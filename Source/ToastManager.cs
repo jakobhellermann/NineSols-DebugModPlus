@@ -15,8 +15,8 @@ public class ToastManager {
 
     private TMP_Text toastText;
 
-    public void Toast(string message) {
-        toasts.Add(new ToastMessage(InputManager.CurrentTime, message));
+    public void Toast(object message) {
+        toasts.Add(new ToastMessage(InputManager.CurrentTime, message.ToString()));
         toastsDirty = true;
     }
 

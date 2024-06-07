@@ -30,6 +30,9 @@
         <Reference Include="QFSW.QC">
             <HintPath>$(NineSolsPath)/NineSols_Data/Managed/QFSW.QC.dll</HintPath>
         </Reference>
+        <Reference Include="AK.Wwise.Unity.MonoBehaviour">
+            <HintPath>$(NineSolsPath)/NineSols_Data/Managed/AK.Wwise.Unity.MonoBehaviour.dll</HintPath>
+        </Reference>
 
         <Reference Include="UnityEngine.UI">
             <HintPath>$(NineSolsPath)/NineSols_Data/Managed/UnityEngine.UI.dll</HintPath>
