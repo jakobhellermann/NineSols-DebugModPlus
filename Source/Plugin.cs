@@ -6,7 +6,6 @@ using DebugMod.Source;
 using DebugMod.Source.Modules;
 using DebugMod.Source.Modules.Hitbox;
 using HarmonyLib;
-using InControl;
 using QFSW.QC;
 using TMPro;
 using UnityEngine;
@@ -78,8 +77,12 @@ public class Plugin : BaseUnityPlugin {
         Instance = this;
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
 
-        harmony = Harmony.CreateAndPatchAll(typeof(Patches));
-        Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} methods...");
+        try {
+            harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly);
+            Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} methods...");
+        } catch (Exception e) {
+            Logger.LogError(e);
+        }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         ToastManager = new ToastManager();

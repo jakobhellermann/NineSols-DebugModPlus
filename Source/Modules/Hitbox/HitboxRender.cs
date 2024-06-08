@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DebugMod.Hitbox;
 
@@ -61,8 +62,8 @@ public class HitboxRender : MonoBehaviour {
         { HitboxType.Finder, [] }
     };
 
-// public static float LineWidth => Math.Max(0.7f, Screen.width / 960f * GameCameras.instance.tk2dCam.ZoomFactor);
-    public static float LineWidth => Math.Max(0.7f, Screen.width / 960f);
+    // public static float LineWidth => Math.Max(0.7f, Screen.width / 960f * GameCameras.instance.tk2dCam.ZoomFactor);
+    public static float LineWidth => Math.Max(0.7f, Screen.width / 2000f);
 
     private void Start() {
         try {
@@ -190,7 +191,8 @@ public class HitboxRender : MonoBehaviour {
 
 
         GUI.depth = int.MaxValue;
-        var camera = CameraManager.Instance.camera2D.GameCamera;
+        // var camera = CameraManager.Instance.camera2D.GameCamera;
+        var camera = GameCore.Instance.gameLevel.sceneCamera;
 
         var lineWidth = LineWidth;
         foreach (var pair in colliders)
