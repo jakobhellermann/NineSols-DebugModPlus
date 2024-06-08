@@ -36,9 +36,11 @@ public class DebugUI : MonoBehaviour {
         foreach (var method in ty.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             if (method.GetCustomAttribute<BindableMethod>() is { } attr) {
                 var actionName = attr.Name ?? method.Name;
-                actions.Add(actionName, new DebugAction() {
-                    OnChange = (Action)Delegate.CreateDelegate(typeof(Action), method)
-                });
+                var action = (Action)Delegate.CreateDelegate(typeof(Action), method);
+
+                actions.Add(actionName, new DebugAction { OnChange = action });
+                if (attr.DefaultKeybind is not null)
+                    Plugin.Instance.KeybindManager.Add(action, attr.DefaultKeybind);
             }
     }
 

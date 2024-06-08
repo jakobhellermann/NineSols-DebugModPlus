@@ -34,12 +34,12 @@ public class Plugin : BaseUnityPlugin {
     public static Plugin Instance;
 
     public ToastManager ToastManager;
+    public KeybindManager KeybindManager;
     private DebugUI debugUI;
 
     private Harmony harmony;
     private GameObject debugCanvas;
     private TMP_Text debugCanvasInfoText;
-    private DebugModActionSet actionSet;
 
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
@@ -49,7 +49,7 @@ public class Plugin : BaseUnityPlugin {
     }
 
 
-    private class DebugModActionSet : PlayerActionSet {
+    /*private class DebugModActionSet : PlayerActionSet {
         public PlayerAction ToggleConsole;
         public PlayerAction ToggleSettings;
 
@@ -60,19 +60,19 @@ public class Plugin : BaseUnityPlugin {
             ToggleConsole.AddDefaultBinding(Key.Control, Key.Period);
             ToggleSettings.AddDefaultBinding(Key.Control, Key.Comma);
         }
-    }
+    }*/
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode) {
         Logger.LogInfo($"Scene loaded: {scene.name}");
-        LoadActionSet();
+        // LoadActionSet();
     }
 
-    private void LoadActionSet() {
+    /*private void LoadActionSet() {
         if (actionSet == null && InputManager.IsSetup) {
             actionSet = new DebugModActionSet();
             actionSet.Initialize();
         }
-    }
+    }*/
 
     private void Awake() {
         Instance = this;
@@ -83,19 +83,18 @@ public class Plugin : BaseUnityPlugin {
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         ToastManager = new ToastManager();
+        KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
 
-        try {
-            debugUI.AddBindableMethods(typeof(FreecamModule));
-            debugUI.AddBindableMethods(typeof(TimeModule));
-            debugUI.AddBindableMethods(typeof(InfotextModule));
-            debugUI.AddBindableMethods(typeof(HitboxModule));
-            debugUI.AddBindableMethods(typeof(SavestateModule));
-        } catch (Exception e) {
-            Logger.LogError(e);
-            ToastManager.Toast(e);
-            throw;
-        }
+
+        KeybindManager.Add(ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
+        KeybindManager.Add(ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
+
+        debugUI.AddBindableMethods(typeof(FreecamModule));
+        debugUI.AddBindableMethods(typeof(TimeModule));
+        debugUI.AddBindableMethods(typeof(InfotextModule));
+        debugUI.AddBindableMethods(typeof(HitboxModule));
+        debugUI.AddBindableMethods(typeof(SavestateModule));
 
         debugCanvas = new GameObject("DebugCanvas");
         var canvas = debugCanvas.AddComponent<Canvas>();
@@ -133,8 +132,7 @@ public class Plugin : BaseUnityPlugin {
 
         ToastManager.Initialize(toastText);
 
-        LoadActionSet();
-
+        // LoadActionSet();
 
         RCGLifeCycle.DontDestroyForever(gameObject);
         RCGLifeCycle.DontDestroyForever(debugCanvas);
@@ -151,43 +149,38 @@ public class Plugin : BaseUnityPlugin {
         if (SceneManager.GetActiveScene().name == "Logo") SceneManager.LoadScene("TitleScreenMenu");
     }
 
+    private void ToggleConsole() {
+        if (!QuantumConsole.Instance) return;
+        // CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
+        QuantumConsole.Instance.Toggle();
+    }
+
+    private void ToggleSettings() {
+        debugUI.settingsOpen = !debugUI.settingsOpen;
+        if (Player.i is not null) {
+            // if (settingsOpen) {
+            // stateBefore = Player.i.playerInput.fsm.State;
+            // Player.i.playerInput.fsm.ChangeState(PlayerInputStateType.Console);
+            // } else
+            // Player.i.playerInput.fsm.ChangeState(stateBefore);
+        }
+    }
 
     private void Update() {
         ToastManager.Update();
+        KeybindManager.Update();
 
         FreecamModule.Update();
         infotextModule.Update();
-
-        if (actionSet != null) {
-            if (actionSet.ToggleConsole.WasPressed && QuantumConsole.Instance)
-                // CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
-                QuantumConsole.Instance.Toggle();
-
-            if (actionSet.ToggleSettings.WasPressed) {
-                debugUI.settingsOpen = !debugUI.settingsOpen;
-
-                if (Player.i is not null) {
-                    // if (settingsOpen) {
-                    // stateBefore = Player.i.playerInput.fsm.State;
-                    // Player.i.playerInput.fsm.ChangeState(PlayerInputStateType.Console);
-                    // } else
-                    // Player.i.playerInput.fsm.ChangeState(stateBefore);
-                }
-            }
-        }
-        // CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
     }
 
 
     private void OnDestroy() {
         harmony.UnpatchSelf();
-
         SceneManager.sceneLoaded -= OnSceneLoaded;
-
         Destroy(debugCanvas);
-        actionSet.Destroy();
-
         HitboxModule.Unload();
+        // actionSet.Destroy();
 
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
     }

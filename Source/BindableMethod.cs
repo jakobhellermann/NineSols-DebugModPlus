@@ -1,5 +1,6 @@
 using System;
 using JetBrains.Annotations;
+using UnityEngine;
 
 namespace DebugMod.Source;
 
@@ -7,4 +8,5 @@ namespace DebugMod.Source;
 [MeansImplicitUse]
 public class BindableMethod : Attribute {
     public string Name;
+    public KeyCode[] DefaultKeybind;
 }
