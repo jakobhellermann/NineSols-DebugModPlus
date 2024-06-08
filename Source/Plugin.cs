@@ -1,13 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using BepInEx;
-using Com.LuisPedroFonseca.ProCamera2D;
-using DebugMod.Hitbox;
+using DebugMod.Source;
+using DebugMod.Source.Modules;
+using DebugMod.Source.Modules.Hitbox;
 using HarmonyLib;
 using InControl;
-using InputExtension;
 using QFSW.QC;
 using TMPro;
 using UnityEngine;
@@ -35,34 +34,20 @@ public class Plugin : BaseUnityPlugin {
     public static Plugin Instance;
 
     public ToastManager ToastManager;
+    private DebugUI debugUI;
 
     private Harmony harmony;
     private GameObject debugCanvas;
     private TMP_Text debugCanvasInfoText;
     private DebugModActionSet actionSet;
 
-    private HitboxViewer hitboxViewer = new();
-
-    private bool settingsOpen = true;
+    private InfotextModule infotextModule;
+    public HitboxModule HitboxModule = new();
 
     public void LogInfo(string msg) {
         Logger.LogInfo(msg);
     }
 
-
-    private class DebugActionToggle {
-        public bool Value;
-        public Action<bool> OnChange;
-    }
-
-    private Dictionary<string, DebugActionToggle> toggles = new();
-
-    private void AddToggle(string actionName, Action<bool> onChange, bool defaultValue = false) {
-        toggles.Add(actionName, new DebugActionToggle {
-            Value = defaultValue,
-            OnChange = onChange
-        });
-    }
 
     private class DebugModActionSet : PlayerActionSet {
         public PlayerAction ToggleConsole;
@@ -91,18 +76,26 @@ public class Plugin : BaseUnityPlugin {
 
     private void Awake() {
         Instance = this;
-
-        toggles.Clear();
-        AddToggle("FreeCam", OnFreecamChange);
-        AddToggle("FastForward", OnFastForwardChange);
-        AddToggle("Hitboxes", OnHitboxChange);
-        AddToggle("Info Text", (_) => { });
+        Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
 
         harmony = Harmony.CreateAndPatchAll(typeof(Patches));
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} methods...");
 
-        Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
-        Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} started loading...");
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        ToastManager = new ToastManager();
+        debugUI = gameObject.AddComponent<DebugUI>();
+
+        try {
+            debugUI.AddBindableMethods(typeof(FreecamModule));
+            debugUI.AddBindableMethods(typeof(TimeModule));
+            debugUI.AddBindableMethods(typeof(InfotextModule));
+            debugUI.AddBindableMethods(typeof(HitboxModule));
+            debugUI.AddBindableMethods(typeof(SavestateModule));
+        } catch (Exception e) {
+            Logger.LogError(e);
+            ToastManager.Toast(e);
+            throw;
+        }
 
         debugCanvas = new GameObject("DebugCanvas");
         var canvas = debugCanvas.AddComponent<Canvas>();
@@ -136,8 +129,8 @@ public class Plugin : BaseUnityPlugin {
         toastTextTransform.anchoredPosition = new Vector2(-10, 10);
         toastTextTransform.sizeDelta = new Vector2(800f, 0f);
 
+        infotextModule = new InfotextModule(debugCanvasInfoText);
 
-        ToastManager = new ToastManager();
         ToastManager.Initialize(toastText);
 
         LoadActionSet();
@@ -159,40 +152,11 @@ public class Plugin : BaseUnityPlugin {
     }
 
 
-    private void UpdateInfoText() {
-        var text = "";
-
-        if (!SingletonBehaviour<GameCore>.IsAvailable()) {
-            text += "not yet available\n";
-            debugCanvasInfoText.text = text;
-            return;
-        }
-
-        var core = GameCore.Instance;
-
-        var coreState = typeof(GameCore.GameCoreState).GetEnumName(core.currentCoreState);
-        text += $"{coreState}\n";
-
-        var player = core.player;
-        if (player) {
-            text += $"Pos: {player.transform.position}\n";
-            text += $"Speed: {player.Velocity}\n";
-            text += $"HP: {player.health.CurrentHealthValue} (+{player.health.CurrentInternalInjury})\n";
-            var state = typeof(PlayerStateType).GetEnumName(player.fsm.State);
-            text += $"{state} {player.playerInput.fsm.State}\n";
-        }
-
-        var currentLevel = core.gameLevel;
-        if (currentLevel)
-            text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})\n";
-
-        text += $"{core.currentCutScene}";
-
-        debugCanvasInfoText.text = text;
-    }
-
     private void Update() {
         ToastManager.Update();
+
+        FreecamModule.Update();
+        infotextModule.Update();
 
         if (actionSet != null) {
             if (actionSet.ToggleConsole.WasPressed && QuantumConsole.Instance)
@@ -200,10 +164,8 @@ public class Plugin : BaseUnityPlugin {
                 QuantumConsole.Instance.Toggle();
 
             if (actionSet.ToggleSettings.WasPressed) {
-                settingsOpen = !settingsOpen;
-                
-                UIManager.Instance.mapPanelController.ShouldShowDeathBag
-                
+                debugUI.settingsOpen = !debugUI.settingsOpen;
+
                 if (Player.i is not null) {
                     // if (settingsOpen) {
                     // stateBefore = Player.i.playerInput.fsm.State;
@@ -214,31 +176,6 @@ public class Plugin : BaseUnityPlugin {
             }
         }
         // CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
-
-        if (toggles["FreeCam"].Value) {
-            var goFast = Input.GetKey(KeyCode.LeftShift);
-
-            // var cam2d =
-            // CameraManager.Instance.camera2D;
-
-
-            var freecamSpeed = 200 * (goFast ? 3 : 1);
-
-            CameraManager.Instance.dummyOffset = Vector2.zero;
-
-            var input = new Vector2(
-                Input.GetAxis("Horizontal"),
-                Input.GetAxis("Vertical"));
-
-            Player.i.SetPosition(Player.i.transform.position + (Vector3)(input * (Time.deltaTime * freecamSpeed)));
-
-            CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
-        }
-
-        if (toggles["Info Text"].Value)
-            UpdateInfoText();
-        else
-            debugCanvasInfoText.text = "";
     }
 
 
@@ -250,90 +187,8 @@ public class Plugin : BaseUnityPlugin {
         Destroy(debugCanvas);
         actionSet.Destroy();
 
-        hitboxViewer.Unload();
+        HitboxModule.Unload();
 
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
-    }
-
-    private GUIStyle styleButton;
-    private GUIStyle styleToggle;
-
-    private PlayerInputStateType stateBefore = PlayerInputStateType.Cutscene;
-
-    private void OnHitboxChange(bool visible) {
-        if (visible)
-            hitboxViewer.Load();
-        else
-            hitboxViewer.Unload();
-    }
-
-    private void OnFastForwardChange(bool ff) {
-        ToastManager.Toast(RCGTime.GlobalSimulationSpeed.ToString());
-
-        if (ff)
-            RCGTime.GlobalSimulationSpeed = 2;
-        else
-            RCGTime.GlobalSimulationSpeed = 1;
-    }
-
-    private void OnFreecamChange(bool freecam) {
-        var player = Player.i;
-        var playerInput = Player.i.playerInput;
-
-        if (freecam) {
-            player.health.BecomeInvincible(this);
-            stateBefore = playerInput.fsm.State;
-            playerInput.fsm.ChangeState(PlayerInputStateType.Console);
-            Player.i.DisableGravity();
-        } else {
-            player.health.RemoveInvincible(this);
-            playerInput.fsm.ChangeState(stateBefore);
-            Player.i.EnableGravity();
-        }
-    }
-
-
-    private void OnGUI() {
-        if (!settingsOpen) return;
-
-        RCGInput.SetCursorVisible(true);
-
-        const int padding = 20;
-        if (styleButton == null) {
-            styleButton = new GUIStyle(GUI.skin.box);
-            styleButton.alignment = TextAnchor.MiddleRight;
-            styleButton.padding = new RectOffset(padding, padding, padding, padding);
-            styleButton.fontSize = 20;
-        }
-
-        if (styleToggle == null) {
-            styleToggle = new GUIStyle(GUI.skin.toggle);
-            // styleToggle.alignment = TextAnchor.MiddleLeft;
-            // styleToggle.padding = new RectOffset(padding, padding, padding, padding);
-            styleToggle.fontSize = 20;
-        }
-
-        GUILayout.BeginArea(new Rect(padding, padding, Screen.width - padding * 2, Screen.height - padding * 2));
-
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-
-
-        GUILayout.BeginVertical();
-
-        foreach (var (name, toggle) in toggles)
-            if (GUILayout.Button($"{name}: {toggle.Value}", styleButton)) {
-                toggle.Value = !toggle.Value;
-                toggle.OnChange(toggle.Value);
-                ToastManager.Toast($"change {name} to {toggle.Value}");
-            }
-
-        GUILayout.EndVertical();
-
-
-        GUILayout.EndHorizontal();
-
-        GUILayout.FlexibleSpace();
-        GUILayout.EndArea();
     }
 }

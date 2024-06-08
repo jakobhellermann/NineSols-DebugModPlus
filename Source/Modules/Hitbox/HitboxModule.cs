@@ -1,12 +1,23 @@
+using DebugMod.Hitbox;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
 
-namespace DebugMod.Hitbox;
+namespace DebugMod.Source.Modules.Hitbox;
 
-public class HitboxViewer {
-    public static int State = 1;
+public class HitboxModule {
+    private static bool hitboxesVisible;
+
     private HitboxRender hitboxRender;
+
+    [BindableMethod(Name = "Toggle Hitboxes")]
+    private static void ToggleHitboxes() {
+        hitboxesVisible = !hitboxesVisible;
+
+        if (hitboxesVisible)
+            Plugin.Instance.HitboxModule.Load();
+        else
+            Plugin.Instance.HitboxModule.Unload();
+    }
 
     public void Load() {
         // State = DebugMod.settings.ShowHitBoxes;

@@ -68,7 +68,7 @@ public class HitboxRender : MonoBehaviour {
         try {
             foreach (var col in Resources.FindObjectsOfTypeAll<Collider2D>()) TryAddHitboxes(col);
         } catch (Exception e) {
-            Plugin.Instance.ToastManager.Toast(e.ToString());
+            ToastManager.Toast(e.ToString());
         }
     }
 
@@ -87,8 +87,6 @@ public class HitboxRender : MonoBehaviour {
 
         if (collider2D is BoxCollider2D or PolygonCollider2D or EdgeCollider2D or CircleCollider2D) {
             var go = collider2D.gameObject;
-
-            if (colliders == null) Plugin.Instance.ToastManager.Toast("duplicate depth");
 
             if (collider2D.GetComponent<MonsterPushAway>())
                 colliders[HitboxType.MonsterPushAway].Add(collider2D);

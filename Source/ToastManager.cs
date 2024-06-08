@@ -15,7 +15,12 @@ public class ToastManager {
 
     private TMP_Text toastText;
 
-    public void Toast(object message) {
+    public static void Toast(object message) {
+        Plugin.Instance.ToastManager.MakeToast(message);
+    }
+
+
+    private void MakeToast(object message) {
         toasts.Add(new ToastMessage(InputManager.CurrentTime, message.ToString()));
         toastsDirty = true;
     }
