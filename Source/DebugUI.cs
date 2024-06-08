@@ -85,10 +85,8 @@ public class DebugUI : MonoBehaviour {
             }
 
         foreach (var (name, toggle) in actions)
-            if (GUILayout.Button($"{name}", styleButton)) {
+            if (GUILayout.Button($"{name}", styleButton))
                 toggle.OnChange();
-                ToastManager.Toast($"running {name}");
-            }
 
         GUILayout.EndVertical();
 

@@ -42,8 +42,9 @@ public class Plugin : BaseUnityPlugin {
 
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
+    public SavestateModule SavestateModule = new();
 
-    public void LogInfo(string msg) {
+    public void LogInfo(object msg) {
         Logger.LogInfo(msg);
     }
 
@@ -61,9 +62,26 @@ public class Plugin : BaseUnityPlugin {
         }
     }*/
 
+    private bool consoleInitialized;
+
     private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode) {
         Logger.LogInfo($"Scene loaded: {scene.name}");
+
+        if (!consoleInitialized && QuantumConsole.Instance) {
+            QuantumConsole.Instance.OnActivate += QuantumConsoleActivate;
+            QuantumConsole.Instance.OnDeactivate += QuantumConsoleDeactivate;
+        }
         // LoadActionSet();
+    }
+
+    private void QuantumConsoleActivate() {
+        if (!GameCore.IsAvailable()) return;
+        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, QuantumConsole.Instance);
+    }
+
+    private void QuantumConsoleDeactivate() {
+        if (!GameCore.IsAvailable()) return;
+        GameCore.Instance.player.playerInput.RevokeAllMyVote(QuantumConsole.Instance);
     }
 
     /*private void LoadActionSet() {
@@ -88,7 +106,6 @@ public class Plugin : BaseUnityPlugin {
         ToastManager = new ToastManager();
         KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
-
 
         KeybindManager.Add(ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
@@ -131,9 +148,10 @@ public class Plugin : BaseUnityPlugin {
         toastTextTransform.anchoredPosition = new Vector2(-10, 10);
         toastTextTransform.sizeDelta = new Vector2(800f, 0f);
 
+        ToastManager.Initialize(toastText);
         infotextModule = new InfotextModule(debugCanvasInfoText);
 
-        ToastManager.Initialize(toastText);
+        QuantumConsoleProcessor.GenerateCommandTable(true);
 
         // LoadActionSet();
 
@@ -154,7 +172,7 @@ public class Plugin : BaseUnityPlugin {
 
     private void ToggleConsole() {
         if (!QuantumConsole.Instance) return;
-        // CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
+        //CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
         QuantumConsole.Instance.Toggle();
     }
 
@@ -183,6 +201,7 @@ public class Plugin : BaseUnityPlugin {
         SceneManager.sceneLoaded -= OnSceneLoaded;
         Destroy(debugCanvas);
         HitboxModule.Unload();
+        SavestateModule.Unload();
         // actionSet.Destroy();
 
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");

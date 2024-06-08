@@ -12,51 +12,9 @@ public class FreecamModule {
     private const float FastMultiplier = 3;
     private const float ScrollSpeed = 1;
 
-    private static bool freecamActive;
+    public static bool FreecamActive;
 
     private static PlayerInputStateType stateBefore = PlayerInputStateType.Cutscene;
-
-
-    [HarmonyPatch(typeof(GameCore), nameof(GameCore.FadeToBlack))]
-    [HarmonyPrefix]
-    private static void FadeToBlack(ref float fadeTime) {
-        if (freecamActive) fadeTime = 0;
-    }
-
-    [HarmonyPatch(typeof(SceneConnectionPoint.ChangeSceneData),
-        nameof(SceneConnectionPoint.ChangeSceneData.MarkAsLoaded))]
-    [HarmonyPostfix]
-    private static void MarkAsLoaded(ref SceneConnectionPoint.ChangeSceneData __instance) {
-        ToastManager.Toast($"Scene load took {__instance.loadingTime}");
-    }
-
-    [HarmonyPatch(typeof(GameCore), nameof(GameCore.FadeOutBlack))]
-    [HarmonyPrefix]
-    private static void FadeOutBlack(ref float fadeTime, ref float delayTime) {
-        if (freecamActive) {
-            fadeTime = 0;
-            delayTime = 0;
-        }
-    }
-
-    [HarmonyPatch(typeof(UIExtension), "AddUITask")]
-    [HarmonyPrefix]
-    private static void AddUiTask(MonoBehaviour mb, Action action, float delay) {
-        ToastManager.Toast(delay);
-    }
-
-    [HarmonyPatch(typeof(GameCore), nameof(GameCore.ChangeScene),
-        [typeof(SceneConnectionPoint.ChangeSceneData), typeof(bool), typeof(bool)])]
-    [HarmonyPrefix]
-    private static void ChangeScene(
-        ref SceneConnectionPoint.ChangeSceneData changeSceneData,
-        ref bool showTip,
-        bool captureLastImage
-    ) {
-        ToastManager.Toast("transition");
-
-        if (freecamActive) showTip = false;
-    }
 
 
     [BindableMethod]
@@ -68,12 +26,12 @@ public class FreecamModule {
 
     [BindableMethod(Name = "Toggle Freecam", DefaultKeybind = [KeyCode.LeftControl, KeyCode.M])]
     private static void ToggleFreecam() {
-        freecamActive = !freecamActive;
+        FreecamActive = !FreecamActive;
 
         var player = Player.i;
         var playerInput = Player.i.playerInput;
 
-        if (freecamActive) {
+        if (FreecamActive) {
             player.enabled = false;
             player.health.BecomeInvincible(Plugin.Instance);
             proCamera.enabled = false;
@@ -96,7 +54,7 @@ public class FreecamModule {
     }
 
     public static void Update() {
-        if (!freecamActive) return;
+        if (!FreecamActive) return;
         var goFast = Input.GetKey(KeyCode.LeftShift);
         var freecamSpeed = Speed * (goFast ? FastMultiplier : 1);
 
