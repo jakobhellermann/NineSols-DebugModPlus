@@ -1,8 +1,7 @@
-using System;
 using Com.LuisPedroFonseca.ProCamera2D;
 using HarmonyLib;
+using NineSolsAPI;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace DebugMod.Source.Modules;
 
@@ -16,9 +15,9 @@ public class FreecamModule {
 
     private static PlayerInputStateType stateBefore = PlayerInputStateType.Cutscene;
 
-
     [BindableMethod]
-    private static void Test() {
+    private static void TestMethod() {
+        ToastManager.Toast("hi");
     }
 
     private static Camera sceneCamera => GameCore.Instance.gameLevel.sceneCamera;

@@ -1,6 +1,7 @@
 using System;
 using DebugMod.Source.Modules;
 using HarmonyLib;
+using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugMod.Source;

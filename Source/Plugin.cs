@@ -6,6 +6,7 @@ using DebugMod.Source;
 using DebugMod.Source.Modules;
 using DebugMod.Source.Modules.Hitbox;
 using HarmonyLib;
+using NineSolsAPI;
 using QFSW.QC;
 using TMPro;
 using UnityEngine;
@@ -28,16 +29,15 @@ internal class Patches {
     }
 }
 
+[BepInDependency(NineSolsAPICore.PluginGUID)]
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin {
     public static Plugin Instance;
 
-    public ToastManager ToastManager;
     public KeybindManager KeybindManager;
     private DebugUI debugUI;
 
     private Harmony harmony;
-    private GameObject debugCanvas;
     private TMP_Text debugCanvasInfoText;
 
     private InfotextModule infotextModule;
@@ -103,7 +103,6 @@ public class Plugin : BaseUnityPlugin {
         }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
-        ToastManager = new ToastManager();
         KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
 
@@ -116,12 +115,9 @@ public class Plugin : BaseUnityPlugin {
         debugUI.AddBindableMethods(typeof(HitboxModule));
         debugUI.AddBindableMethods(typeof(SavestateModule));
 
-        debugCanvas = new GameObject("DebugCanvas");
-        var canvas = debugCanvas.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
         var debugText = new GameObject();
-        debugText.transform.SetParent(debugCanvas.transform);
+        debugText.transform.SetParent(NineSolsAPICore.FullscreenCanvas.gameObject.transform);
         debugCanvasInfoText = debugText.AddComponent<TextMeshProUGUI>();
         debugCanvasInfoText.alignment = TextAlignmentOptions.TopLeft;
         debugCanvasInfoText.fontSize = 20;
@@ -133,22 +129,6 @@ public class Plugin : BaseUnityPlugin {
         debugTextTransform.pivot = new Vector2(0f, 1f);
         debugTextTransform.anchoredPosition = new Vector2(10, -10);
         debugTextTransform.sizeDelta = new Vector2(800f, 0f);
-
-        var toastTextObj = new GameObject();
-        toastTextObj.transform.SetParent(debugCanvas.transform);
-        var toastText = toastTextObj.AddComponent<TextMeshProUGUI>();
-        toastText.alignment = TextAlignmentOptions.BottomRight;
-        toastText.fontSize = 20;
-        toastText.color = Color.white;
-
-        var toastTextTransform = toastText.GetComponent<RectTransform>();
-        toastTextTransform.anchorMin = new Vector2(1, 0);
-        toastTextTransform.anchorMax = new Vector2(1, 0);
-        toastTextTransform.pivot = new Vector2(1f, 0f);
-        toastTextTransform.anchoredPosition = new Vector2(-10, 10);
-        toastTextTransform.sizeDelta = new Vector2(800f, 0f);
-
-        ToastManager.Initialize(toastText);
         infotextModule = new InfotextModule(debugCanvasInfoText);
 
         QuantumConsoleProcessor.GenerateCommandTable(true);
@@ -156,8 +136,6 @@ public class Plugin : BaseUnityPlugin {
         // LoadActionSet();
 
         RCGLifeCycle.DontDestroyForever(gameObject);
-        RCGLifeCycle.DontDestroyForever(debugCanvas);
-
 
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
     }
@@ -188,7 +166,6 @@ public class Plugin : BaseUnityPlugin {
     }
 
     private void Update() {
-        ToastManager.Update();
         KeybindManager.Update();
 
         FreecamModule.Update();
@@ -199,7 +176,6 @@ public class Plugin : BaseUnityPlugin {
     private void OnDestroy() {
         harmony.UnpatchSelf();
         SceneManager.sceneLoaded -= OnSceneLoaded;
-        Destroy(debugCanvas);
         HitboxModule.Unload();
         SavestateModule.Unload();
         // actionSet.Destroy();
