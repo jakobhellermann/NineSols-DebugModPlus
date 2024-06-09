@@ -13,21 +13,6 @@ using UnityEngine.SceneManagement;
 
 namespace DebugMod;
 
-[HarmonyPatch]
-[SuppressMessage("ReSharper", "InconsistentNaming")]
-internal class Patches {
-    [HarmonyPatch(typeof(QuantumConsoleProcessor), "LoadCommandsFromType")]
-    [HarmonyFinalizer]
-    private static Exception LoadCommandsFromType(Type type, Exception __exception) => null;
-
-    [HarmonyPatch(typeof(QuantumConsole), "IsSupportedState")]
-    [HarmonyPrefix]
-    private static bool IsSupportedState(ref bool __result) {
-        __result = true;
-        return false;
-    }
-}
-
 [BepInDependency(NineSolsAPICore.PluginGUID)]
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 public class DebugMod : BaseUnityPlugin {
@@ -35,6 +20,7 @@ public class DebugMod : BaseUnityPlugin {
 
     public KeybindManager KeybindManager;
     private DebugUI debugUI;
+    private QuantumConsoleModule quantumConsoleModule;
 
     private Harmony harmony;
     private TMP_Text debugCanvasInfoText;
@@ -56,9 +42,10 @@ public class DebugMod : BaseUnityPlugin {
             Log.Error(e);
         }
 
-        SceneManager.sceneLoaded += OnSceneLoaded;
         KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
+        quantumConsoleModule = new QuantumConsoleModule();
+        quantumConsoleModule.Load();
 
         KeybindManager.Add(ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
@@ -84,8 +71,6 @@ public class DebugMod : BaseUnityPlugin {
         debugTextTransform.anchoredPosition = new Vector2(10, -10);
         debugTextTransform.sizeDelta = new Vector2(800f, 0f);
         infotextModule = new InfotextModule(debugCanvasInfoText);
-
-        QuantumConsoleProcessor.GenerateCommandTable(true);
 
 
         RCGLifeCycle.DontDestroyForever(gameObject);
@@ -128,9 +113,9 @@ public class DebugMod : BaseUnityPlugin {
 
     private void OnDestroy() {
         harmony.UnpatchSelf();
-        SceneManager.sceneLoaded -= OnSceneLoaded;
         HitboxModule.Unload();
         SavestateModule.Unload();
+        quantumConsoleModule.Unload();
         // actionSet.Destroy();
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
