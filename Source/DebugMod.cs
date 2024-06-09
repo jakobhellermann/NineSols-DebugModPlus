@@ -43,62 +43,17 @@ public class DebugMod : BaseUnityPlugin {
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
 
-    public void LogInfo(object msg) {
-        Logger.LogInfo(msg);
-    }
-
-
-    /*private class DebugModActionSet : PlayerActionSet {
-        public PlayerAction ToggleConsole;
-        public PlayerAction ToggleSettings;
-
-        public void Initialize() {
-            ToggleConsole = CreatePlayerAction("Toggle Console");
-            ToggleSettings = CreatePlayerAction("Toggle Settings");
-
-            ToggleConsole.AddDefaultBinding(Key.Control, Key.Period);
-            ToggleSettings.AddDefaultBinding(Key.Control, Key.Comma);
-        }
-    }*/
-
-    private bool consoleInitialized;
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode) {
-        Logger.LogInfo($"Scene loaded: {scene.name}");
-
-        if (!consoleInitialized && QuantumConsole.Instance) {
-            QuantumConsole.Instance.OnActivate += QuantumConsoleActivate;
-            QuantumConsole.Instance.OnDeactivate += QuantumConsoleDeactivate;
-        }
-        // LoadActionSet();
-    }
-
-    private void QuantumConsoleActivate() {
-        if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, QuantumConsole.Instance);
-    }
-
-    private void QuantumConsoleDeactivate() {
-        if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.RevokeAllMyVote(QuantumConsole.Instance);
-    }
-
-    /*private void LoadActionSet() {
-        if (actionSet == null && InputManager.IsSetup) {
-            actionSet = new DebugModActionSet();
-            actionSet.Initialize();
-        }
-    }*/
 
     private void Awake() {
         Instance = this;
-        Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
+        Log.Init(Logger);
+        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
 
         try {
             harmony = Harmony.CreateAndPatchAll(typeof(DebugMod).Assembly);
-            Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} methods...");
+            Log.Info($"Patched {harmony.GetPatchedMethods().Count()} methods...");
         } catch (Exception e) {
-            Logger.LogError(e);
+            Log.Error(e);
         }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -132,11 +87,10 @@ public class DebugMod : BaseUnityPlugin {
 
         QuantumConsoleProcessor.GenerateCommandTable(true);
 
-        // LoadActionSet();
 
         RCGLifeCycle.DontDestroyForever(gameObject);
 
-        Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
     }
 
     private void Start() {
@@ -179,6 +133,6 @@ public class DebugMod : BaseUnityPlugin {
         SavestateModule.Unload();
         // actionSet.Destroy();
 
-        Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
+        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
     }
 }
