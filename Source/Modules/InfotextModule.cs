@@ -1,6 +1,6 @@
 using TMPro;
 
-namespace DebugMod.Source.Modules;
+namespace DebugMod.Modules;
 
 public class InfotextModule(TMP_Text debugCanvasInfoText) {
     private static bool infotextActive;

@@ -1,4 +1,4 @@
 /*.DotSettings.user
 /.idea
-/obj
-/bin
+obj
+bin

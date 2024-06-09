@@ -5,7 +5,7 @@ using InputExtension;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod.Source;
+namespace DebugMod;
 
 internal class DebugActionToggle {
     public bool Value;
@@ -41,7 +41,7 @@ public class DebugUI : MonoBehaviour {
 
                 actions.Add(actionName, new DebugAction { OnChange = action });
                 if (attr.DefaultKeybind is not null)
-                    Plugin.Instance.KeybindManager.Add(action, attr.DefaultKeybind);
+                    DebugMod.Instance.KeybindManager.Add(action, attr.DefaultKeybind);
             }
     }
 

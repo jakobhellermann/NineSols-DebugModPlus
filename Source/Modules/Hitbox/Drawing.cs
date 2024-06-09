@@ -1,7 +1,7 @@
 using System.Reflection;
 using UnityEngine;
 
-namespace DebugMod.Hitbox;
+namespace DebugMod.Modules.Hitbox;
 
 // Line drawing routine originally courtesy of Linusmartensson:
 // http://forum.unity3d.com/threads/71979-Drawing-lines-in-the-editor

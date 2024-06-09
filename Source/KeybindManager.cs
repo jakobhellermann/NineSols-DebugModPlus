@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Input = UnityEngine.Input;
 
-namespace DebugMod.Source;
+namespace DebugMod;
 
 internal class KeyBind {
     public KeyCode[] Keys;

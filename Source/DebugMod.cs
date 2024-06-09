@@ -2,9 +2,8 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using BepInEx;
-using DebugMod.Source;
-using DebugMod.Source.Modules;
-using DebugMod.Source.Modules.Hitbox;
+using DebugMod.Modules;
+using DebugMod.Modules.Hitbox;
 using HarmonyLib;
 using NineSolsAPI;
 using QFSW.QC;
@@ -31,8 +30,8 @@ internal class Patches {
 
 [BepInDependency(NineSolsAPICore.PluginGUID)]
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-public class Plugin : BaseUnityPlugin {
-    public static Plugin Instance;
+public class DebugMod : BaseUnityPlugin {
+    public static DebugMod Instance;
 
     public KeybindManager KeybindManager;
     private DebugUI debugUI;
@@ -96,7 +95,7 @@ public class Plugin : BaseUnityPlugin {
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
 
         try {
-            harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly);
+            harmony = Harmony.CreateAndPatchAll(typeof(DebugMod).Assembly);
             Logger.LogInfo($"Patched {harmony.GetPatchedMethods().Count()} methods...");
         } catch (Exception e) {
             Logger.LogError(e);

@@ -3,7 +3,7 @@ using HarmonyLib;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod.Source.Modules;
+namespace DebugMod.Modules;
 
 [HarmonyPatch]
 public class FreecamModule {
@@ -32,7 +32,7 @@ public class FreecamModule {
 
         if (FreecamActive) {
             player.enabled = false;
-            player.health.BecomeInvincible(Plugin.Instance);
+            player.health.BecomeInvincible(DebugMod.Instance);
             proCamera.enabled = false;
 
 
@@ -44,7 +44,7 @@ public class FreecamModule {
             // CameraManager.Instance.cameraCore.theRealSceneCamera.enabled = true;
 
             player.enabled = true;
-            player.health.RemoveInvincible(Plugin.Instance);
+            player.health.RemoveInvincible(DebugMod.Instance);
             proCamera.enabled = true;
             sceneCamera.transform.position = sceneCamera.transform.position with { z = -240 }; // TODO check if correct
             // playerInput.fsm.ChangeState(stateBefore);

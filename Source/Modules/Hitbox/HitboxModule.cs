@@ -1,8 +1,7 @@
-using DebugMod.Hitbox;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace DebugMod.Source.Modules.Hitbox;
+namespace DebugMod.Modules.Hitbox;
 
 public class HitboxModule {
     private static bool hitboxesVisible;
@@ -14,9 +13,9 @@ public class HitboxModule {
         hitboxesVisible = !hitboxesVisible;
 
         if (hitboxesVisible)
-            Plugin.Instance.HitboxModule.Load();
+            DebugMod.Instance.HitboxModule.Load();
         else
-            Plugin.Instance.HitboxModule.Unload();
+            DebugMod.Instance.HitboxModule.Unload();
     }
 
     public void Load() {

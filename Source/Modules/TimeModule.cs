@@ -1,7 +1,6 @@
 using System.Collections;
-using UnityEngine;
 
-namespace DebugMod.Source.Modules;
+namespace DebugMod.Modules;
 
 public class TimeModule {
     [BindableMethod(Name = "Toggle Fastforward")]
@@ -18,7 +17,7 @@ public class TimeModule {
     private static void FrameAdvance() {
         RCGTime.GlobalSimulationSpeed = 0;
 
-        Plugin.Instance.StartCoroutine(AdvanceFrameCoro());
+        DebugMod.Instance.StartCoroutine(AdvanceFrameCoro());
     }
 
     private static IEnumerator AdvanceFrameCoro() {

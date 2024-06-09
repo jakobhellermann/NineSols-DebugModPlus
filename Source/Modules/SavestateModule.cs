@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod.Source.Modules;
+namespace DebugMod.Modules;
 
 internal class Savestate {
     public string MetaJson;
@@ -22,7 +22,7 @@ public class SavestateModule {
 
     [BindableMethod(Name = "Create Savestate")]
     private static void CreateSavestateMethod() {
-        var module = Plugin.Instance.SavestateModule;
+        var module = DebugMod.Instance.SavestateModule;
 
         const string slot = "0";
         module.CreateSavestate(slot);
@@ -31,7 +31,7 @@ public class SavestateModule {
 
     [BindableMethod(Name = "Load Savestate")]
     private static void LoadSavestateMethod() {
-        var module = Plugin.Instance.SavestateModule;
+        var module = DebugMod.Instance.SavestateModule;
 
         const string slot = "0";
         if (!module.savestates.TryGetValue(slot, out var savestate)) {
