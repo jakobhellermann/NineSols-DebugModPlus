@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using BepInEx;
 using DebugMod.Modules;
@@ -7,7 +6,6 @@ using DebugMod.Modules.Hitbox;
 using HarmonyLib;
 using NineSolsAPI;
 using QFSW.QC;
-using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,7 +21,6 @@ public class DebugMod : BaseUnityPlugin {
     private QuantumConsoleModule quantumConsoleModule;
 
     private Harmony harmony;
-    private TMP_Text debugCanvasInfoText;
 
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
@@ -45,7 +42,7 @@ public class DebugMod : BaseUnityPlugin {
         KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
         quantumConsoleModule = new QuantumConsoleModule();
-        quantumConsoleModule.Load();
+        infotextModule = new InfotextModule();
 
         KeybindManager.Add(ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
@@ -55,23 +52,6 @@ public class DebugMod : BaseUnityPlugin {
         debugUI.AddBindableMethods(typeof(InfotextModule));
         debugUI.AddBindableMethods(typeof(HitboxModule));
         debugUI.AddBindableMethods(typeof(SavestateModule));
-
-
-        var debugText = new GameObject();
-        debugText.transform.SetParent(NineSolsAPICore.FullscreenCanvas.gameObject.transform);
-        debugCanvasInfoText = debugText.AddComponent<TextMeshProUGUI>();
-        debugCanvasInfoText.alignment = TextAlignmentOptions.TopLeft;
-        debugCanvasInfoText.fontSize = 20;
-        debugCanvasInfoText.color = Color.white;
-
-        var debugTextTransform = debugCanvasInfoText.GetComponent<RectTransform>();
-        debugTextTransform.anchorMin = new Vector2(0, 1);
-        debugTextTransform.anchorMax = new Vector2(0, 1);
-        debugTextTransform.pivot = new Vector2(0f, 1f);
-        debugTextTransform.anchoredPosition = new Vector2(10, -10);
-        debugTextTransform.sizeDelta = new Vector2(800f, 0f);
-        infotextModule = new InfotextModule(debugCanvasInfoText);
-
 
         RCGLifeCycle.DontDestroyForever(gameObject);
 

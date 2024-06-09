@@ -24,7 +24,7 @@ public class QuantumConsoleModule {
     
     private bool consoleInitialized;
 
-    public void Load() {
+    public QuantumConsoleModule() {
         QuantumConsoleProcessor.GenerateCommandTable(true);
         SceneManager.sceneLoaded += OnSceneLoaded;
     }

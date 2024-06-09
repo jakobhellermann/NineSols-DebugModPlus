@@ -1,9 +1,28 @@
+using NineSolsAPI;
 using TMPro;
+using UnityEngine;
 
 namespace DebugMod.Modules;
 
-public class InfotextModule(TMP_Text debugCanvasInfoText) {
+public class InfotextModule {
     private static bool infotextActive;
+    private TMP_Text debugCanvasInfoText;
+
+    public InfotextModule() {
+        var debugText = new GameObject();
+        debugText.transform.SetParent(NineSolsAPICore.FullscreenCanvas.gameObject.transform);
+        debugCanvasInfoText = debugText.AddComponent<TextMeshProUGUI>();
+        debugCanvasInfoText.alignment = TextAlignmentOptions.TopLeft;
+        debugCanvasInfoText.fontSize = 20;
+        debugCanvasInfoText.color = Color.white;
+
+        var debugTextTransform = debugCanvasInfoText.GetComponent<RectTransform>();
+        debugTextTransform.anchorMin = new Vector2(0, 1);
+        debugTextTransform.anchorMax = new Vector2(0, 1);
+        debugTextTransform.pivot = new Vector2(0f, 1f);
+        debugTextTransform.anchoredPosition = new Vector2(10, -10);
+        debugTextTransform.sizeDelta = new Vector2(800f, 0f);
+    }
 
     [BindableMethod(Name = "Toggle Infotext")]
     private static void ToggleFreecam() {
