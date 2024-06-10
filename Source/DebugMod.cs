@@ -16,7 +16,6 @@ namespace DebugMod;
 public class DebugMod : BaseUnityPlugin {
     public static DebugMod Instance;
 
-    public KeybindManager KeybindManager;
     private DebugUI debugUI;
     private QuantumConsoleModule quantumConsoleModule;
 
@@ -39,7 +38,6 @@ public class DebugMod : BaseUnityPlugin {
             Log.Error(e);
         }
 
-        KeybindManager = new KeybindManager();
         debugUI = gameObject.AddComponent<DebugUI>();
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
@@ -84,8 +82,6 @@ public class DebugMod : BaseUnityPlugin {
     }
 
     private void Update() {
-        KeybindManager.Update();
-
         FreecamModule.Update();
         infotextModule.Update();
     }

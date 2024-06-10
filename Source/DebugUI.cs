@@ -41,7 +41,7 @@ public class DebugUI : MonoBehaviour {
 
                 actions.Add(actionName, new DebugAction { OnChange = action });
                 if (attr.DefaultKeybind is not null)
-                    DebugMod.Instance.KeybindManager.Add(action, attr.DefaultKeybind);
+                    KeybindManager.Add(action, attr.DefaultKeybind);
             }
     }
 
