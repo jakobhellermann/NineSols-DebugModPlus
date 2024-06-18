@@ -34,12 +34,6 @@ public class FastLoads {
         delay = 0;
     }
 
-    [HarmonyPatch(typeof(GameCore), "InitializeGameLevel")]
-    [HarmonyPrefix]
-    private static void Init() {
-        ToastManager.Toast("initgamelevel");
-    }
-
 
     [HarmonyPatch(typeof(GameCore), nameof(GameCore.ChangeScene),
         [typeof(SceneConnectionPoint.ChangeSceneData), typeof(bool), typeof(bool)])]
@@ -49,16 +43,15 @@ public class FastLoads {
         ref bool showTip,
         bool captureLastImage
     ) {
-        ToastManager.Toast("start change");
         if (!DoFastLoads) return;
 
         showTip = false;
     }
 
-    [HarmonyPatch(typeof(SceneConnectionPoint.ChangeSceneData),
+    /*[HarmonyPatch(typeof(SceneConnectionPoint.ChangeSceneData),
         nameof(SceneConnectionPoint.ChangeSceneData.MarkAsLoaded))]
     [HarmonyPostfix]
     private static void MarkAsLoaded(ref SceneConnectionPoint.ChangeSceneData __instance) {
-        ToastManager.Toast($"Scene load took {__instance.loadingTime}");
-    }
+        // ToastManager.Toast($"Scene load took {__instance.loadingTime}");
+    }*/
 }

@@ -15,11 +15,6 @@ public class FreecamModule {
 
     private static PlayerInputStateType stateBefore = PlayerInputStateType.Cutscene;
 
-    [BindableMethod]
-    private static void TestMethod() {
-        ToastManager.Toast("hi");
-    }
-
     private static Camera sceneCamera => GameCore.Instance.gameLevel.sceneCamera;
     private static ProCamera2D proCamera => CameraManager.Instance.cameraCore.proCamera2D;
 

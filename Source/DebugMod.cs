@@ -42,8 +42,8 @@ public class DebugMod : BaseUnityPlugin {
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
 
-        KeybindManager.Add(ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
-        KeybindManager.Add(ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
+        KeybindManager.Add(this, ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
+        KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
 
         debugUI.AddBindableMethods(typeof(FreecamModule));
         debugUI.AddBindableMethods(typeof(TimeModule));

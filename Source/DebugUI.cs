@@ -17,7 +17,7 @@ internal class DebugAction {
 }
 
 public class DebugUI : MonoBehaviour {
-    public bool settingsOpen = true;
+    public bool settingsOpen = false;
 
     private GUIStyle styleButton;
     private GUIStyle styleToggle;
@@ -41,7 +41,7 @@ public class DebugUI : MonoBehaviour {
 
                 actions.Add(actionName, new DebugAction { OnChange = action });
                 if (attr.DefaultKeybind is not null)
-                    KeybindManager.Add(action, attr.DefaultKeybind);
+                    KeybindManager.Add(this, action, attr.DefaultKeybind);
             }
     }
 
