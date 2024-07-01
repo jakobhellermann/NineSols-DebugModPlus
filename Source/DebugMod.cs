@@ -56,14 +56,6 @@ public class DebugMod : BaseUnityPlugin {
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-    private void Start() {
-        Invoke(nameof(AfterStart), 0);
-    }
-
-    private void AfterStart() {
-        if (SceneManager.GetActiveScene().name == "Logo") SceneManager.LoadScene("TitleScreenMenu");
-    }
-
     private void ToggleConsole() {
         if (!QuantumConsole.Instance) return;
         //CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
