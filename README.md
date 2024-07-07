@@ -1,8 +1,8 @@
 # Nine Sols Debug Mod
 
 ## Features
-- Debug Console
-- Start Logo Remover
-- (Basic) save states
-- Hitbox viewer
-- freecam
+- Debug Console (Ctrl+.)
+- Debug Settings panel (Ctrl+,)
+  - (Basic) save states
+  - Hitbox viewer (Ctrl+B)
+  - Freecam (Ctrl+M)
