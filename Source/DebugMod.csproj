@@ -55,6 +55,5 @@
     <Target Name="CopyMod" AfterTargets="PostBuildEvent">
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..." />
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true" />
     </Target>
 </Project>
