@@ -75,6 +75,7 @@ public class DebugMod : BaseUnityPlugin {
 
     private void Update() {
         FreecamModule.Update();
+        MapTeleportModule.Update();
         infotextModule.Update();
     }
 
