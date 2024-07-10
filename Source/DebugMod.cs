@@ -24,6 +24,7 @@ public class DebugMod : BaseUnityPlugin {
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
+    public GhostModule GhostModule = new();
 
 
     private void Awake() {
@@ -41,9 +42,12 @@ public class DebugMod : BaseUnityPlugin {
         debugUI = gameObject.AddComponent<DebugUI>();
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
+        GhostModule = new GhostModule();
 
         KeybindManager.Add(this, ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
+        KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
+        KeybindManager.Add(this, () => GhostModule.PlayBack(), KeyCode.O);
 
         debugUI.AddBindableMethods(typeof(FreecamModule));
         debugUI.AddBindableMethods(typeof(TimeModule));
@@ -55,6 +59,7 @@ public class DebugMod : BaseUnityPlugin {
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
     }
+
 
     private void ToggleConsole() {
         if (!QuantumConsole.Instance) return;
@@ -79,12 +84,17 @@ public class DebugMod : BaseUnityPlugin {
         infotextModule.Update();
     }
 
+    private void LateUpdate() {
+        GhostModule.LateUpdate();
+    }
+
 
     private void OnDestroy() {
         harmony.UnpatchSelf();
         HitboxModule.Unload();
         SavestateModule.Unload();
         quantumConsoleModule.Unload();
+        GhostModule.Unload();
         // actionSet.Destroy();
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
