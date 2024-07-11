@@ -61,7 +61,7 @@ public class SavestateModule {
             MetaJson = metaJson,
             FlagsJson = flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
-            PlayerPosition = currentPos
+            PlayerPosition = currentPos,
         };
 
         savestates[slot] = savestate;
@@ -94,7 +94,7 @@ public class SavestateModule {
                 sceneName = savestate.Scene,
                 panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },
                 // changeSceneMode = SceneConnectionPoint.Cha   ngeSceneMode.Teleport
-                playerSpawnPosition = () => currentPos
+                playerSpawnPosition = () => currentPos,
             },
             false
         );
