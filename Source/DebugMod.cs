@@ -49,11 +49,11 @@ public class DebugMod : BaseUnityPlugin {
         KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
         KeybindManager.Add(this, () => GhostModule.PlayBack(), KeyCode.O);
 
-        debugUI.AddBindableMethods(typeof(FreecamModule));
-        debugUI.AddBindableMethods(typeof(TimeModule));
-        debugUI.AddBindableMethods(typeof(InfotextModule));
-        debugUI.AddBindableMethods(typeof(HitboxModule));
-        debugUI.AddBindableMethods(typeof(SavestateModule));
+        debugUI.AddBindableMethods(Config, typeof(FreecamModule));
+        debugUI.AddBindableMethods(Config, typeof(TimeModule));
+        debugUI.AddBindableMethods(Config, typeof(InfotextModule));
+        debugUI.AddBindableMethods(Config, typeof(HitboxModule));
+        debugUI.AddBindableMethods(Config, typeof(SavestateModule));
 
         RCGLifeCycle.DontDestroyForever(gameObject);
 

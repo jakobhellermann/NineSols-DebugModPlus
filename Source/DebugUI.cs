@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using BepInEx.Configuration;
 using InputExtension;
 using NineSolsAPI;
 using UnityEngine;
@@ -33,15 +34,23 @@ public class DebugUI : MonoBehaviour {
     }
 
 
-    public void AddBindableMethods(Type ty) {
+    public void AddBindableMethods(ConfigFile config, Type ty) {
         foreach (var method in ty.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             if (method.GetCustomAttribute<BindableMethod>() is { } attr) {
                 var actionName = attr.Name ?? method.Name;
                 var action = (Action)Delegate.CreateDelegate(typeof(Action), method);
 
+
+                var shortcutName = new string(Array.FindAll(attr.Name.ToCharArray(), char.IsLetterOrDigit));
+                var keyboardShortcut =
+                    config.Bind("Shortcuts", shortcutName,
+                        attr.DefaultKeybind != null
+                            ? new KeyboardShortcut(attr.DefaultKeybind[^1], attr.DefaultKeybind[..^1])
+                            : new KeyboardShortcut());
+
                 actions.Add(actionName, new DebugAction { OnChange = action });
-                if (attr.DefaultKeybind is not null)
-                    KeybindManager.Add(this, action, attr.DefaultKeybind);
+
+                KeybindManager.Add(this, action, () => keyboardShortcut.Value);
             }
     }
 

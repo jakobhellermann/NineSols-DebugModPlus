@@ -1,6 +1,5 @@
 using Com.LuisPedroFonseca.ProCamera2D;
 using HarmonyLib;
-using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugMod.Modules;
