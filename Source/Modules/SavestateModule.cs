@@ -11,10 +11,14 @@ internal class Savestate {
 
     public string Scene;
     public Vector3 PlayerPosition;
+    public Vector2 PlayerVelocity;
 }
 
 public class SavestateModule {
     public static bool IsLoadingSavestate = false;
+
+    public event EventHandler SavestateLoaded;
+    public event EventHandler SavestateCreated;
 
     // TODO unload
     private Dictionary<string, Savestate> savestates = [];
@@ -46,12 +50,32 @@ public class SavestateModule {
         }
     }
 
+    [BindableMethod(Name = "Load Savestate\n(No reload)")]
+    private static void LoadSavestateMethodNoReload() {
+        var module = DebugMod.Instance.SavestateModule;
+
+        const string slot = "0";
+        if (!module.savestates.TryGetValue(slot, out var savestate)) {
+            ToastManager.Toast($"Savestate '{slot}' not found");
+            return;
+        }
+
+        try {
+            module.LoadSavestateNoReload(savestate);
+        } catch (Exception e) {
+            ToastManager.Toast(e);
+        }
+    }
+
 
     private void CreateSavestate(string slot) {
         var saveManager = SaveManager.Instance;
         var gameCore = GameCore.Instance;
 
-        var currentPos = Player.i.transform.position;
+
+        var player = Player.i;
+        var currentPos = player.transform.position;
+        var currentVelocity = player.Velocity;
         var flagsJson = GameFlagManager.FlagsToJson(saveManager.allFlags);
         var saveSlotMetaData = gameCore.playerGameData.SaveMetaData();
         var metaJson = JsonUtility.ToJson(saveSlotMetaData);
@@ -62,9 +86,12 @@ public class SavestateModule {
             FlagsJson = flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
             PlayerPosition = currentPos,
+            PlayerVelocity = currentVelocity,
         };
 
         savestates[slot] = savestate;
+
+        SavestateCreated?.Invoke(this, EventArgs.Empty);
     }
 
 
@@ -95,11 +122,44 @@ public class SavestateModule {
                 panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },
                 // changeSceneMode = SceneConnectionPoint.Cha   ngeSceneMode.Teleport
                 playerSpawnPosition = () => currentPos,
+                ChangedDoneEvent = () => {
+                    Player.i.Velocity = savestate.PlayerVelocity;
+                    OnSavestateLoaded();
+                },
             },
             false
         );
 
+        ToastManager.Toast("Savestate loaded");
         IsLoadingSavestate = false;
+    }
+
+
+    private void LoadSavestateNoReload(Savestate savestate) {
+        IsLoadingSavestate = true;
+
+        var saveManager = SaveManager.Instance;
+        // var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
+
+        GameFlagManager.LoadFlags(
+            savestate.FlagsJson,
+            saveManager.allFlags,
+            TestMode.Build
+        );
+        saveManager.allFlags.AllFlagInitStartAndEquip();
+        GameCore.Instance.ResetLevel();
+
+        MapTeleportModule.TeleportTo(savestate.PlayerPosition, savestate.Scene, false);
+        Player.i.Velocity = savestate.PlayerVelocity;
+
+        OnSavestateLoaded();
+
+        ToastManager.Toast("Savestate loaded");
+        IsLoadingSavestate = false;
+    }
+
+    private void OnSavestateLoaded() {
+        SavestateLoaded?.Invoke(this, EventArgs.Empty);
     }
 
     public void Unload() {

@@ -7,7 +7,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
 
-        <NineSolsPath>/home/jakob/.local/share/Steam/steamapps/common/Nine Sols</NineSolsPath>
+        <NineSolsPath>$(HOME)/.local/share/Steam/steamapps/common/Nine Sols</NineSolsPath>
         <CopyDir>$(NineSolsPath)/BepInEx/scripts</CopyDir>
     </PropertyGroup>
 

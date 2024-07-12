@@ -30,18 +30,20 @@ public static class MapTeleportModule {
         var clickRatio = localPoint / minimapRect.sizeDelta;
         var worldPosition = minimap.MapData.ImageRatioToWorldPosition(clickRatio);
 
-        TeleportTo(worldPosition, minimap.MapData, forceReloadScene);
+        TeleportTo(worldPosition, minimap.MapData.sceneID, forceReloadScene);
     }
 
-    private static void TeleportTo(Vector2 worldPosition, GameLevelMapData mapData, bool forceReloadScene) {
+    public static void TeleportTo(Vector2 worldPosition, string sceneID, bool forceReloadScene) {
         UIManager.Instance.menuUI.HideMenu();
 
-        var isCurrentScene = mapData.sceneID == GameCore.Instance.CurrentSceneName;
+        var isCurrentScene = sceneID == GameCore.Instance.CurrentSceneName;
 
         if (!isCurrentScene || forceReloadScene)
-            GoToScene(mapData.sceneID, worldPosition, true);
+            GoToScene(sceneID, worldPosition, true);
         else
             Player.i.transform.position = worldPosition;
+
+        CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
     }
 
     private static void GoToScene(string sceneName, Vector3 worldPosition, bool showTip = false) {

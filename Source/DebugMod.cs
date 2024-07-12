@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
 using BepInEx;
+using BepInEx.Configuration;
 using DebugMod.Modules;
 using DebugMod.Modules.Hitbox;
 using HarmonyLib;
 using NineSolsAPI;
 using QFSW.QC;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace DebugMod;
 
@@ -24,6 +24,7 @@ public class DebugMod : BaseUnityPlugin {
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
+    public SpeedrunTimerModule SpeedrunTimerModule;
     public GhostModule GhostModule = new();
 
 
@@ -42,12 +43,26 @@ public class DebugMod : BaseUnityPlugin {
         debugUI = gameObject.AddComponent<DebugUI>();
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
+        SpeedrunTimerModule = new SpeedrunTimerModule();
         GhostModule = new GhostModule();
+
+        SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
+        SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
+
 
         KeybindManager.Add(this, ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
-        KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
-        KeybindManager.Add(this, () => GhostModule.PlayBack(), KeyCode.O);
+        // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
+        // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
+
+        var changeModeShortcut = Config.Bind("SpeedrunTimer", "Change Mode", new KeyboardShortcut());
+        var setEndpointShortcut = Config.Bind("SpeedrunTimer", "Set Endpoint", new KeyboardShortcut());
+        KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
+
+        var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
+        // KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
+
 
         debugUI.AddBindableMethods(Config, typeof(FreecamModule));
         debugUI.AddBindableMethods(Config, typeof(TimeModule));
@@ -85,7 +100,16 @@ public class DebugMod : BaseUnityPlugin {
     }
 
     private void LateUpdate() {
-        GhostModule.LateUpdate();
+        try {
+            GhostModule.LateUpdate();
+            SpeedrunTimerModule.LateUpdate();
+        } catch (Exception e) {
+            Log.Error(e);
+        }
+    }
+
+    private void OnGUI() {
+        SpeedrunTimerModule.OnGui();
     }
 
 
@@ -95,7 +119,7 @@ public class DebugMod : BaseUnityPlugin {
         SavestateModule.Unload();
         quantumConsoleModule.Unload();
         GhostModule.Unload();
-        // actionSet.Destroy();
+        SpeedrunTimerModule.Destroy();
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
     }
