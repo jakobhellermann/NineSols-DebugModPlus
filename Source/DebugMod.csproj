@@ -7,7 +7,8 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
 
-        <NineSolsPath>$(HOME)/.local/share/Steam/steamapps/common/Nine Sols</NineSolsPath>
+        <NineSolsPath Condition="'$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Nine Sols</NineSolsPath>
+        <NineSolsPath Condition="'$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Steam/steamapps/common/Nine Sols</NineSolsPath>
         <CopyDir>$(NineSolsPath)/BepInEx/scripts</CopyDir>
     </PropertyGroup>
 
