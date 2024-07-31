@@ -25,6 +25,7 @@ public class DebugMod : BaseUnityPlugin {
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
     public SpeedrunTimerModule SpeedrunTimerModule;
+    public FsmInspectorModule FsmInspectorModule;
     public GhostModule GhostModule = new();
 
 
@@ -44,6 +45,7 @@ public class DebugMod : BaseUnityPlugin {
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
         SpeedrunTimerModule = new SpeedrunTimerModule();
+        FsmInspectorModule = new FsmInspectorModule();
         GhostModule = new GhostModule();
 
         SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
@@ -111,6 +113,7 @@ public class DebugMod : BaseUnityPlugin {
 
     private void OnGUI() {
         SpeedrunTimerModule.OnGui();
+        FsmInspectorModule.OnGui();
     }
 
 
