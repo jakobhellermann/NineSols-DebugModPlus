@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
+using BlendModes;
 using DebugMod.Modules;
 using DebugMod.Modules.Hitbox;
 using HarmonyLib;
+using InControl;
 using NineSolsAPI;
 using QFSW.QC;
+using RCGMaker.Core;
 using UnityEngine;
 
 namespace DebugMod;
@@ -100,6 +105,56 @@ public class DebugMod : BaseUnityPlugin {
         FreecamModule.Update();
         MapTeleportModule.Update();
         infotextModule.Update();
+
+        if (Input.GetKey(KeyCode.LeftControl)) {
+            Cursor.visible = true;
+
+            if (Input.GetMouseButtonDown(0)) {
+                ToastManager.Toast("click");
+                try {
+                    var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
+                    var worldPosition =
+                        mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
+                            -mainCamera.transform.position.z));
+                    worldPosition.z = 0; // Set z to 0 to match the 2D plane
+                    var sprites = PickSprite(worldPosition);
+
+                    StateMachineOwner? sm = null;
+                    foreach (var sprite in sprites) {
+                        var smm = sprite.GetComponentInParent<StateMachineOwner>();
+                        if (smm) sm = smm;
+                    }
+
+                    if (sm) ToastManager.Toast(sm);
+                } catch (Exception e) {
+                    ToastManager.Toast(e);
+                }
+            }
+        }
+    }
+
+    private List<SpriteRenderer> PickSprite(Vector3 worldPosition) {
+        List<SpriteRenderer> sprites = [];
+        var spriteRenderers = FindObjectsOfType<SpriteRenderer>();
+        foreach (var spriteRenderer in spriteRenderers) {
+            if (!IsWithinSpriteBounds(spriteRenderer, worldPosition)) continue;
+
+            var spriteName = spriteRenderer.gameObject.name.ToLower();
+            var parentName = spriteRenderer.gameObject.transform.parent?.name ?? "";
+            if (spriteName.Contains("light") || spriteName.Contains("fade") || spriteName.Contains("glow") ||
+                spriteName.Contains("attack") ||
+                parentName.Contains("Vibe") || parentName.Contains("Skin")) continue;
+
+            sprites.Add(spriteRenderer);
+        }
+
+        return sprites;
+
+
+        bool IsWithinSpriteBounds(SpriteRenderer spriteRenderer, Vector3 position) {
+            var bounds = spriteRenderer.bounds;
+            return bounds.Contains(position);
+        }
     }
 
     private void LateUpdate() {
