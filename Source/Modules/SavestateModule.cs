@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+using JetBrains.Annotations;
 using NineSolsAPI;
 using UnityEngine;
 
@@ -7,7 +10,7 @@ namespace DebugMod.Modules;
 
 internal class Savestate {
     public string MetaJson;
-    public string FlagsJson;
+    public byte[] Flags;
 
     public string Scene;
     public Vector3 PlayerPosition;
@@ -15,6 +18,11 @@ internal class Savestate {
 }
 
 public class SavestateModule {
+    [CanBeNull] private static MethodInfo OldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
+
+    [CanBeNull] private static MethodInfo NewLoadFlagsMethodInfo =
+        typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
+
     public static bool IsLoadingSavestate = false;
 
     public event EventHandler SavestateLoaded;
@@ -76,14 +84,17 @@ public class SavestateModule {
         var player = Player.i;
         var currentPos = player.transform.position;
         var currentVelocity = player.Velocity;
-        var flagsJson = GameFlagManager.FlagsToJson(saveManager.allFlags);
         var saveSlotMetaData = gameCore.playerGameData.SaveMetaData();
         var metaJson = JsonUtility.ToJson(saveSlotMetaData);
+
+        var flags = OldLoadFlagsMethodInfo != null
+            ? Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(saveManager.allFlags))
+            : GameFlagManager.FlagsToBinary(saveManager.allFlags);
 
 
         var savestate = new Savestate {
             MetaJson = metaJson,
-            FlagsJson = flagsJson,
+            Flags = flags,
             Scene = gameCore.gameLevel.gameObject.scene.name,
             PlayerPosition = currentPos,
             PlayerVelocity = currentVelocity,
@@ -95,20 +106,34 @@ public class SavestateModule {
     }
 
 
+    private void LoadFlags(Savestate savestate) {
+        const TestMode testMode = TestMode.Build;
+        var gameFlagCollection = SaveManager.Instance.allFlags;
+
+        if (OldLoadFlagsMethodInfo != null)
+            OldLoadFlagsMethodInfo.Invoke(null,
+                [Encoding.UTF8.GetString(savestate.Flags), gameFlagCollection, testMode]);
+        else {
+            if (NewLoadFlagsMethodInfo == null) {
+                Log.Error("LoadFlagsFromBinarySave doesn't exist");
+                return;
+            }
+
+            NewLoadFlagsMethodInfo.Invoke(null, [savestate.Flags, gameFlagCollection, testMode]);
+        }
+    }
+
     private void LoadSavestate(Savestate savestate) {
         IsLoadingSavestate = true;
 
         var saveManager = SaveManager.Instance;
 
-        var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
+        // var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
+
 
         // saveManager.allStatData.ClearStats();
         // saveManager.allFlags.AllFlagAwake(TestMode.Build);
-        GameFlagManager.LoadFlags(
-            savestate.FlagsJson,
-            saveManager.allFlags,
-            TestMode.Build
-        );
+        LoadFlags(savestate);
         saveManager.allFlags.AllFlagInitStartAndEquip();
 
         // var teleportPointWithPath = GameFlagManager.Instance.GetTeleportPointWithPath(meta.lastTeleportPointPath);
@@ -141,11 +166,7 @@ public class SavestateModule {
         var saveManager = SaveManager.Instance;
         // var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
 
-        GameFlagManager.LoadFlags(
-            savestate.FlagsJson,
-            saveManager.allFlags,
-            TestMode.Build
-        );
+        LoadFlags(savestate);
         saveManager.allFlags.AllFlagInitStartAndEquip();
         GameCore.Instance.ResetLevel();
 
