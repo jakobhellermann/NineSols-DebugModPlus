@@ -179,6 +179,7 @@ public class DebugMod : BaseUnityPlugin {
         quantumConsoleModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
+        infotextModule.Destroy();
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
     }

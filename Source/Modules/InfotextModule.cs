@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using HarmonyLib;
 using NineSolsAPI;
 using TMPro;
 using UnityEngine;
@@ -5,11 +8,14 @@ using UnityEngine;
 namespace DebugMod.Modules;
 
 public class InfotextModule {
-    private static bool infotextActive;
+    private static bool infotextActive = false;
     private TMP_Text debugCanvasInfoText;
 
+    private AccessTools.FieldRef<Player, float> groundJumpReferenceY =
+        AccessTools.FieldRefAccess<Player, float>("GroundJumpRefrenceY");
+
     public InfotextModule() {
-        var debugText = new GameObject();
+        var debugText = new GameObject("Info Text");
         debugText.transform.SetParent(NineSolsAPICore.FullscreenCanvas.gameObject.transform);
         debugCanvasInfoText = debugText.AddComponent<TextMeshProUGUI>();
         debugCanvasInfoText.alignment = TextAlignmentOptions.TopLeft;
@@ -47,24 +53,48 @@ public class InfotextModule {
 
         var core = GameCore.Instance;
 
-        var coreState = typeof(GameCore.GameCoreState).GetEnumName(core.currentCoreState);
-        text += $"{coreState}\n";
+        if (core.currentCoreState != GameCore.GameCoreState.Playing) {
+            var coreState = typeof(GameCore.GameCoreState).GetEnumName(core.currentCoreState);
+            text += $"{coreState}\n";
+        }
 
         var player = core.player;
         if (player) {
-            text += $"Pos: {player.transform.position}\n";
-            text += $"Speed: {player.Velocity}\n";
+            text += $"Pos: {(Vector2)player.transform.position}\n";
+            text += $"Speed: {player.FinalVelocity}\n";
             text += $"HP: {player.health.CurrentHealthValue} (+{player.health.CurrentInternalInjury})\n";
             var state = typeof(PlayerStateType).GetEnumName(player.fsm.State);
-            text += $"{state} {player.playerInput.fsm.State}\n";
+            var inputState = player.playerInput.fsm.State;
+            text += $"{state} {(inputState == PlayerInputStateType.Action ? "" : inputState.ToString())}\n";
+
+            if (player.jumpState != Player.PlayerJumpState.None) {
+                var varJumpTimer = player.currentVarJumpTimer;
+                text +=
+                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "")} {player.IsAirJumping}\n";
+            } else text += "\n";
+
+            List<(bool, string)> flags = [
+                (player.isOnWall, "isOnWall"),
+                (player.isOnLedge, "isOnLedge"),
+                (player.isOnRope, "isOnRope"),
+                (player.kicked, "kicked"),
+            ];
+
+            var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
+
+            text += $"{flagsStr}\n";
         }
 
         var currentLevel = core.gameLevel;
         if (currentLevel)
             text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})\n";
 
-        text += $"{core.currentCutScene}";
+        if (core.currentCutScene is not null) text += $"{core.currentCutScene}";
 
         debugCanvasInfoText.text = text;
+    }
+
+    public void Destroy() {
+        Object.Destroy(debugCanvasInfoText.gameObject);
     }
 }
