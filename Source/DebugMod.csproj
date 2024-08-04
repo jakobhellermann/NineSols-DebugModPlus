@@ -48,6 +48,15 @@
         <Reference Include="UnityEngine.InputModule">
             <HintPath>$(NineSolsPath)/NineSols_Data/Managed/UnityEngine.InputModule.dll</HintPath>
         </Reference>
+        <Reference Include="Newtonsoft.Json">
+            <HintPath>$(NineSolsPath)/NineSols_Data/Managed/Newtonsoft.Json.dll</HintPath>
+        </Reference>
+        <Reference Include="I2">
+            <HintPath>$(NineSolsPath)/NineSols_Data/Managed/I2.dll</HintPath>
+        </Reference>
+        <Reference Include="guidRef">
+            <HintPath>$(NineSolsPath)/NineSols_Data/Managed/guidRef.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>

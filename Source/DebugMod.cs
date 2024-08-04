@@ -77,6 +77,8 @@ public class DebugMod : BaseUnityPlugin {
         debugUI.AddBindableMethods(Config, typeof(HitboxModule));
         debugUI.AddBindableMethods(Config, typeof(SavestateModule));
         debugUI.AddBindableMethods(Config, typeof(CheatModule));
+        // debugUI.AddBindableMethods(Config, typeof(FlagLoggerModule));
+        FlagLoggerModule.Awake();
 
         RCGLifeCycle.DontDestroyForever(gameObject);
 
