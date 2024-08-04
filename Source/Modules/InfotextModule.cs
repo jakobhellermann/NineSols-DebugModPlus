@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using NineSolsAPI;
+using NineSolsAPI.Utils;
 using TMPro;
 using UnityEngine;
 

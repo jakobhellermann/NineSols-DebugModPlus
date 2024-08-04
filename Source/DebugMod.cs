@@ -1,17 +1,16 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
-using BlendModes;
 using DebugMod.Modules;
 using DebugMod.Modules.Hitbox;
 using HarmonyLib;
-using InControl;
+using MonsterLove.StateMachine;
 using NineSolsAPI;
 using QFSW.QC;
-using RCGMaker.Core;
 using UnityEngine;
 
 namespace DebugMod;
@@ -112,25 +111,26 @@ public class DebugMod : BaseUnityPlugin {
             Cursor.visible = true;
 
             if (Input.GetMouseButtonDown(0)) {
-                ToastManager.Toast("click");
+                FsmInspectorModule.Objects.Clear();
+
                 try {
                     var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
                     var worldPosition =
                         mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
                             -mainCamera.transform.position.z));
                     worldPosition.z = 0; // Set z to 0 to match the 2D plane
-                    var sprites = PickSprite(worldPosition);
+                    var visible = PickVisible(worldPosition);
 
-                    StateMachineOwner? sm = null;
-                    foreach (var sprite in sprites) {
-                        var smm = sprite.GetComponentInParent<StateMachineOwner>();
-                        if (smm) sm = smm;
-                    }
-
-                    if (sm) {
-                        FsmInspectorModule.ObjectsToDisplay = [sm.gameObject];
-                        ToastManager.Toast(sm);
-                    }
+                    var stateMachine = visible.Select(sprite =>
+                            sprite.GetComponentInParent<StateMachineOwner>()?.gameObject ??
+                            sprite.GetComponentInParent<FSMStateMachineRunner>()?.gameObject)
+                        .Where(x => x)
+                        .Distinct()
+                        .FirstOrDefault();
+                    if (stateMachine)
+                        FsmInspectorModule.Objects.Add(stateMachine!);
+                    else
+                        ToastManager.Toast($"No state machine found at cursor");
                 } catch (Exception e) {
                     ToastManager.Toast(e);
                 }
@@ -138,28 +138,21 @@ public class DebugMod : BaseUnityPlugin {
         }
     }
 
-    private List<SpriteRenderer> PickSprite(Vector3 worldPosition) {
-        List<SpriteRenderer> sprites = [];
-        var spriteRenderers = FindObjectsOfType<SpriteRenderer>();
-        foreach (var spriteRenderer in spriteRenderers) {
-            if (!IsWithinSpriteBounds(spriteRenderer, worldPosition)) continue;
-
-            var spriteName = spriteRenderer.gameObject.name.ToLower();
-            var parentName = spriteRenderer.gameObject.transform.parent?.name ?? "";
-            if (spriteName.Contains("light") || spriteName.Contains("fade") || spriteName.Contains("glow") ||
-                spriteName.Contains("attack") ||
-                parentName.Contains("Vibe") || parentName.Contains("Skin")) continue;
-
-            sprites.Add(spriteRenderer);
-        }
-
-        return sprites;
-
-
-        bool IsWithinSpriteBounds(SpriteRenderer spriteRenderer, Vector3 position) {
-            var bounds = spriteRenderer.bounds;
-            return bounds.Contains(position);
-        }
+    // ReSharper disable Unity.PerformanceAnalysis
+    private List<GameObject> PickVisible(Vector3 worldPosition) {
+        return FindObjectsOfType<SpriteRenderer>().Select(renderer => (renderer.gameObject, renderer.bounds))
+            .Concat(FindObjectsOfType<ParticleSystemRenderer>()
+                .Select(renderer => (renderer.gameObject, renderer.bounds)))
+            .Where(t => t.bounds.Contains(worldPosition))
+            .Where(t => {
+                var goName = t.gameObject.gameObject.name.ToLower();
+                var parentName = t.gameObject.gameObject.transform.parent?.name ?? "";
+                return !goName.Contains("light") && !goName.Contains("fade") &&
+                       !goName.Contains("glow") && !goName.Contains("attack") &&
+                       !parentName.Contains("Vibe") && !parentName.Contains("Skin");
+            })
+            .Select(x => x.gameObject)
+            .ToList();
     }
 
     private void LateUpdate() {
