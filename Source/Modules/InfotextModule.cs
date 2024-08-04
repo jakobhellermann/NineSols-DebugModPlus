@@ -91,6 +91,12 @@ public class InfotextModule {
 
         if (core.currentCutScene is not null) text += $"{core.currentCutScene}";
 
+        if (player.interactableFinder.CurrentInteractableArea is { } current) {
+            text += "Interaction:\n";
+            foreach (var interaction in current.ValidInteractions)
+                text += $"{interaction}";
+        }
+
         debugCanvasInfoText.text = text;
     }
 
