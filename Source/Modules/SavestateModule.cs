@@ -22,6 +22,9 @@ public class SavestateModule {
 
     [CanBeNull] private static MethodInfo NewLoadFlagsMethodInfo =
         typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
+    
+    [CanBeNull] private static MethodInfo FlagsToBinary =
+        typeof(GameFlagManager).GetMethod("FlagsToBinary");
 
     public static bool IsLoadingSavestate = false;
 
@@ -89,7 +92,7 @@ public class SavestateModule {
 
         var flags = OldLoadFlagsMethodInfo != null
             ? Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(saveManager.allFlags))
-            : GameFlagManager.FlagsToBinary(saveManager.allFlags);
+            : (byte[]) FlagsToBinary.Invoke(null, [saveManager.allFlags]);
 
 
         var savestate = new Savestate {

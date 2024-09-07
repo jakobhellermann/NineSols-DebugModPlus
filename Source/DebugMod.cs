@@ -67,7 +67,7 @@ public class DebugMod : BaseUnityPlugin {
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
 
-        var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
+        // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
         // KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
 
 
