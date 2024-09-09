@@ -2,7 +2,7 @@
 schemaVersion = "0.0.1"
 
 [package]
-namespace = "dubisteinkek"
+namespace = "jakobhellermann"
 name = "DebugMod"
 versionNumber = "1.2.0"
 description = "Debug tools for the game"
