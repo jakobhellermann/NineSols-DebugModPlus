@@ -125,7 +125,10 @@ public class DebugMod : BaseUnityPlugin {
                         if (smm) sm = smm;
                     }
 
-                    if (sm) ToastManager.Toast(sm);
+                    if (sm) {
+                        FsmInspectorModule.ObjectsToDisplay = [sm.gameObject];
+                        ToastManager.Toast(sm);
+                    }
                 } catch (Exception e) {
                     ToastManager.Toast(e);
                 }
