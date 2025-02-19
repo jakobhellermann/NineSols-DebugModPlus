@@ -79,10 +79,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     // state
     private float segmentStartTime = 0;
 
-    private float time = 0;
-
-    // separate delta time unaffected by anything outside of the class
-    private float deltaTime = 0;
+    private float currentTime = 0;
 
     // helps track loads and deltaTime
     private float latestTime = 0;
@@ -123,8 +120,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     private void EndSegment() {
         if (state != SpeedrunTimerState.Running) return;
 
-        var segmentTime = time - segmentStartTime;
-        segmentStartTime = time;
+        var segmentTime = currentTime - segmentStartTime;
+        segmentStartTime = currentTime;
 
         Log.Info($"Ending segment of {segmentTime:0.00}s");
 
@@ -174,7 +171,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
 
     public void ResetTimer() {
         stopwatch.Reset();
-        time = 0;
+        currentTime = 0;
         latestTime = 0;
         segmentStartTime = 0;
         done = false;
@@ -218,7 +215,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     }
 
     private void SegmentBegin() {
-        segmentStartTime = time;
+        segmentStartTime = currentTime;
         if (EnableGhost) GhostModule.StartRecording();
 
         if (EnableGhost) {
@@ -362,21 +359,19 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
             CheckLoading(sceneName, coreState, blackCover, loadingScreen);
 
             if (state == SpeedrunTimerState.Running) {
-                // start stopwatch
-                // Stopwatch is preferred over deltatime so its unaffected by bow and other things, more accurate to livesplit
+                // Stopwatch is preferred over deltatime so it's unaffected by bow and other things, more accurate to livesplit
                 stopwatch.Start();
-                deltaTime = (float)stopwatch.Elapsed.TotalSeconds - latestTime;
-                time += deltaTime;
+                currentTime += (float)stopwatch.Elapsed.TotalSeconds - latestTime;
                 latestTime = (float)stopwatch.Elapsed.TotalSeconds;
             }
 
-            // dont pause stopwatch during loads to track load removal
+            // don't pause stopwatch during loads to track load removal
         } catch (Exception e) {
             Log.Error($"Error during SpeedrunTimerModule LateUpdate: {e}");
         }
     }
 
-    // All logic here is the autosplitters fault not mine
+    // All logic here is the autosplitter's fault not mine
     private void CheckLoading(
         string sceneName = "",
         GameCoreState coreState = GameCoreState.Playing,
@@ -439,7 +434,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         const int padding = 8;
 
         if (done || state != SpeedrunTimerState.Inactive) {
-            var timeStr = $"{(done ? "Done in " : "")}{time:0.00}s";
+            var timeStr = $"{(done ? "Done in " : "")}{currentTime:0.00}s";
 
             if (infoText != null) {
                 var diffText = $"{(infoText.SegmentTimeLast > 0 ? "+" : "")}{infoText.SegmentTimeLast:0.00}s";
