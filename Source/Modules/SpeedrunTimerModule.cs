@@ -3,6 +3,7 @@ using NineSolsAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using BepInEx.Configuration;
 using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,7 +18,7 @@ namespace DebugModPlus.Modules;
  * based off collision triggers. In theory Livesplit should just be used for any longer section (until the ghost stuffs done)
  */
 
-internal enum TimerMode {
+public enum TimerMode {
     // Default mode is triggers, the most common use for this timer is two triggers within the same room to time movement/bosses
     Triggers, // Savestates do not affect the timer
     AfterSavestate, // Timer starts immediately after savestate load
@@ -33,7 +34,7 @@ internal enum SpeedrunTimerState {
 }
 
 [HarmonyPatch]
-public class SpeedrunTimerModule {
+public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     private static bool isLoading = false;
 
     private const bool EnableGhost = false;
@@ -75,7 +76,11 @@ public class SpeedrunTimerModule {
     private float latestTime = 0;
 
     private string? startRoom = null;
-    private TimerMode timerMode = TimerMode.Triggers;
+
+    private TimerMode TimerMode {
+        get => configTimerMode.Value;
+        set => configTimerMode.Value = value;
+    }
 
     private SpeedrunTimerState state = SpeedrunTimerState.Inactive;
 
@@ -161,8 +166,8 @@ public class SpeedrunTimerModule {
     }
 
     public void CycleTimerMode() {
-        timerMode = (TimerMode)((int)(timerMode + 1) % timerModes.Length);
-        ToastManager.Toast("Speedrun timer mode: " + timerMode switch {
+        TimerMode = (TimerMode)((int)(TimerMode + 1) % timerModes.Length);
+        ToastManager.Toast("Speedrun timer mode: " + TimerMode switch {
             TimerMode.Triggers => "Begin on start trigger",
             TimerMode.AfterSavestate => "Begin after savestate",
             TimerMode.NextRoom => "Begin on next room",
@@ -230,7 +235,7 @@ public class SpeedrunTimerModule {
 
     public void OnSavestateCreated() {
         // dont reset timer if trigger mode
-        if (timerMode == TimerMode.Triggers) return;
+        if (TimerMode == TimerMode.Triggers) return;
         done = false;
         currentSegments = new List<(string, float, GhostFrame[]?)>();
         lastSegments = null;
@@ -241,10 +246,10 @@ public class SpeedrunTimerModule {
 
     public void OnSavestateLoaded() {
         // dont reset timer if trigger mode
-        if (timerMode == TimerMode.Triggers) return;
+        if (TimerMode == TimerMode.Triggers) return;
         ResetTimer();
         startRoom ??= GameCore.Instance.gameLevel.SceneName;
-        state = timerMode switch {
+        state = TimerMode switch {
             TimerMode.AfterSavestate => SpeedrunTimerState.Running,
             TimerMode.NextRoom => SpeedrunTimerState.StartNextRoom,
             _ => throw new ArgumentOutOfRangeException(),

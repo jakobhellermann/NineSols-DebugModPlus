@@ -28,7 +28,7 @@ public class DebugModPlus : BaseUnityPlugin {
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
 
-    public SpeedrunTimerModule SpeedrunTimerModule = new();
+    public SpeedrunTimerModule SpeedrunTimerModule = null!;
 
     public FsmInspectorModule FsmInspectorModule = new();
     public GhostModule GhostModule = new();
@@ -48,22 +48,29 @@ public class DebugModPlus : BaseUnityPlugin {
             Log.Error(e);
         }
 
-        debugUI = gameObject.AddComponent<DebugUI>();
+        // config
+        var configTimerMode = Config.Bind("SpeedrunTimer", "Timer Mode", TimerMode.AfterSavestate);
+        var changeModeShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Cycle Timer Mode", new KeyboardShortcut());
+        var resetTimerShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Reset Timer", new KeyboardShortcut());
+        var pauseTimerShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Pause Timer", new KeyboardShortcut());
+        var setStartpointShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Set Startpoint", new KeyboardShortcut());
+        var setEndpointShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Set Endpoint", new KeyboardShortcut());
+        var clearCheckpointsShortcut =
+            Config.Bind("SpeedrunTimer Shortcuts", "Clear Checkpoints", new KeyboardShortcut());
+
+        configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
+            new KeyboardShortcut(KeyCode.LeftControl),
+            new ConfigDescription(
+                "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
+
+        SpeedrunTimerModule = new SpeedrunTimerModule(configTimerMode);
 
         SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
         SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
 
+
         KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
-        // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
-        // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
-
-        var changeModeShortcut = Config.Bind("SpeedrunTimer", "Change Mode", new KeyboardShortcut());
-        var resetTimerShortcut = Config.Bind("SpeedrunTimer", "Reset Timer", new KeyboardShortcut());
-        var pauseTimerShortcut = Config.Bind("SpeedrunTimer", "Pause Timer", new KeyboardShortcut());
-        var setStartpointShortcut = Config.Bind("SpeedrunTimer", "Set Startpoint", new KeyboardShortcut());
-        var setEndpointShortcut = Config.Bind("SpeedrunTimer", "Set Endpoint", new KeyboardShortcut());
-        var clearCheckpointsShortcut = Config.Bind("SpeedrunTimer", "Clear Checkpoints", new KeyboardShortcut());
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimer(), () => resetTimerShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
@@ -72,9 +79,10 @@ public class DebugModPlus : BaseUnityPlugin {
         KeybindManager.Add(this, () => SpeedrunTimerModule.ClearCheckpoints(), () => clearCheckpointsShortcut.Value);
 
         // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
-        // KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
+        // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
+        // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
 
-
+        debugUI = gameObject.AddComponent<DebugUI>();
         debugUI.AddBindableMethods(Config, typeof(FreecamModule));
         debugUI.AddBindableMethods(Config, typeof(TimeModule));
         debugUI.AddBindableMethods(Config, typeof(InfotextModule));
@@ -82,12 +90,8 @@ public class DebugModPlus : BaseUnityPlugin {
         debugUI.AddBindableMethods(Config, typeof(SavestateModule));
         debugUI.AddBindableMethods(Config, typeof(CheatModule));
         // debugUI.AddBindableMethods(Config, typeof(FlagLoggerModule));
-        FlagLoggerModule.Awake();
 
-        configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
-            new KeyboardShortcut(KeyCode.LeftControl),
-            new ConfigDescription(
-                "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
+        FlagLoggerModule.Awake();
 
         RCGLifeCycle.DontDestroyForever(gameObject);
 
