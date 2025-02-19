@@ -32,7 +32,7 @@ public class SavestateModule {
     public event EventHandler SavestateCreated;
 
     // TODO unload
-    private Dictionary<string, Savestate> savestates = [];
+    private Dictionary<string, Savestate> savestates = new();
 
 
     [BindableMethod(Name = "Create Savestate")]
@@ -92,8 +92,7 @@ public class SavestateModule {
 
         var flags = OldLoadFlagsMethodInfo != null
             ? Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(saveManager.allFlags))
-            : (byte[])FlagsToBinary.Invoke(null, [saveManager.allFlags]);
-
+            : (byte[])FlagsToBinary.Invoke(null, new object[] { saveManager.allFlags });
 
         var savestate = new Savestate {
             MetaJson = metaJson,
@@ -122,7 +121,7 @@ public class SavestateModule {
                 return;
             }
 
-            NewLoadFlagsMethodInfo.Invoke(null, [savestate.Flags, gameFlagCollection, testMode]);
+            NewLoadFlagsMethodInfo.Invoke(null, new object[] { savestate.Flags, gameFlagCollection, testMode });
         }
     }
 
@@ -187,6 +186,6 @@ public class SavestateModule {
     }
 
     public void Unload() {
-        savestates = [];
+        savestates = new Dictionary<string, Savestate>();
     }
 }

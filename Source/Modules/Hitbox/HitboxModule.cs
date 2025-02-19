@@ -8,7 +8,7 @@ public class HitboxModule {
 
     private HitboxRender hitboxRender;
 
-    [BindableMethod(Name = "Toggle Hitboxes", DefaultKeybind = [KeyCode.LeftControl, KeyCode.B])]
+    [BindableMethod(Name = "Toggle Hitboxes", DefaultKeybind = new KeyCode[] { KeyCode.LeftControl, KeyCode.B })]
     private static void ToggleHitboxes() {
         hitboxesVisible = !hitboxesVisible;
 

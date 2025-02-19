@@ -34,9 +34,8 @@ public class FastLoads {
         delay = 0;
     }
 
-
     [HarmonyPatch(typeof(GameCore), nameof(GameCore.ChangeScene),
-        [typeof(SceneConnectionPoint.ChangeSceneData), typeof(bool), typeof(bool)])]
+        new Type[] { typeof(SceneConnectionPoint.ChangeSceneData), typeof(bool), typeof(bool) })]
     [HarmonyPrefix]
     private static void ChangeScene(
         ref SceneConnectionPoint.ChangeSceneData changeSceneData,

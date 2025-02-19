@@ -19,12 +19,12 @@ public class GhostModule {
 
     // recording
     private bool recording = false;
-    private List<GhostFrame> recordingFrames = [];
+    private List<GhostFrame> recordingFrames = new();
 
     public GhostFrame[] CurrentRecording => recordingFrames.ToArray();
 
     // playback
-    private List<GhostPlayback> playbacks = [];
+    private List<GhostPlayback> playbacks = new();
 
     public void StartRecording() {
         recordingFrames.Clear();
