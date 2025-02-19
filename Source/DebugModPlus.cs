@@ -111,7 +111,9 @@ public class DebugModPlus : BaseUnityPlugin {
         MapTeleportModule.Update();
         infotextModule.Update();
 
-        if (configShortcutFsmPickerModifier.Value.IsPressed()) {
+        var canUseFsmPicker = Player.i?.playerInput.fsm.State is not PlayerInputStateType.UI;
+
+        if (canUseFsmPicker && configShortcutFsmPickerModifier.Value.IsPressed()) {
             Cursor.visible = true;
 
             if (Input.GetMouseButtonDown(0)) {
