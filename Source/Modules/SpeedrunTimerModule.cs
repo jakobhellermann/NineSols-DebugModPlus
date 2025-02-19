@@ -4,7 +4,10 @@ using NineSolsAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static GameCore;
@@ -247,34 +250,32 @@ public class SpeedrunTimerModule {
         if (state == SpeedrunTimerState.Running) SegmentBegin();
     }
 
-    private Sprite? startpointSprite;
+    private Sprite? checkpointSprite;
     private GameObject? startpointObject;
-    private Sprite? endpointSprite;
     private GameObject? endpointObject;
+
+    private Sprite GetCheckpointSprite() {
+        var checkpointTexture = AssemblyUtils.GetEmbeddedTexture("DebugModPlus.checkmark.png")!;
+        return checkpointSprite ??= Sprite.CreateSprite(
+            checkpointTexture, new Rect(0, 0, checkpointTexture.width, checkpointTexture.height), new Vector2(0.5f, 0f),
+            16f,
+            0,
+            SpriteMeshType.FullRect, Vector4.zero, false, new SecondarySpriteTexture[] { }
+        );
+    }
+
 
     private void SpawnEndpointTexture() {
         if (endpoint is not var (position, scene)) return;
 
         if (GameCore.Instance.gameLevel.SceneName != scene) return;
 
-        if (endpointSprite == null) {
-            // ReSharper disable once Unity.UnknownResource
-            var texture = Resources.LoadAll<Texture2D>("/").First(t => t.name == "checkmark");
-            endpointSprite = Sprite.CreateSprite(
-                texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0f), 16f, 0,
-                SpriteMeshType.FullRect, Vector4.zero, false, new SecondarySpriteTexture[] { }
-            );
-        }
-
-
         if (endpointObject) Object.Destroy(endpointObject);
         endpointObject = new GameObject("flag") {
-            transform = {
-                position = position,
-            },
+            transform = { position = position },
         };
         var spriteRenderer = endpointObject.AddComponent<SpriteRenderer>();
-        spriteRenderer.sprite = endpointSprite;
+        spriteRenderer.sprite = GetCheckpointSprite();
         spriteRenderer.material.shader = Shader.Find("GUI/Text Shader");
         spriteRenderer.material.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
     }
@@ -285,24 +286,12 @@ public class SpeedrunTimerModule {
 
         if (GameCore.Instance.gameLevel.SceneName != scene) return;
 
-        if (startpointSprite == null) {
-            // ReSharper disable once Unity.UnknownResource
-            var texture = Resources.LoadAll<Texture2D>("/").First(t => t.name == "checkmark");
-            startpointSprite = Sprite.CreateSprite(
-                texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0f), 16f, 0,
-                SpriteMeshType.FullRect, Vector4.zero, false, new SecondarySpriteTexture[] { }
-            );
-        }
-
-
         if (startpointObject) Object.Destroy(startpointObject);
         startpointObject = new GameObject("flag") {
-            transform = {
-                position = position,
-            },
+            transform = { position = position },
         };
         var spriteRenderer = startpointObject.AddComponent<SpriteRenderer>();
-        spriteRenderer.sprite = startpointSprite;
+        spriteRenderer.sprite = GetCheckpointSprite();
         spriteRenderer.material.shader = Shader.Find("GUI/Text Shader");
         spriteRenderer.material.color = new Color(0.0f, 0.6f, 0.3f, 0.8f);
     }
