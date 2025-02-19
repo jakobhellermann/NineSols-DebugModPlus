@@ -32,6 +32,8 @@ public class DebugMod : BaseUnityPlugin {
     public FsmInspectorModule FsmInspectorModule;
     public GhostModule GhostModule = new();
 
+    private ConfigEntry<KeyboardShortcut> configShortcutFSMPickerModifier;
+
 
     private void Awake() {
         Instance = this;
@@ -79,6 +81,11 @@ public class DebugMod : BaseUnityPlugin {
         // debugUI.AddBindableMethods(Config, typeof(FlagLoggerModule));
         FlagLoggerModule.Awake();
 
+        configShortcutFSMPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
+            new KeyboardShortcut(KeyCode.LeftControl),
+            new ConfigDescription(
+                "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
+
         RCGLifeCycle.DontDestroyForever(gameObject);
 
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
@@ -107,7 +114,7 @@ public class DebugMod : BaseUnityPlugin {
         MapTeleportModule.Update();
         infotextModule.Update();
 
-        if (Input.GetKey(KeyCode.LeftControl)) {
+        if (configShortcutFSMPickerModifier.Value.IsPressed()) {
             Cursor.visible = true;
 
             if (Input.GetMouseButtonDown(0)) {
