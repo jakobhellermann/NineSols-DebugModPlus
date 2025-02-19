@@ -72,7 +72,7 @@ public class InfotextModule {
                 var varJumpTimer = player.currentVarJumpTimer;
                 text +=
                     $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "")} {player.IsAirJumping}\n";
-            } else text += "\n";
+            }
 
             List<(bool, string)> flags = [
                 (player.isOnWall, "isOnWall"),
@@ -83,14 +83,14 @@ public class InfotextModule {
 
             var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
 
-            text += $"{flagsStr}\n";
+            if (flagsStr.Length > 0) text += $"{flagsStr}\n";
         }
 
         var currentLevel = core.gameLevel;
         if (currentLevel)
             text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})\n";
 
-        if (core.currentCutScene is not null) text += $"{core.currentCutScene}";
+        if (core.currentCutScene) text += $"{core.currentCutScene}";
 
         if (player.interactableFinder.CurrentInteractableArea is { } current) {
             text += "Interaction:\n";
