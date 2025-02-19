@@ -34,15 +34,55 @@ internal enum SpeedrunTimerState {
     StartNextRoom, // Off, turned on next room
 }
 
+// ReSharper disable once InconsistentNaming
+internal class Segments {
+    public List<SpeedrunRecordingSegment> Current = new();
+    public List<SpeedrunRecordingSegment> Last = new();
+    public List<SpeedrunRecordingSegment> PB = new();
+
+    public void Clear() {
+        Current.Clear();
+        Last.Clear();
+        PB.Clear();
+    }
+
+    public void Add(SpeedrunRecordingSegment currentSegment) {
+        Current.Add(currentSegment);
+    }
+
+    public void Finish() {
+        var previousLast = Last;
+        previousLast.Clear();
+
+        Last = Current;
+        Current = previousLast;
+
+        if (Last.Count != PB.Count && PB.Count > 0)
+            ToastManager.Toast(
+                $"Finished in {Last.Count} segments, as opposed to PB of {PB.Count} segments. Clearing PB.");
+
+        if (PB.Count == 0)
+            PB = new List<SpeedrunRecordingSegment>(Last);
+        else
+            for (var i = 0; i < PB.Count; i++)
+                if (Last[i].SegmentTime < PB[i].SegmentTime)
+                    PB[i] = Last[i];
+    }
+
+    public int ActiveSegmentIndex => Current.Count;
+}
+
 internal class SpeedrunRecordingSegment {
     public required string SceneName;
     public float SegmentTime;
     public GhostFrame[]? GhostFrames;
 }
 
+// ReSharper disable once InconsistentNaming
 internal class SpeedrunInfoText {
     public float SegmentTime;
     public float? SegmentTimeLast;
+    public float? SegmentTimePB;
 }
 
 [HarmonyPatch]
@@ -100,8 +140,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
 
 
     private bool done = false;
-    private List<SpeedrunRecordingSegment>? lastSegments = null;
-    private List<SpeedrunRecordingSegment> currentSegments = new();
+    private Segments segments = new();
     private SpeedrunInfoText? infoText;
 
     private void OnLevelChange() {
@@ -131,28 +170,30 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
             GhostModule.StopRecording();
         }
 
-        var lastSegment = lastSegments?.ElementAtOrDefault(currentSegments.Count);
+        var lastSegment = segments.Last.ElementAtOrDefault(segments.ActiveSegmentIndex);
+        var pbSegment = segments.PB.ElementAtOrDefault(segments.ActiveSegmentIndex);
         var currentSegment = new SpeedrunRecordingSegment {
             SceneName = GameCore.Instance.gameLevel.SceneName,
             SegmentTime = segmentTime,
             GhostFrames = ghostSegment,
         };
-        currentSegments.Add(currentSegment);
+        segments.Add(currentSegment);
         infoText = new SpeedrunInfoText {
             SegmentTime = currentSegment.SegmentTime,
-            SegmentTimeLast = lastSegment != null ? currentSegment.SegmentTime - lastSegment.SegmentTime : null,
+            SegmentTimeLast = lastSegment?.SegmentTime,
+            SegmentTimePB = pbSegment?.SegmentTime,
         };
     }
 
     private SpeedrunRecordingSegment? GetMatchingLastSegment() {
-        if (lastSegments is null) return null;
+        if (segments.Last.Count == 0) return null;
 
         for (var i = 0;; i++) {
-            if (i >= lastSegments.Count) return null;
+            if (i >= segments.Last.Count) return null;
 
-            var lastSegment = lastSegments[i];
+            var lastSegment = segments.Last[i];
 
-            if (i >= currentSegments.Count) return lastSegment;
+            if (i >= segments.Current.Count) return lastSegment;
         }
     }
 
@@ -166,6 +207,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         });
 
         ResetTimer();
+        segments.Clear();
         startRoom = null;
     }
 
@@ -175,7 +217,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         latestTime = 0;
         segmentStartTime = 0;
         done = false;
-        currentSegments = new List<SpeedrunRecordingSegment>();
+        segments.Current.Clear();
         infoText = null;
         state = SpeedrunTimerState.Inactive;
     }
@@ -231,8 +273,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
         done = false;
-        currentSegments = new List<SpeedrunRecordingSegment>();
-        lastSegments = null;
+        segments.Clear();
         infoText = null;
         segmentStartTime = 0;
         startRoom = null;
@@ -313,9 +354,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         EndSegment();
         done = true;
         state = SpeedrunTimerState.Inactive;
-        lastSegments = currentSegments;
-        ToastManager.Toast($"Endpoint reached in {currentSegments.Count} segments");
-        currentSegments = new List<SpeedrunRecordingSegment>();
+        segments.Finish();
+        ToastManager.Toast($"Endpoint reached in {segments.Last.Count} segments");
     }
 
     /* This is where a huge disaster occurred
@@ -428,21 +468,30 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         }
     }
 
-    //TODO: Track Segment PB as well to compare
     public void OnGui() {
-        style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 30 };
+        style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 28 };
         const int padding = 8;
 
         if (done || state != SpeedrunTimerState.Inactive) {
             var timeStr = $"{(done ? "Done in " : "")}{currentTime:0.00}s";
 
             if (infoText != null) {
-                var diffText = $"{(infoText.SegmentTimeLast > 0 ? "+" : "")}{infoText.SegmentTimeLast:0.00}s";
-                timeStr += $"\nCompared to last: {diffText}";
+                var segmentText = $"\nSegment: {infoText.SegmentTime:0.00}s";
+                if (infoText.SegmentTimeLast is { } segLast)
+                    segmentText += $"\nLast: {segLast:0.00}s ({FormatTimeDelta(infoText.SegmentTime - segLast)})";
+                if (infoText.SegmentTimePB is { } segPb)
+                    segmentText += $"\nPB: {segPb:0.00}s ({FormatTimeDelta(infoText.SegmentTime - segPb)})";
+                timeStr += segmentText;
             }
 
-            GUI.Label(new Rect(padding, padding, 600, 100), timeStr, style);
+
+            GUI.Label(new Rect(padding, padding, 800, 500), timeStr, style);
         }
+    }
+
+    private string FormatTimeDelta(float delta) {
+        var sign = delta > 0 ? "+" : "";
+        return $"{sign}{delta:0.00}s";
     }
 
     public void Destroy() {
