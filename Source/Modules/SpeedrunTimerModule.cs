@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static GameCore;
 using Object = UnityEngine.Object;
 
 namespace DebugModPlus.Modules;
@@ -18,18 +19,18 @@ namespace DebugModPlus.Modules;
  */
 
 internal enum TimerMode {
-    //Default mode is triggers, the most common use for this timer is two triggers within the same room to time movement/bosses
-    Triggers, //Savestates do not affect the timer
-    AfterSavestate, //Timer starts immediately after savestate load
-    NextRoom, //Timer starts next room after savestate load
+    // Default mode is triggers, the most common use for this timer is two triggers within the same room to time movement/bosses
+    Triggers, // Savestates do not affect the timer
+    AfterSavestate, // Timer starts immediately after savestate load
+    NextRoom, // Timer starts next room after savestate load
 }
 
 internal enum SpeedrunTimerState {
-    Inactive, //Off
-    Running, //On, time increasing
-    Paused, //On, manually paused
-    Loading, //On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
-    StartNextRoom, //Off, turned on next room
+    Inactive, // Off
+    Running, // On, time increasing
+    Paused, // On, manually paused
+    Loading, // On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
+    StartNextRoom, // Off, turned on next room
 }
 
 [HarmonyPatch]
@@ -38,7 +39,8 @@ public class SpeedrunTimerModule {
 
     private const bool EnableGhost = false;
 
-    internal Stopwatch stopwatch = new();
+    private GhostModule GhostModule => DebugModPlus.Instance.GhostModule;
+    private Stopwatch stopwatch = new();
 
     [HarmonyPatch(typeof(GameCore), "InitializeGameLevel")]
     [HarmonyPostfix]
@@ -67,10 +69,10 @@ public class SpeedrunTimerModule {
 
     private float time = 0;
 
-    //separate delta time unaffected by anything outside of the class
+    // separate delta time unaffected by anything outside of the class
     private float deltaTime = 0;
 
-    //helps track loads and deltaTime
+    // helps track loads and deltaTime
     private float latestTime = 0;
 
     private string? startRoom = null;
@@ -78,7 +80,7 @@ public class SpeedrunTimerModule {
 
     private SpeedrunTimerState state = SpeedrunTimerState.Inactive;
 
-    //added startpoint
+    // added startpoint
     private (Vector2, string)? startpoint = null;
     private (Vector2, string)? endpoint = null;
     private string[] timerModes = Enum.GetNames(typeof(TimerMode));
@@ -99,9 +101,7 @@ public class SpeedrunTimerModule {
         if (state == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName)
             state = SpeedrunTimerState.Running;
     }
-
-    private GhostModule GhostModule => DebugModPlus.Instance.GhostModule;
-
+    
     private void EndSegment() {
         if (state != SpeedrunTimerState.Running) return;
 
@@ -130,7 +130,7 @@ public class SpeedrunTimerModule {
                     $"{i} curr {currentSegments.Count} last {(lastSegments != null ? lastSegments.Count.ToString() : "null")}");
                 if (i >= currentSegments.Count) {
                     lastTimeDelta = currentTime - lastTime;
-                    Log.Info($"lasttiemdelta of {lastTimeDelta:0.00}s");
+                    Log.Info($"lasttimedelta of {lastTimeDelta:0.00}s");
                     break;
                 }
 
@@ -158,6 +158,11 @@ public class SpeedrunTimerModule {
             if (i >= currentSegments.Count) return lastSegment;
         }
     }
+    
+    public void CycleTimerMode() {
+        timerMode = (TimerMode)((int)(timerMode + 1) % timerModes.Length);
+        ToastManager.Toast(timerMode);
+    }
 
     public void ResetTimer() {
         stopwatch.Reset();
@@ -172,6 +177,23 @@ public class SpeedrunTimerModule {
 
     public void PauseTimer() {
         state = state == SpeedrunTimerState.Running ? SpeedrunTimerState.Paused : SpeedrunTimerState.Running;
+    }
+    
+    public void SetStartpoint() {
+        var startpointPosition = Player.i.transform.position;
+        //Adjust position to match outer edges
+        startpointPosition.x += Player.i.Facing == Facings.Right ? 16 : -16;
+        var startpointScene = GameCore.Instance.gameLevel.SceneName;
+        startpoint = (startpointPosition, startpointScene);
+        SpawnStartpointTexture();
+    }
+
+    public void SetEndpoint() {
+        var endpointPosition = Player.i.transform.position;
+        endpointPosition.x += Player.i.Facing == Facings.Right ? 16 : -16;
+        var endpointScene = GameCore.Instance.gameLevel.SceneName;
+        endpoint = (endpointPosition, endpointScene);
+        SpawnEndpointTexture();
     }
 
     private void SegmentBegin() {
@@ -240,7 +262,7 @@ public class SpeedrunTimerModule {
         spriteRenderer.material.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
     }
 
-    //Startpoint logic can probably be merged with Endpoint for better readability
+    // Startpoint logic can probably be merged with Endpoint for better readability
     private void SpawnStartpointTexture() {
         if (startpoint is not var (position, scene)) return;
 
@@ -268,31 +290,12 @@ public class SpeedrunTimerModule {
         spriteRenderer.material.color = new Color(0.0f, 0.6f, 0.3f, 0.8f);
     }
 
-
-    public void SetStartpoint() {
-        var startpointPosition = Player.i.transform.position;
-        //Adjust position to match outer edges
-        startpointPosition.x += Player.i.Facing == Facings.Right ? 16 : -16;
-        var startpointScene = GameCore.Instance.gameLevel.SceneName;
-        startpoint = (startpointPosition, startpointScene);
-        SpawnStartpointTexture();
-    }
-
-    public void SetEndpoint() {
-        var endpointPosition = Player.i.transform.position;
-        endpointPosition.x += Player.i.Facing == Facings.Right ? 16 : -16;
-        var endpointScene = GameCore.Instance.gameLevel.SceneName;
-        endpoint = (endpointPosition, endpointScene);
-        SpawnEndpointTexture();
-    }
-
     private void StartpointReached() {
         if (state == SpeedrunTimerState.Running || state == SpeedrunTimerState.Loading) return;
 
         ResetTimer();
 
         state = SpeedrunTimerState.Running;
-
         SegmentBegin();
     }
 
@@ -307,43 +310,37 @@ public class SpeedrunTimerModule {
         currentSegments = new List<(string, float, GhostFrame[]?)>();
     }
 
-    public void CycleTimerMode() {
-        timerMode = (TimerMode)((int)(timerMode + 1) % timerModes.Length);
-        ToastManager.Toast(timerMode);
-    }
-
     /* This is where a huge disaster occurred
      * In order to follow autosplitter logic theres a lot of data that needs to be grabbed, however referencing manager instances that aren't active
      * crashes the game, hopefully I made this readable
      */
     public void LateUpdate() {
         try {
-            var coreState = GameCore.GameCoreState.Playing;
+            var coreState = GameCoreState.Playing;
             var sceneName = SceneManager.GetActiveScene().name;
-            UnityEngine.UI.Image blackCover = null;
-            LoadingScreenPanel loadingScreen = null;
+            UnityEngine.UI.Image? blackCover = null;
+            LoadingScreenPanel? loadingScreen = null;
 
             void GrabInfoSafe() {
-                //want to grab these references in safe spots
+                // want to grab these references in safe spots
                 if (sceneName == "ClearTransition") {
                     loadingScreen = null;
                     blackCover = null;
                 } else if (sceneName == "TitleScreenMenu") {
                     loadingScreen = null;
-                    if (blackCover == null) blackCover = ApplicationUIGroupManager.Instance.blackCover;
+                    if (!blackCover) blackCover = ApplicationUIGroupManager.Instance.blackCover;
                 } else {
                     blackCover = null;
-                    if (loadingScreen == null) loadingScreen = ApplicationCore.Instance.loadingScreen;
+                    if (!loadingScreen) loadingScreen = ApplicationCore.Instance.loadingScreen;
                     coreState = GameCore.Instance.currentCoreState;
                 }
             }
 
-            //check timer triggers, start trigger might happen when inactive
+            // check timer triggers, start trigger might happen when inactive
             CheckTriggers(sceneName);
 
             if (state == SpeedrunTimerState.Inactive)
                 return;
-
             else if (state == SpeedrunTimerState.Paused) {
                 stopwatch.Stop();
                 latestTime = (float)stopwatch.Elapsed.TotalSeconds;
@@ -354,15 +351,15 @@ public class SpeedrunTimerModule {
             CheckLoading(sceneName, coreState, blackCover, loadingScreen);
 
             if (state == SpeedrunTimerState.Running) {
-                //start stopwatch
-                //Stopwatch is preferred over deltatime so its unaffected by bow and other things, more accurate to livesplit
+                // start stopwatch
+                // Stopwatch is preferred over deltatime so its unaffected by bow and other things, more accurate to livesplit
                 stopwatch.Start();
                 deltaTime = (float)stopwatch.Elapsed.TotalSeconds - latestTime;
                 time += deltaTime;
                 latestTime = (float)stopwatch.Elapsed.TotalSeconds;
             }
 
-            //dont pause stopwatch during loads to track load removal
+            // dont pause stopwatch during loads to track load removal
         } catch (Exception e) {
             Log.Error($"Error during SpeedrunTimerModule LateUpdate: {e}");
         }
@@ -408,14 +405,12 @@ public class SpeedrunTimerModule {
         }
     }
 
-    private void CheckTriggers(string _sceneName = "") {
+    private void CheckTriggers(string sceneName = "") {
         var playerPosition = Vector2.zero;
         var doCheckPoints = false;
-        var sceneName = _sceneName;
         const float distanceThreshold = 18;
 
-        if (Player.i != null && Player.i.gameObject.activeInHierarchy && Player.i.transform != null &&
-            Player.i.transform.position != null) {
+        if (Player.i && Player.i.gameObject.activeInHierarchy && Player.i.transform) {
             playerPosition = Player.i.transform.position;
             doCheckPoints = true;
         }
