@@ -57,7 +57,7 @@ public class DebugUI : MonoBehaviour {
     public void AddToggle(string actionName, Action<bool> onChange, bool defaultValue = false) {
         toggles.Add(actionName, new DebugActionToggle {
             Value = defaultValue,
-            OnChange = onChange
+            OnChange = onChange,
         });
     }
 
@@ -70,13 +70,13 @@ public class DebugUI : MonoBehaviour {
         styleButton ??= new GUIStyle(GUI.skin.box) {
             alignment = TextAnchor.MiddleRight,
             padding = new RectOffset(padding, padding, padding, padding),
-            fontSize = 20
+            fontSize = 20,
         };
 
         styleToggle ??= new GUIStyle(GUI.skin.toggle) {
             // styleToggle.alignment = TextAnchor.MiddleLeft;
             // styleToggle.padding = new RectOffset(padding, padding, padding, padding);
-            fontSize = 20
+            fontSize = 20,
         };
 
         GUILayout.BeginArea(new Rect(padding, padding, Screen.width - padding * 2, Screen.height - padding * 2));

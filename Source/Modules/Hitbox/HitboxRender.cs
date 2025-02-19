@@ -58,7 +58,7 @@ public class HitboxRender : MonoBehaviour {
         { HitboxType.Trap, [] },
         { HitboxType.Trigger, [] },
         { HitboxType.Interactable, [] },
-        { HitboxType.Finder, [] }
+        { HitboxType.Finder, [] },
     };
 
     // public static float LineWidth => Math.Max(0.7f, Screen.width / 960f * GameCameras.instance.tk2dCam.ZoomFactor);
@@ -213,7 +213,7 @@ public class HitboxRender : MonoBehaviour {
                     Vector2 bottomRight = new(halfSize.x, -halfSize.y);
                     var bottomLeft = -halfSize;
                     var boxPoints = new List<Vector2> {
-                        topLeft, topRight, bottomRight, bottomLeft, topLeft
+                        topLeft, topRight, bottomRight, bottomLeft, topLeft,
                     };
                     DrawPointSequence(boxPoints, camera, collider2D, hitboxType, lineWidth);
                     break;

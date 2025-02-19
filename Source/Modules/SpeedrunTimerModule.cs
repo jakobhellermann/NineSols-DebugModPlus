@@ -227,7 +227,7 @@ public class SpeedrunTimerModule {
 
     public void LateUpdate() {
         if (state == SpeedrunTimerState.Inactive) return;
-        
+
         try {
             if (state == SpeedrunTimerState.Running && !isLoading)
                 time += RCGTime.deltaTime;
