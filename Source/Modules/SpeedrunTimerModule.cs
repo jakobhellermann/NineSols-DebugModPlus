@@ -158,10 +158,15 @@ public class SpeedrunTimerModule {
             if (i >= currentSegments.Count) return lastSegment;
         }
     }
-    
+
     public void CycleTimerMode() {
         timerMode = (TimerMode)((int)(timerMode + 1) % timerModes.Length);
-        ToastManager.Toast(timerMode);
+        ToastManager.Toast("Speedrun timer mode: " + timerMode switch {
+            TimerMode.Triggers => "Begin on start trigger",
+            TimerMode.AfterSavestate => "Begin after savestate",
+            TimerMode.NextRoom => "Begin on next room",
+            _ => throw new ArgumentOutOfRangeException(),
+        });
     }
 
     public void ResetTimer() {
@@ -176,9 +181,15 @@ public class SpeedrunTimerModule {
     }
 
     public void PauseTimer() {
-        state = state == SpeedrunTimerState.Running ? SpeedrunTimerState.Paused : SpeedrunTimerState.Running;
+        if (state == SpeedrunTimerState.Running) {
+            ToastManager.Toast("Pausing timer");
+            state = SpeedrunTimerState.Paused;
+        } else {
+            ToastManager.Toast("Resuming timer");
+            state = SpeedrunTimerState.Running;
+        }
     }
-    
+
     public void SetStartpoint() {
         var startpointPosition = Player.i.transform.position;
         //Adjust position to match outer edges
@@ -306,7 +317,7 @@ public class SpeedrunTimerModule {
         done = true;
         state = SpeedrunTimerState.Inactive;
         lastSegments = currentSegments;
-        ToastManager.Toast($"endpoint reached with {currentSegments.Count}");
+        ToastManager.Toast($"Endpoint reached in {currentSegments.Count} segments");
         currentSegments = new List<(string, float, GhostFrame[]?)>();
     }
 
