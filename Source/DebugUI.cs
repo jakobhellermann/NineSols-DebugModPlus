@@ -10,18 +10,18 @@ namespace DebugModPlus;
 
 internal class DebugActionToggle {
     public bool Value;
-    public Action<bool> OnChange;
+    public required Action<bool> OnChange;
 }
 
 internal class DebugAction {
-    public Action OnChange;
+    public required Action OnChange;
 }
 
 public class DebugUI : MonoBehaviour {
     public bool settingsOpen = false;
 
-    private GUIStyle styleButton;
-    private GUIStyle styleToggle;
+    private GUIStyle? styleButton;
+    private GUIStyle? styleToggle;
 
     private Dictionary<string, DebugActionToggle> toggles = new();
     private Dictionary<string, DebugAction> actions = new();
@@ -30,10 +30,6 @@ public class DebugUI : MonoBehaviour {
         toggles.Clear();
     }
 
-    private void OnDestroy() {
-    }
-
-
     public void AddBindableMethods(ConfigFile config, Type ty) {
         foreach (var method in ty.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             if (method.GetCustomAttribute<BindableMethod>() is { } attr) {
@@ -41,7 +37,7 @@ public class DebugUI : MonoBehaviour {
                 var action = (Action)Delegate.CreateDelegate(typeof(Action), method);
 
 
-                var shortcutName = new string(Array.FindAll(attr.Name.ToCharArray(), char.IsLetterOrDigit));
+                var shortcutName = new string(Array.FindAll(actionName.ToCharArray(), char.IsLetterOrDigit));
                 var keyboardShortcut =
                     config.Bind("Shortcuts", shortcutName,
                         attr.DefaultKeybind != null

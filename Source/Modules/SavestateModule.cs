@@ -2,34 +2,33 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-using JetBrains.Annotations;
 using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Modules;
 
 internal class Savestate {
-    public string MetaJson;
-    public byte[] Flags;
+    public required string MetaJson;
+    public required byte[] Flags;
 
-    public string Scene;
+    public required string Scene;
     public Vector3 PlayerPosition;
     public Vector2 PlayerVelocity;
 }
 
 public class SavestateModule {
-    [CanBeNull] private static MethodInfo OldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
+    private static MethodInfo? oldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
 
-    [CanBeNull] private static MethodInfo NewLoadFlagsMethodInfo =
+    private static MethodInfo? newLoadFlagsMethodInfo =
         typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
 
-    [CanBeNull] private static MethodInfo FlagsToBinary =
+    private static MethodInfo? flagsToBinary =
         typeof(GameFlagManager).GetMethod("FlagsToBinary");
 
     public static bool IsLoadingSavestate = false;
 
-    public event EventHandler SavestateLoaded;
-    public event EventHandler SavestateCreated;
+    public event EventHandler? SavestateLoaded;
+    public event EventHandler? SavestateCreated;
 
     // TODO unload
     private Dictionary<string, Savestate> savestates = new();
@@ -91,9 +90,9 @@ public class SavestateModule {
         var saveSlotMetaData = gameCore.playerGameData.SaveMetaData();
         var metaJson = JsonUtility.ToJson(saveSlotMetaData);
 
-        var flags = OldLoadFlagsMethodInfo != null
+        var flags = oldLoadFlagsMethodInfo != null
             ? Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(saveManager.allFlags))
-            : (byte[])FlagsToBinary.Invoke(null, new object[] { saveManager.allFlags });
+            : (byte[])flagsToBinary!.Invoke(null, new object[] { saveManager.allFlags });
 
         var savestate = new Savestate {
             MetaJson = metaJson,
@@ -113,16 +112,16 @@ public class SavestateModule {
         const TestMode testMode = TestMode.Build;
         var gameFlagCollection = SaveManager.Instance.allFlags;
 
-        if (OldLoadFlagsMethodInfo != null)
-            OldLoadFlagsMethodInfo.Invoke(null,
+        if (oldLoadFlagsMethodInfo != null)
+            oldLoadFlagsMethodInfo.Invoke(null,
                 new object[] { Encoding.UTF8.GetString(savestate.Flags), gameFlagCollection, testMode });
         else {
-            if (NewLoadFlagsMethodInfo == null) {
+            if (newLoadFlagsMethodInfo == null) {
                 Log.Error("LoadFlagsFromBinarySave doesn't exist");
                 return;
             }
 
-            NewLoadFlagsMethodInfo.Invoke(null, new object[] { savestate.Flags, gameFlagCollection, testMode });
+            newLoadFlagsMethodInfo.Invoke(null, new object[] { savestate.Flags, gameFlagCollection, testMode });
         }
     }
 

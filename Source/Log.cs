@@ -3,7 +3,7 @@ using BepInEx.Logging;
 namespace DebugModPlus;
 
 internal static class Log {
-    private static ManualLogSource logSource;
+    private static ManualLogSource logSource = null!;
 
     internal static void Init(ManualLogSource logSource) {
         Log.logSource = logSource;

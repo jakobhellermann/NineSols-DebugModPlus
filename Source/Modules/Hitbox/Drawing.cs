@@ -1,6 +1,8 @@
 using System.Reflection;
 using UnityEngine;
 
+// ReSharper disable InconsistentNaming
+
 namespace DebugModPlus.Modules.Hitbox;
 
 // Line drawing routine originally courtesy of Linusmartensson:
@@ -27,10 +29,10 @@ namespace DebugModPlus.Modules.Hitbox;
 // https://docs.google.com/spreadsheet/ccc?key=0AvJlJlbRO26VdHhzeHNRMVF2UHZHMXFCTVFZN011V1E&usp=sharing
 
 public static class Drawing {
-    private static Texture2D aaLineTex = null;
-    private static Texture2D lineTex = null;
-    private static Material blitMaterial = null;
-    private static Material blendMaterial = null;
+    private static Texture2D? aaLineTex = null;
+    private static Texture2D? lineTex = null;
+    private static Material? blitMaterial = null;
+    private static Material? blendMaterial = null;
     private static Rect lineRect = new(0, 0, 1, 1);
 
     // Draw a line in screen space, suitable for use from OnGUI calls from either
@@ -70,8 +72,8 @@ public static class Drawing {
         if (len < 0.001f) return;
 
         // Pick texture and material (and tweak width) based on anti-alias setting.
-        Texture2D tex;
-        Material mat;
+        Texture2D? tex;
+        Material? mat;
         if (antiAlias) {
             // Multiplying by three is fine for anti-aliasing width-1 lines, but make a wide "fringe"
             // for thicker lines, which may or may not be desirable.
@@ -113,7 +115,7 @@ public static class Drawing {
 
     public static void DrawCircle(Vector2 center, int radius, Color color, float width, bool antiAlias,
         int segmentsPerQuarter) {
-        var rh = (float)radius * 0.551915024494f;
+        var rh = radius * 0.551915024494f;
 
         var p1 = new Vector2(center.x, center.y - radius);
         var p1_tan_a = new Vector2(center.x - rh, center.y - radius);
@@ -179,9 +181,10 @@ public static class Drawing {
 
         // GUI.blitMaterial and GUI.blendMaterial are used internally by GUI.DrawTexture,
         // depending on the alphaBlend parameter. Use reflection to "borrow" these references.
-        blitMaterial = (Material)typeof(GUI).GetMethod("get_blitMaterial", BindingFlags.NonPublic | BindingFlags.Static)
-            .Invoke(null, null);
+        blitMaterial =
+            (Material)typeof(GUI).GetMethod("get_blitMaterial", BindingFlags.NonPublic | BindingFlags.Static)!
+                .Invoke(null, null);
         blendMaterial = (Material)typeof(GUI)
-            .GetMethod("get_blendMaterial", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+            .GetMethod("get_blendMaterial", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
     }
 }

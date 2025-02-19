@@ -6,6 +6,9 @@
         <Version>1.2.0</Version>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
+        <NoWarn>MSB3277</NoWarn>
+        <Nullable>enable</Nullable>
+        <PublishRelease>true</PublishRelease>
 
         <!-- todo macOS -->
         <NineSolsPath Condition="'$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Nine Sols</NineSolsPath>

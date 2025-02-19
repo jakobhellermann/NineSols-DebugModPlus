@@ -6,7 +6,7 @@ namespace DebugModPlus.Modules.Hitbox;
 public class HitboxModule {
     private static bool hitboxesVisible;
 
-    private HitboxRender hitboxRender;
+    private HitboxRender? hitboxRender;
 
     [BindableMethod(Name = "Toggle Hitboxes", DefaultKeybind = new KeyCode[] { KeyCode.LeftControl, KeyCode.B })]
     private static void ToggleHitboxes() {

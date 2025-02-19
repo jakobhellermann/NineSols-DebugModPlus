@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using NineSolsAPI;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -7,10 +6,10 @@ namespace DebugModPlus.Modules;
 
 public record GhostFrame(Vector3 Position, string SpriteName, int Facing);
 
-internal class GhostPlayback {
-    public SpriteRenderer PlayerCopy;
-    public GhostFrame[] Frames;
-    public int PlaybackIndex;
+internal class GhostPlayback(SpriteRenderer playerCopy, GhostFrame[] frames, int playbackIndex) {
+    public SpriteRenderer PlayerCopy = playerCopy;
+    public GhostFrame[] Frames = frames;
+    public int PlaybackIndex = playbackIndex;
 }
 
 public class GhostModule {
@@ -45,11 +44,7 @@ public class GhostModule {
         var playerCopy = Object.Instantiate(player.PlayerSprite.gameObject).GetComponent<SpriteRenderer>();
         Object.DontDestroyOnLoad(playerCopy);
 
-        playbacks.Add(new GhostPlayback {
-            PlayerCopy = playerCopy,
-            PlaybackIndex = 0,
-            Frames = frames,
-        });
+        playbacks.Add(new GhostPlayback(playerCopy, frames, 0));
     }
 
     private void UpdateRecord() {

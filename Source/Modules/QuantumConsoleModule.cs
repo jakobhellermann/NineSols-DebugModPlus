@@ -11,7 +11,7 @@ public class QuantumConsoleModule {
     // ReSharper disable once InconsistentNaming
     [HarmonyPatch(typeof(QuantumConsoleProcessor), "LoadCommandsFromType")]
     [HarmonyFinalizer]
-    private static Exception LoadCommandsFromType(Type type, Exception __exception) => null;
+    private static Exception? LoadCommandsFromType(Type type, Exception __exception) => null;
 
     // ReSharper disable once InconsistentNaming
     [HarmonyPatch(typeof(QuantumConsole), "IsSupportedState")]

@@ -1,12 +1,8 @@
-#nullable enable
 using HarmonyLib;
 using NineSolsAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -123,7 +119,7 @@ public class SpeedrunTimerModule {
 
         currentSegments.Add((GameCore.Instance.gameLevel.SceneName, roomTime, ghostSegment));
 
-        if (lastSegments is not null) {
+        if (lastSegments is { } ls) {
             var i = 0;
 
             string? lastRoom;
@@ -139,9 +135,9 @@ public class SpeedrunTimerModule {
                     break;
                 }
 
-                if (i >= lastSegments.Count) break;
+                if (i >= ls.Count) break;
 
-                (lastRoom, lastTime, _) = lastSegments[i];
+                (lastRoom, lastTime, _) = ls[i];
                 (var currentRoom, currentTime, _) = currentSegments[i];
 
                 if (lastRoom != currentRoom) break;

@@ -17,23 +17,23 @@ namespace DebugModPlus;
 [BepInDependency(NineSolsAPICore.PluginGUID)]
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 public class DebugModPlus : BaseUnityPlugin {
-    public static DebugModPlus Instance;
+    public static DebugModPlus Instance = null!;
 
-    private DebugUI debugUI;
-    private QuantumConsoleModule quantumConsoleModule;
+    private DebugUI debugUI = null!;
+    private QuantumConsoleModule quantumConsoleModule = new();
 
-    private Harmony harmony;
+    private Harmony harmony = null!;
 
-    private InfotextModule infotextModule;
+    private InfotextModule infotextModule = new();
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
 
-    public SpeedrunTimerModule SpeedrunTimerModule;
+    public SpeedrunTimerModule SpeedrunTimerModule = new();
 
-    public FsmInspectorModule FsmInspectorModule;
+    public FsmInspectorModule FsmInspectorModule = new();
     public GhostModule GhostModule = new();
 
-    private ConfigEntry<KeyboardShortcut> configShortcutFSMPickerModifier;
+    private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
 
 
     private void Awake() {
@@ -49,11 +49,6 @@ public class DebugModPlus : BaseUnityPlugin {
         }
 
         debugUI = gameObject.AddComponent<DebugUI>();
-        quantumConsoleModule = new QuantumConsoleModule();
-        infotextModule = new InfotextModule();
-        SpeedrunTimerModule = new SpeedrunTimerModule();
-        FsmInspectorModule = new FsmInspectorModule();
-        GhostModule = new GhostModule();
 
         SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
         SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
@@ -87,7 +82,7 @@ public class DebugModPlus : BaseUnityPlugin {
         // debugUI.AddBindableMethods(Config, typeof(FlagLoggerModule));
         FlagLoggerModule.Awake();
 
-        configShortcutFSMPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
+        configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
             new KeyboardShortcut(KeyCode.LeftControl),
             new ConfigDescription(
                 "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
@@ -114,7 +109,7 @@ public class DebugModPlus : BaseUnityPlugin {
         MapTeleportModule.Update();
         infotextModule.Update();
 
-        if (configShortcutFSMPickerModifier.Value.IsPressed()) {
+        if (configShortcutFsmPickerModifier.Value.IsPressed()) {
             Cursor.visible = true;
 
             if (Input.GetMouseButtonDown(0)) {
