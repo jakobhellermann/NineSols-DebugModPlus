@@ -98,10 +98,12 @@ public class SpeedrunTimerModule {
     private void OnLevelChangeDone() {
         SegmentBegin();
 
-        if (state == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName)
+        if (state == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
             state = SpeedrunTimerState.Running;
+            SegmentBegin();
+        }
     }
-    
+
     private void EndSegment() {
         if (state != SpeedrunTimerState.Running) return;
 
@@ -167,6 +169,9 @@ public class SpeedrunTimerModule {
             TimerMode.NextRoom => "Begin on next room",
             _ => throw new ArgumentOutOfRangeException(),
         });
+
+        ResetTimer();
+        startRoom = null;
     }
 
     public void ResetTimer() {
@@ -225,20 +230,21 @@ public class SpeedrunTimerModule {
         lastSegments = null;
         lastTimeDelta = null;
         segmentStartTime = 0;
+        startRoom = null;
     }
 
     public void OnSavestateLoaded() {
         // dont reset timer if trigger mode
         if (timerMode == TimerMode.Triggers) return;
         ResetTimer();
-        startRoom = GameCore.Instance.gameLevel.SceneName;
+        startRoom ??= GameCore.Instance.gameLevel.SceneName;
         state = timerMode switch {
             TimerMode.AfterSavestate => SpeedrunTimerState.Running,
             TimerMode.NextRoom => SpeedrunTimerState.StartNextRoom,
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        SegmentBegin();
+        if (state == SpeedrunTimerState.Running) SegmentBegin();
     }
 
     private Sprite? startpointSprite;
@@ -377,39 +383,35 @@ public class SpeedrunTimerModule {
     }
 
     // All logic here is the autosplitters fault not mine
-    private void CheckLoading(string _sceneName = "",
-        GameCore.GameCoreState _coreState = GameCore.GameCoreState.Playing, UnityEngine.UI.Image _blackCover = null,
-        LoadingScreenPanel _loadingScreen = null) {
-        var sceneName = _sceneName;
-        var coreState = _coreState;
-        var blackCover = _blackCover;
-        var loadingScreen = _loadingScreen;
+    private void CheckLoading(
+        string sceneName = "",
+        GameCoreState coreState = GameCoreState.Playing,
+        UnityEngine.UI.Image? blackCover = null,
+        LoadingScreenPanel? loadingScreen = null) {
+        if (state is not (SpeedrunTimerState.Running or SpeedrunTimerState.Loading)) return;
 
         try {
-            var doPauseTimer = false;
-            if ((loadingScreen is not null && loadingScreen.isActiveAndEnabled)
-                //Autosplitter documents this as Blank / Load, not sure if this is how I'm supposed to check it
-                || sceneName == ""
-                || sceneName == "ClearTransition"
-                || sceneName == "A0_S6_Intro_Video"
-                //Save file reads synchronous so this is the only way to solve that lag
-                || (sceneName == "TitleScreenMenu" && blackCover is not null && blackCover.isActiveAndEnabled &&
-                    blackCover.color.a > 0.99f)
-                || coreState == GameCore.GameCoreState.ChangingScene
-                || coreState == GameCore.GameCoreState.Init)
-                doPauseTimer = true;
+            var doPauseTimer = (loadingScreen is not null && loadingScreen.isActiveAndEnabled)
+                               // Autosplitter documents this as Blank / Load, not sure if this is how I'm supposed to check it
+                               || sceneName is "" or "ClearTransition" or "A0_S6_Intro_Video"
+                               // Save file reads synchronous so this is the only way to solve that lag
+                               || (sceneName == "TitleScreenMenu" && blackCover is
+                                   { isActiveAndEnabled: true, color.a: > 0.99f })
+                               || coreState is GameCoreState.ChangingScene or GameCoreState.Init;
 
             if (doPauseTimer) {
-                if (state == SpeedrunTimerState.Running) Log.Info("Pausing timer Now");
-                state = SpeedrunTimerState.Loading;
+                if (state == SpeedrunTimerState.Running) {
+                    Log.Info("Pausing timer now");
+                    state = SpeedrunTimerState.Loading;
+                }
             } else {
                 if (state == SpeedrunTimerState.Loading) {
-                    var oldlatesttime = latestTime;
+                    var oldLatestTime = latestTime;
                     latestTime = (float)stopwatch.Elapsed.TotalSeconds;
-                    Log.Info("Unpausing Timer, load time removed is " + (latestTime - oldlatesttime));
-                }
+                    Log.Info("Unpausing timer, load time removed is " + (latestTime - oldLatestTime));
 
-                state = SpeedrunTimerState.Running;
+                    state = SpeedrunTimerState.Running;
+                }
             }
         } catch (Exception e) {
             Log.Error($"Error during loading checks in SpeedrunTimerModule CheckLoading: {e}");
