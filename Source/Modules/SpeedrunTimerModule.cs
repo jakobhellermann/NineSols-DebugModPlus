@@ -211,6 +211,13 @@ public class SpeedrunTimerModule {
         SpawnEndpointTexture();
     }
 
+    public void ClearCheckpoints() {
+        startpoint = null;
+        endpoint = null;
+        if (startpointObject) Object.Destroy(startpointObject);
+        if (endpointObject) Object.Destroy(endpointObject);
+    }
+
     private void SegmentBegin() {
         segmentStartTime = time;
         if (EnableGhost) GhostModule.StartRecording();

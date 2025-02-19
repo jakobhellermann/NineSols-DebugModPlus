@@ -63,11 +63,13 @@ public class DebugModPlus : BaseUnityPlugin {
         var pauseTimerShortcut = Config.Bind("SpeedrunTimer", "Pause Timer", new KeyboardShortcut());
         var setStartpointShortcut = Config.Bind("SpeedrunTimer", "Set Startpoint", new KeyboardShortcut());
         var setEndpointShortcut = Config.Bind("SpeedrunTimer", "Set Endpoint", new KeyboardShortcut());
+        var clearCheckpointsShortcut = Config.Bind("SpeedrunTimer", "Clear Checkpoints", new KeyboardShortcut());
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimer(), () => resetTimerShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.ClearCheckpoints(), () => clearCheckpointsShortcut.Value);
 
         // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
         // KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
