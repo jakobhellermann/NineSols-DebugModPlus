@@ -6,7 +6,7 @@ using NineSolsAPI.Utils;
 using TMPro;
 using UnityEngine;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 public class InfotextModule {
     private static bool infotextActive = false;

@@ -3,7 +3,7 @@ using NineSolsAPI;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 public record GhostFrame(Vector3 Position, string SpriteName, int Facing);
 

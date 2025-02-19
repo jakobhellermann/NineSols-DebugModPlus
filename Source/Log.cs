@@ -1,6 +1,6 @@
 using BepInEx.Logging;
 
-namespace DebugMod;
+namespace DebugModPlus;
 
 internal static class Log {
     private static ManualLogSource logSource;

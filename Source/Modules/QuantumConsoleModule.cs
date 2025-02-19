@@ -3,7 +3,7 @@ using HarmonyLib;
 using NineSolsAPI;
 using QFSW.QC;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class QuantumConsoleModule {
@@ -48,11 +48,11 @@ public class QuantumConsoleModule {
 
     private void QuantumConsoleActivate() {
         if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, DebugMod.Instance);
+        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, DebugModPlus.Instance);
     }
 
     private void QuantumConsoleDeactivate() {
         if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.RevokeAllMyVote(DebugMod.Instance);
+        GameCore.Instance.player.playerInput.RevokeAllMyVote(DebugModPlus.Instance);
     }
 }

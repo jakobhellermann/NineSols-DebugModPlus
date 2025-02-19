@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 /*TODO:
  * I wasn't really sure what the goals were of the segment system or ghost recording or how they worked, so I likely borked it. I tried not to but it might need some patching
@@ -44,7 +44,7 @@ public class SpeedrunTimerModule {
     [HarmonyPostfix]
     private static void InitializeGameLevel() {
         isLoading = false;
-        var module = DebugMod.Instance.SpeedrunTimerModule;
+        var module = DebugModPlus.Instance.SpeedrunTimerModule;
         if (module.startRoom != GameCore.Instance.gameLevel.SceneName) module.OnLevelChangeDone();
         module.SpawnStartpointTexture();
         module.SpawnEndpointTexture();
@@ -55,7 +55,7 @@ public class SpeedrunTimerModule {
     [HarmonyPostfix]
     private static void ChangeScene() {
         isLoading = true;
-        var module = DebugMod.Instance.SpeedrunTimerModule;
+        var module = DebugModPlus.Instance.SpeedrunTimerModule;
         module.OnLevelChange();
     }
 
@@ -100,7 +100,7 @@ public class SpeedrunTimerModule {
             state = SpeedrunTimerState.Running;
     }
 
-    private GhostModule GhostModule => DebugMod.Instance.GhostModule;
+    private GhostModule GhostModule => DebugModPlus.Instance.GhostModule;
 
     private void EndSegment() {
         if (state != SpeedrunTimerState.Running) return;

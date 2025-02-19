@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NineSolsAPI;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 public static class FlagLoggerModule {
     private const bool LogFlagsOnAwake = false;

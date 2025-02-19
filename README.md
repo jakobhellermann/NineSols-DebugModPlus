@@ -1,4 +1,4 @@
-# Nine Sols Debug Mod
+# DebugModPlus
 
 ## Features
 - Debug Console (Ctrl+.)

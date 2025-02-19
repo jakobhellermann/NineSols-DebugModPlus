@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace DebugMod.Modules.Hitbox;
+namespace DebugModPlus.Modules.Hitbox;
 
 public class HitboxModule {
     private static bool hitboxesVisible;
@@ -13,13 +13,13 @@ public class HitboxModule {
         hitboxesVisible = !hitboxesVisible;
 
         if (hitboxesVisible)
-            DebugMod.Instance.HitboxModule.Load();
+            DebugModPlus.Instance.HitboxModule.Load();
         else
-            DebugMod.Instance.HitboxModule.Unload();
+            DebugModPlus.Instance.HitboxModule.Unload();
     }
 
     public void Load() {
-        // State = DebugMod.settings.ShowHitBoxes;
+        // State = DebugModPlus.settings.ShowHitBoxes;
         Unload();
         SceneManager.activeSceneChanged += CreateHitboxRender;
 
@@ -30,7 +30,7 @@ public class HitboxModule {
     }
 
     public void Unload() {
-        // State = DebugMod.settings.ShowHitBoxes;
+        // State = DebugModPlus.settings.ShowHitBoxes;
         SceneManager.activeSceneChanged -= CreateHitboxRender;
 
         // ModHooks.ColliderCreateHook -= UpdateHitboxRender;
