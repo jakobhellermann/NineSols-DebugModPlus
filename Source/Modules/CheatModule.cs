@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class CheatModule {

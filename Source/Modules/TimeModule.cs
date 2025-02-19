@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 public class TimeModule {
     [BindableMethod(Name = "Toggle Fastforward")]
@@ -17,7 +17,7 @@ public class TimeModule {
     private static void FrameAdvance() {
         RCGTime.GlobalSimulationSpeed = 0;
 
-        DebugMod.Instance.StartCoroutine(AdvanceFrameCoro());
+        DebugModPlus.Instance.StartCoroutine(AdvanceFrameCoro());
     }
 
     private static IEnumerator AdvanceFrameCoro() {

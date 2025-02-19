@@ -3,7 +3,7 @@ using HarmonyLib;
 using QFSW.QC;
 using UnityEngine.SceneManagement;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class QuantumConsoleModule {

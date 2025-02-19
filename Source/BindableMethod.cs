@@ -2,7 +2,7 @@ using System;
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace DebugMod;
+namespace DebugModPlus;
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 [MeansImplicitUse]

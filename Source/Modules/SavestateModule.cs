@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 internal class Savestate {
     public string MetaJson;
@@ -38,7 +38,7 @@ public class SavestateModule {
 
     [BindableMethod(Name = "Create Savestate")]
     private static void CreateSavestateMethod() {
-        var module = DebugMod.Instance.SavestateModule;
+        var module = DebugModPlus.Instance.SavestateModule;
 
         const string slot = "0";
         module.CreateSavestate(slot);
@@ -47,7 +47,7 @@ public class SavestateModule {
 
     [BindableMethod(Name = "Load Savestate")]
     private static void LoadSavestateMethod() {
-        var module = DebugMod.Instance.SavestateModule;
+        var module = DebugModPlus.Instance.SavestateModule;
 
         const string slot = "0";
         if (!module.savestates.TryGetValue(slot, out var savestate)) {
@@ -64,7 +64,7 @@ public class SavestateModule {
 
     [BindableMethod(Name = "Load Savestate\n(No reload)")]
     private static void LoadSavestateMethodNoReload() {
-        var module = DebugMod.Instance.SavestateModule;
+        var module = DebugModPlus.Instance.SavestateModule;
 
         const string slot = "0";
         if (!module.savestates.TryGetValue(slot, out var savestate)) {

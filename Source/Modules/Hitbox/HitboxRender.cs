@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod.Modules.Hitbox;
+namespace DebugModPlus.Modules.Hitbox;
 
 public class HitboxRender : MonoBehaviour {
     // ReSharper disable once StructCanBeMadeReadOnly

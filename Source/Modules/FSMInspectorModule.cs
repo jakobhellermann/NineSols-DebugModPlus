@@ -15,7 +15,7 @@ using UnityEngine;
 using IStateMachine = MonsterLove.StateMachine.IStateMachine;
 using Object = UnityEngine.Object;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class FsmInspectorModule {

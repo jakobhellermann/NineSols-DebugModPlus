@@ -3,7 +3,7 @@ using NineSolsAPI;
 using RCGSetting;
 using UnityEngine;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 public static class MapTeleportModule {
     public static void Update() {

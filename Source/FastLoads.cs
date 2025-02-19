@@ -1,10 +1,10 @@
 using System;
-using DebugMod.Modules;
+using DebugModPlus.Modules;
 using HarmonyLib;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod;
+namespace DebugModPlus;
 
 [HarmonyPatch]
 public class FastLoads {

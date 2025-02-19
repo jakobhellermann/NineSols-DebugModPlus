@@ -2,7 +2,7 @@ using Com.LuisPedroFonseca.ProCamera2D;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DebugMod.Modules;
+namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class FreecamModule {
@@ -26,7 +26,7 @@ public class FreecamModule {
 
         if (FreecamActive) {
             player.enabled = false;
-            player.health.BecomeInvincible(DebugMod.Instance);
+            player.health.BecomeInvincible(DebugModPlus.Instance);
             proCamera.enabled = false;
 
 
@@ -38,7 +38,7 @@ public class FreecamModule {
             // CameraManager.Instance.cameraCore.theRealSceneCamera.enabled = true;
 
             player.enabled = true;
-            player.health.RemoveInvincible(DebugMod.Instance);
+            player.health.RemoveInvincible(DebugModPlus.Instance);
             proCamera.enabled = true;
             sceneCamera.transform.position = sceneCamera.transform.position with { z = -240 }; // TODO check if correct
             // playerInput.fsm.ChangeState(stateBefore);

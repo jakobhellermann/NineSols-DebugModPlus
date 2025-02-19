@@ -6,8 +6,8 @@ using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Configuration;
 using BlendModes;
-using DebugMod.Modules;
-using DebugMod.Modules.Hitbox;
+using DebugModPlus.Modules;
+using DebugModPlus.Modules.Hitbox;
 using HarmonyLib;
 using InControl;
 using NineSolsAPI;
@@ -16,12 +16,12 @@ using RCGMaker.Core;
 using UnityEngine;
 using UnityEngine.XR;
 
-namespace DebugMod;
+namespace DebugModPlus;
 
 [BepInDependency(NineSolsAPICore.PluginGUID)]
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-public class DebugMod : BaseUnityPlugin {
-    public static DebugMod Instance;
+public class DebugModPlus : BaseUnityPlugin {
+    public static DebugModPlus Instance;
 
     private DebugUI debugUI;
     private QuantumConsoleModule quantumConsoleModule;
@@ -45,7 +45,7 @@ public class DebugMod : BaseUnityPlugin {
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
 
         try {
-            harmony = Harmony.CreateAndPatchAll(typeof(DebugMod).Assembly);
+            harmony = Harmony.CreateAndPatchAll(typeof(DebugModPlus).Assembly);
             Log.Info($"Patched {harmony.GetPatchedMethods().Count()} methods...");
         } catch (Exception e) {
             Log.Error(e);

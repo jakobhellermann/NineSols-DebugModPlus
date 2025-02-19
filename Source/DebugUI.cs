@@ -6,7 +6,7 @@ using InputExtension;
 using NineSolsAPI;
 using UnityEngine;
 
-namespace DebugMod;
+namespace DebugModPlus;
 
 internal class DebugActionToggle {
     public bool Value;
