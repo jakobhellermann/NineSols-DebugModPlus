@@ -10,7 +10,6 @@ using DebugMod.Modules.Hitbox;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
-using QFSW.QC;
 using UnityEngine;
 
 namespace DebugMod;
@@ -57,8 +56,7 @@ public class DebugMod : BaseUnityPlugin {
         SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
         SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
 
-
-        KeybindManager.Add(this, ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
+        KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
         // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
         // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
@@ -91,12 +89,6 @@ public class DebugMod : BaseUnityPlugin {
         Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-
-    private void ToggleConsole() {
-        if (!QuantumConsole.Instance) return;
-        //CallPrivateMethod(typeof(PlayerInputBinder), "BindQuantumConsole",GameCore.Instance.player.playerInput);
-        QuantumConsole.Instance.Toggle();
-    }
 
     private void ToggleSettings() {
         debugUI.settingsOpen = !debugUI.settingsOpen;
@@ -181,7 +173,6 @@ public class DebugMod : BaseUnityPlugin {
         harmony.UnpatchSelf();
         HitboxModule.Unload();
         SavestateModule.Unload();
-        quantumConsoleModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();

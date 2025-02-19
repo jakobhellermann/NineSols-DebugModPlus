@@ -1,7 +1,7 @@
 using System;
 using HarmonyLib;
+using NineSolsAPI;
 using QFSW.QC;
-using UnityEngine.SceneManagement;
 
 namespace DebugMod.Modules;
 
@@ -20,35 +20,39 @@ public class QuantumConsoleModule {
         __result = true;
         return false;
     }
-    
-    
-    private bool consoleInitialized;
 
     public QuantumConsoleModule() {
         QuantumConsoleProcessor.GenerateCommandTable(true);
-        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
-    public void Unload() {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
+    private bool active = false;
 
-    private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode) {
-        if (consoleInitialized || !QuantumConsole.Instance) return;
-        
-        QuantumConsole.Instance.OnActivate += QuantumConsoleActivate;
-        QuantumConsole.Instance.OnDeactivate += QuantumConsoleDeactivate;
-        consoleInitialized = true;
+    public void ToggleConsole() {
+        var consoleObject = ApplicationCore.Instance.gameObject.GetComponentInChildren<QuantumConsole>();
+        consoleObject.enabled = true;
+
+        try {
+            if (active) {
+                consoleObject.Deactivate();
+                QuantumConsoleDeactivate();
+            } else {
+                consoleObject.Activate();
+                QuantumConsoleActivate();
+            }
+
+            active = !active;
+        } catch (Exception e) {
+            ToastManager.Toast(e);
+        }
     }
 
     private void QuantumConsoleActivate() {
         if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, QuantumConsole.Instance);
+        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, DebugMod.Instance);
     }
 
     private void QuantumConsoleDeactivate() {
         if (!GameCore.IsAvailable()) return;
-        GameCore.Instance.player.playerInput.RevokeAllMyVote(QuantumConsole.Instance);
+        GameCore.Instance.player.playerInput.RevokeAllMyVote(DebugMod.Instance);
     }
-
 }
