@@ -73,12 +73,13 @@ public class InfotextModule {
                     $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "")} {player.IsAirJumping}\n";
             } else text += "\n";
 
-            List<(bool, string)> flags = [
+            List<(bool, string)> flags = new List<(bool, string)>
+            {
                 (player.isOnWall, "isOnWall"),
                 (player.isOnLedge, "isOnLedge"),
                 (player.isOnRope, "isOnRope"),
                 (player.kicked, "kicked"),
-            ];
+            };
 
             var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
 

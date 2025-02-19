@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using BepInEx;
+using BepInEx.Logging;
 using BepInEx.Configuration;
 using BlendModes;
 using DebugMod.Modules;
@@ -13,6 +14,7 @@ using NineSolsAPI;
 using QFSW.QC;
 using RCGMaker.Core;
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace DebugMod;
 
@@ -30,7 +32,10 @@ public class DebugMod : BaseUnityPlugin {
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
     public SpeedrunTimerModule SpeedrunTimerModule;
-    public FsmInspectorModule FsmInspectorModule;
+    //FSM Inspector disabled, error handling gets sent through toast and lags game
+    //TODO: fix and re-enable
+    //TODO: make modules toggleable
+    //public FsmInspectorModule FsmInspectorModule;
     public GhostModule GhostModule = new();
 
 
@@ -50,7 +55,7 @@ public class DebugMod : BaseUnityPlugin {
         quantumConsoleModule = new QuantumConsoleModule();
         infotextModule = new InfotextModule();
         SpeedrunTimerModule = new SpeedrunTimerModule();
-        FsmInspectorModule = new FsmInspectorModule();
+        //FsmInspectorModule = new FsmInspectorModule();
         GhostModule = new GhostModule();
 
         SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
@@ -63,8 +68,14 @@ public class DebugMod : BaseUnityPlugin {
         // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
 
         var changeModeShortcut = Config.Bind("SpeedrunTimer", "Change Mode", new KeyboardShortcut());
+        var resetTimerShortcut = Config.Bind("SpeedrunTimer", "Reset Timer", new KeyboardShortcut());
+        var pauseTimerShortcut = Config.Bind("SpeedrunTimer", "Pause Timer", new KeyboardShortcut());
+        var setStartpointShortcut = Config.Bind("SpeedrunTimer", "Set Startpoint", new KeyboardShortcut());
         var setEndpointShortcut = Config.Bind("SpeedrunTimer", "Set Endpoint", new KeyboardShortcut());
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimer(), () => resetTimerShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
 
         // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
@@ -109,6 +120,7 @@ public class DebugMod : BaseUnityPlugin {
         if (Input.GetKey(KeyCode.LeftControl)) {
             Cursor.visible = true;
 
+            //disabling this for now because it caused issues
             if (Input.GetMouseButtonDown(0)) {
                 ToastManager.Toast("click");
                 try {
@@ -117,8 +129,8 @@ public class DebugMod : BaseUnityPlugin {
                         mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
                             -mainCamera.transform.position.z));
                     worldPosition.z = 0; // Set z to 0 to match the 2D plane
-                    var sprites = PickSprite(worldPosition);
-
+                    //var sprites = PickSprite(worldPosition);
+                    /*
                     StateMachineOwner? sm = null;
                     foreach (var sprite in sprites) {
                         var smm = sprite.GetComponentInParent<StateMachineOwner>();
@@ -126,18 +138,19 @@ public class DebugMod : BaseUnityPlugin {
                     }
 
                     if (sm) {
-                        FsmInspectorModule.ObjectsToDisplay = [sm.gameObject];
+                        FsmInspectorModule.ObjectsToDisplay = new List<GameObject> { sm.gameObject };
                         ToastManager.Toast(sm);
-                    }
+                    }*/
                 } catch (Exception e) {
                     ToastManager.Toast(e);
                 }
+                    
             }
         }
     }
 
     private List<SpriteRenderer> PickSprite(Vector3 worldPosition) {
-        List<SpriteRenderer> sprites = [];
+        List<SpriteRenderer> sprites = new List<SpriteRenderer>();
         var spriteRenderers = FindObjectsOfType<SpriteRenderer>();
         foreach (var spriteRenderer in spriteRenderers) {
             if (!IsWithinSpriteBounds(spriteRenderer, worldPosition)) continue;
@@ -159,7 +172,6 @@ public class DebugMod : BaseUnityPlugin {
             return bounds.Contains(position);
         }
     }
-
     private void LateUpdate() {
         try {
             GhostModule.LateUpdate();
@@ -171,7 +183,7 @@ public class DebugMod : BaseUnityPlugin {
 
     private void OnGUI() {
         SpeedrunTimerModule.OnGui();
-        FsmInspectorModule.OnGui();
+        //FsmInspectorModule.OnGui();
     }
 
 

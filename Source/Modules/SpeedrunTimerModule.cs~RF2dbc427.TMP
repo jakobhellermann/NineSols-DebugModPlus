@@ -15,27 +15,33 @@ namespace DebugMod.Modules;
 /*TODO:
  * I wasn't really sure what the goals were of the segment system or ghost recording or how they worked, so I likely borked it. I tried not to but it might need some patching
  * My goal was to make this timer more closely imitate the standard use of a speedrun timer mod, which is a timer that mimics the autosplitter, used for timing short movement sections
- * based off collision triggers. In theory Livesplit should just be used for any longer section (until the ghost stuffs done)
+ * based off collision triggers. In theory Livesplit should just be used for any longer section.
 */
 
 internal enum TimerMode {
-    //Default mode is triggers, the most common use for this timer is two triggers within the same room to time movement/bosses
-    Triggers,         //Savestates do not affect the timer
-    AfterSavestate,   //Timer starts immediately after savestate load
-    NextRoom,         //Timer starts next room after savestate load
+    Triggers,
+    AfterSavestate,
+    NextRoom,
 }
 
 internal enum SpeedrunTimerState {
-    Inactive,         //Off
-    Running,          //On, time increasing
-    Paused,           //On, manually paused
-    Loading,          //On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
-    StartNextRoom,    //Off, turned on next room
+    Inactive,
+    Running,
+    //paused is used soley by the hotkey
+    Paused,
+    Loading,
+    StartNextRoom,
 }
+
+
 
 [HarmonyPatch]
 public class SpeedrunTimerModule {
     private static bool isLoading = false;
+
+    private static UnityEngine.UI.Image? blackCover = null;
+
+    private static LoadingScreenPanel? loadingScreen = null;
 
     private const bool EnableGhost = false;
 
@@ -66,15 +72,12 @@ public class SpeedrunTimerModule {
     // state
     private float segmentStartTime = 0;
     private float time = 0;
-    //separate delta time unaffected by anything outside of the class
     private float deltaTime = 0;
-    //helps track loads and deltaTime
     private float latestTime = 0;
 
     private string? startRoom = null;
     private TimerMode timerMode = TimerMode.Triggers;
     private SpeedrunTimerState state = SpeedrunTimerState.Inactive;
-    //added startpoint
     private (Vector2, string)? startpoint = null;
     private (Vector2, string)? endpoint = null;
     private string[] timerModes = Enum.GetNames(typeof(TimerMode));
@@ -157,8 +160,6 @@ public class SpeedrunTimerModule {
 
     public void ResetTimer() {
         stopwatch.Reset();
-        time = 0;
-        latestTime = 0;
         segmentStartTime = 0;
         done = false;
         currentSegments = new List<(string, float, GhostFrame[]?)>();
@@ -236,7 +237,6 @@ public class SpeedrunTimerModule {
         spriteRenderer.material.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
     }
 
-    //Startpoint logic can probably be merged with Endpoint for better readability
     private void SpawnStartpointTexture()
     {
         if (startpoint is not var (position, scene)) return;
@@ -294,7 +294,7 @@ public class SpeedrunTimerModule {
         SegmentBegin();
     }
     private void EndpointReached() {
-        if (state != SpeedrunTimerState.Running || state == SpeedrunTimerState.Loading) return;
+        if (state != SpeedrunTimerState.Running) return;
 
         EndSegment();
         done = true;
@@ -309,68 +309,44 @@ public class SpeedrunTimerModule {
         ToastManager.Toast(timerMode);
     }
 
-    /* This is where a huge disaster occurred
-     * In order to follow autosplitter logic theres a lot of data that needs to be grabbed, however referencing manager instances that aren't active 
-     * crashes the game, hopefully I made this readable
-     */
     public void LateUpdate() {
         try
         {
-            var coreState = GameCore.GameCoreState.Playing;
-            string sceneName = SceneManager.GetActiveScene().name;
-            UnityEngine.UI.Image blackCover = null;
-            LoadingScreenPanel loadingScreen = null;
+            var sceneName = SceneManager.GetActiveScene().name;
 
-            void GrabInfoSafe()
+            //check timer triggers
+            CheckTriggers();
+
+            if (sceneName == "TitleScreen" && (blackCover is null || loadingScreen is null))
             {
-                //want to grab these references in safe spots
-                if (sceneName == "ClearTransition")
-                {
-                    loadingScreen = null;
-                    blackCover = null;
-                }
-                else if (sceneName == "TitleScreenMenu")
-                {
-                    loadingScreen = null;
-                    if (blackCover == null) blackCover = ApplicationUIGroupManager.Instance.blackCover;
-                }
-                else
-                {
-                    blackCover = null;
-                    if (loadingScreen == null) loadingScreen = ApplicationCore.Instance.loadingScreen;
-                    coreState = GameCore.Instance.currentCoreState;
-                }
+                blackCover = ApplicationUIGroupManager.Instance.blackCover;
+                loadingScreen = ApplicationCore.Instance.loadingScreen;
             }
-
-            //check timer triggers, start trigger might happen when inactive
-            CheckTriggers(sceneName);
 
             if (state == SpeedrunTimerState.Inactive)
             {
+                if (stopwatch.IsRunning) ResetTimer();
                 return;
             }
 
-            else if (state == SpeedrunTimerState.Paused)
+            try
             {
-                stopwatch.Stop();
-                latestTime = (float)stopwatch.Elapsed.TotalSeconds;
-                return;
+                CheckLoading(sceneName);
             }
-
-            GrabInfoSafe();
-            CheckLoading(sceneName, coreState, blackCover, loadingScreen);
+            catch (Exception e)
+            {
+                Log.Error($"Error during SpeedrunTimerModule CheckLoading: {e}");
+            }
 
             if (state == SpeedrunTimerState.Running)
             {
                 //start stopwatch
-                //Stopwatch is preferred over deltatime so its unaffected by bow and other things, more accurate to livesplit
                 stopwatch.Start();
                 deltaTime = (float)stopwatch.Elapsed.TotalSeconds - latestTime;
                 time += deltaTime;
                 latestTime = (float)stopwatch.Elapsed.TotalSeconds;
-            }
 
-            //dont pause stopwatch during loads to track load removal
+            }
         }
         catch (Exception e)
         {
@@ -379,26 +355,38 @@ public class SpeedrunTimerModule {
     }
 
     // All logic here is the autosplitters fault not mine
-    private void CheckLoading(string _sceneName = "", GameCore.GameCoreState _coreState = GameCore.GameCoreState.Playing, UnityEngine.UI.Image _blackCover = null, LoadingScreenPanel _loadingScreen = null)
+    private void CheckLoading(string _sceneName = "")
     {
         var sceneName = _sceneName;
-        var coreState = _coreState;
-        var blackCover = _blackCover;
-        var loadingScreen = _loadingScreen;
-
         try
         {
             var doPauseTimer = false;
-            if (loadingScreen is not null && loadingScreen.isActiveAndEnabled
+
+            if ((loadingScreen is not null && loadingScreen.isActiveAndEnabled)
+                //Can't get gamecore to not crash in the title screen
                 //Autosplitter documents this as Blank / Load, not sure if this is how I'm supposed to check it
-                || sceneName == ""
-                || sceneName == "ClearTransition"
-                || sceneName == "A0_S6_Intro_Video"
-                //Save file reads synchronous so this is the only way to solve that lag
-                || (sceneName == "TitleScreenMenu" && blackCover is not null && blackCover.isActiveAndEnabled && blackCover.color.a > 0.99f)
-                || coreState == GameCore.GameCoreState.ChangingScene
-                || coreState == GameCore.GameCoreState.Init)
-            { doPauseTimer = true; }
+                || (sceneName == "")
+                || (sceneName == "ClearTransition")
+                || (sceneName == "A0_S6_Intro_Video")
+                //If Title Screen has not started fading in
+                || (blackCover is not null && blackCover.isActiveAndEnabled && sceneName == "TitleScreenMenu" && blackCover.color.a > 0.99f))
+            {
+                Log.Info("Pausing timer, no gamecore check, scene is: " + sceneName);
+                doPauseTimer = true;
+            }
+            //check game manager to see if timer needs to be paused anyway
+            else
+            {
+                if (sceneName != "TitleScreenMenu" && sceneName != "ClearTransition" && sceneName != "")
+                {
+                    if (GameCore.Instance.currentCoreState == GameCore.GameCoreState.ChangingScene || GameCore.Instance.currentCoreState == GameCore.GameCoreState.Init)
+                    {
+                        Log.Info("Pausing timer, yes gamecore check, scene is: " + sceneName);
+                        doPauseTimer = true;
+                    }
+                    else Log.Info("GameCore state is Playing"); 
+                }
+            }
 
             if (doPauseTimer)
             {
@@ -425,11 +413,11 @@ public class SpeedrunTimerModule {
         }
     }
 
-    private void CheckTriggers(string _sceneName = "")
+    private void CheckTriggers()
     {
         var playerPosition = Vector2.zero;
         var doCheckPoints = false;
-        var sceneName = _sceneName;
+        var sceneName = SceneManager.GetActiveScene().name;
         const float distanceThreshold = 18;
 
         if (Player.i != null && Player.i.gameObject.activeInHierarchy && Player.i.transform != null && Player.i.transform.position != null)
@@ -451,7 +439,7 @@ public class SpeedrunTimerModule {
         }
     }
 
-    //TODO: Track Segment PB as well to compare
+
     public void OnGui() {
         const int padding = 8;
 

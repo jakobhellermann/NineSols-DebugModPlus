@@ -40,25 +40,25 @@ public class HitboxRender : MonoBehaviour {
     }
 
     private readonly SortedDictionary<HitboxType, HashSet<Collider2D>> colliders = new() {
-        { HitboxType.ActorSensor, [] },
-        { HitboxType.AkGameObj, [] },
-        { HitboxType.AttackSensor, [] },
-        { HitboxType.ChangeSceneTrigger, [] },
-        { HitboxType.EffectDealer, [] },
-        { HitboxType.EffectReceiver, [] },
-        { HitboxType.Enemy, [] },
-        { HitboxType.GeneralFindable, [] },
-        { HitboxType.MonsterPushAway, [] },
-        { HitboxType.Other, [] },
-        { HitboxType.PathFindAgent, [] },
-        { HitboxType.PathFindTarget, [] },
-        { HitboxType.Player, [] },
-        { HitboxType.PlayerSensor, [] },
-        { HitboxType.Terrain, [] },
-        { HitboxType.Trap, [] },
-        { HitboxType.Trigger, [] },
-        { HitboxType.Interactable, [] },
-        { HitboxType.Finder, [] }
+        { HitboxType.ActorSensor, new HashSet<Collider2D>()},
+        { HitboxType.AkGameObj, new HashSet<Collider2D>()},
+        { HitboxType.AttackSensor, new HashSet<Collider2D>()},
+        { HitboxType.ChangeSceneTrigger, new HashSet<Collider2D>()},
+        { HitboxType.EffectDealer, new HashSet<Collider2D>()},
+        { HitboxType.EffectReceiver, new HashSet<Collider2D>()},
+        { HitboxType.Enemy,new HashSet<Collider2D>()},
+        { HitboxType.GeneralFindable, new HashSet<Collider2D>()},
+        { HitboxType.MonsterPushAway, new HashSet<Collider2D>()},
+        { HitboxType.Other, new HashSet<Collider2D>()},
+        { HitboxType.PathFindAgent, new HashSet<Collider2D>()},
+        { HitboxType.PathFindTarget, new HashSet<Collider2D>()},
+        { HitboxType.Player, new HashSet<Collider2D>()},
+        { HitboxType.PlayerSensor, new HashSet<Collider2D>()},
+        { HitboxType.Terrain, new HashSet<Collider2D>()},
+        { HitboxType.Trap, new HashSet<Collider2D>()},
+        { HitboxType.Trigger, new HashSet<Collider2D>()},
+        { HitboxType.Interactable, new HashSet<Collider2D>()},
+        { HitboxType.Finder, new HashSet<Collider2D>()}
     };
 
     // public static float LineWidth => Math.Max(0.7f, Screen.width / 960f * GameCameras.instance.tk2dCam.ZoomFactor);

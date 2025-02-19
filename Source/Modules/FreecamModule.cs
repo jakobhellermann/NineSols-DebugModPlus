@@ -17,7 +17,7 @@ public class FreecamModule {
     private static Camera sceneCamera => GameCore.Instance.gameLevel.sceneCamera;
     private static ProCamera2D proCamera => CameraManager.Instance.cameraCore.proCamera2D;
 
-    [BindableMethod(Name = "Toggle Freecam", DefaultKeybind = [KeyCode.LeftControl, KeyCode.M])]
+    [BindableMethod(Name = "Toggle Freecam", DefaultKeybind = new KeyCode[] { KeyCode.LeftControl, KeyCode.M })]
     private static void ToggleFreecam() {
         FreecamActive = !FreecamActive;
 

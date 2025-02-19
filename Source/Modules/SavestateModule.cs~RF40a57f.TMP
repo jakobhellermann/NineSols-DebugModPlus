@@ -73,14 +73,13 @@ public class SavestateModule {
         }
 
         try {
-            module.LoadSavestate(savestate, false);
+            module.LoadSavestateNoReload(savestate);
         } catch (Exception e) {
             ToastManager.Toast(e);
         }
     }
 
-    //TODO: Save Player Data, Reset Jades, and write to file
-    //      HP, Direction, Qi, Ammo, Revival Jade
+
     private void CreateSavestate(string slot) {
         var saveManager = SaveManager.Instance;
         var gameCore = GameCore.Instance;
@@ -129,9 +128,7 @@ public class SavestateModule {
 
     }
 
-
-    //TODO: Implement loading from file
-    private void LoadSavestate(Savestate savestate, bool reload = true) {
+    private void LoadSavestate(Savestate savestate) {
         IsLoadingSavestate = true;
 
         var saveManager = SaveManager.Instance;
@@ -148,41 +145,46 @@ public class SavestateModule {
         //ApplicationUIGroupManager.Instance.PopAll();
 
         // reload scene
-        if (reload)
-        {
-            var currentPos = savestate.PlayerPosition;
-            GameCore.Instance.ChangeScene(
-                new SceneConnectionPoint.ChangeSceneData
-                {
-                    sceneName = savestate.Scene,
-                    panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },
-                    // changeSceneMode = SceneConnectionPoint.Cha   ngeSceneMode.Teleport
-                    playerSpawnPosition = () => currentPos,
-                    ChangedDoneEvent = () =>
-                    {
-                        Player.i.Velocity = savestate.PlayerVelocity;
-                        OnSavestateLoaded();
-                    },
+        var currentPos = savestate.PlayerPosition;
+        GameCore.Instance.ChangeScene(
+            new SceneConnectionPoint.ChangeSceneData {
+                sceneName = savestate.Scene,
+                panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },
+                // changeSceneMode = SceneConnectionPoint.Cha   ngeSceneMode.Teleport
+                playerSpawnPosition = () => currentPos,
+                ChangedDoneEvent = () => {
+                    Player.i.Velocity = savestate.PlayerVelocity;
+                    OnSavestateLoaded();
                 },
-                false
-            );
-        }
-        // no reload
-        else
-        {
-            MapTeleportModule.TeleportTo(savestate.PlayerPosition, savestate.Scene, false);
-            Player.i.Velocity = savestate.PlayerVelocity;
+            },
+            false
+        );
 
-            OnSavestateLoaded();
-        }
+        ToastManager.Toast("Savestate loaded");
+        IsLoadingSavestate = false;
+    }
+
+
+    private void LoadSavestateNoReload(Savestate savestate) {
+        IsLoadingSavestate = true;
+
+        var saveManager = SaveManager.Instance;
+        // var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
+
+        LoadFlags(savestate);
+        saveManager.allFlags.AllFlagInitStartAndEquip();
+        GameCore.Instance.ResetLevel();
+
+        MapTeleportModule.TeleportTo(savestate.PlayerPosition, savestate.Scene, false);
+        Player.i.Velocity = savestate.PlayerVelocity;
+
+        OnSavestateLoaded();
 
         ToastManager.Toast("Savestate loaded");
         IsLoadingSavestate = false;
     }
 
     private void OnSavestateLoaded() {
-        //reset level cuz enemies often get killed and scene transition doesnt reset it
-        GameCore.Instance.ResetLevel();
         SavestateLoaded?.Invoke(this, EventArgs.Empty);
     }
 
