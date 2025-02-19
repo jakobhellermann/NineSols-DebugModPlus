@@ -3,6 +3,7 @@ using NineSolsAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using BepInEx.Configuration;
 using NineSolsAPI.Utils;
 using UnityEngine;
@@ -31,6 +32,17 @@ internal enum SpeedrunTimerState {
     Paused, // On, manually paused
     Loading, // On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
     StartNextRoom, // Off, turned on next room
+}
+
+internal class SpeedrunRecordingSegment {
+    public required string SceneName;
+    public float SegmentTime;
+    public GhostFrame[]? GhostFrames;
+}
+
+internal class SpeedrunInfoText {
+    public float SegmentTime;
+    public float? SegmentTimeLast;
 }
 
 [HarmonyPatch]
@@ -91,9 +103,9 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
 
 
     private bool done = false;
-    private List<(string, float, GhostFrame[]?)>? lastSegments = null;
-    private List<(string, float, GhostFrame[]?)> currentSegments = new();
-    private float? lastTimeDelta;
+    private List<SpeedrunRecordingSegment>? lastSegments = null;
+    private List<SpeedrunRecordingSegment> currentSegments = new();
+    private SpeedrunInfoText? infoText;
 
     private void OnLevelChange() {
         EndSegment();
@@ -111,10 +123,10 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     private void EndSegment() {
         if (state != SpeedrunTimerState.Running) return;
 
-        var roomTime = time - segmentStartTime;
+        var segmentTime = time - segmentStartTime;
         segmentStartTime = time;
 
-        Log.Info($"Ending segment of {roomTime:0.00}s {lastSegments?.Count}");
+        Log.Info($"Ending segment of {segmentTime:0.00}s");
 
         GhostFrame[]? ghostSegment = null;
         if (EnableGhost) {
@@ -122,44 +134,26 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
             GhostModule.StopRecording();
         }
 
-        currentSegments.Add((GameCore.Instance.gameLevel.SceneName, roomTime, ghostSegment));
-
-        if (lastSegments is { } ls) {
-            var i = 0;
-
-            string? lastRoom;
-            float? lastTime = null;
-            float? currentTime = null;
-
-            while (true) {
-                Log.Info(
-                    $"{i} curr {currentSegments.Count} last {(lastSegments != null ? lastSegments.Count.ToString() : "null")}");
-                if (i >= currentSegments.Count) {
-                    lastTimeDelta = currentTime - lastTime;
-                    Log.Info($"lasttimedelta of {lastTimeDelta:0.00}s");
-                    break;
-                }
-
-                if (i >= ls.Count) break;
-
-                (lastRoom, lastTime, _) = ls[i];
-                (var currentRoom, currentTime, _) = currentSegments[i];
-
-                if (lastRoom != currentRoom) break;
-
-                i++;
-            }
-        }
+        var lastSegment = lastSegments?.ElementAtOrDefault(currentSegments.Count);
+        var currentSegment = new SpeedrunRecordingSegment {
+            SceneName = GameCore.Instance.gameLevel.SceneName,
+            SegmentTime = segmentTime,
+            GhostFrames = ghostSegment,
+        };
+        currentSegments.Add(currentSegment);
+        infoText = new SpeedrunInfoText {
+            SegmentTime = currentSegment.SegmentTime,
+            SegmentTimeLast = lastSegment != null ? currentSegment.SegmentTime - lastSegment.SegmentTime : null,
+        };
     }
 
-    private (string, float, GhostFrame[]?)? GetMatchingLastSegment() {
+    private SpeedrunRecordingSegment? GetMatchingLastSegment() {
         if (lastSegments is null) return null;
 
-        (string, float, GhostFrame[]?)? lastSegment = null;
         for (var i = 0;; i++) {
             if (i >= lastSegments.Count) return null;
 
-            lastSegment = lastSegments[i];
+            var lastSegment = lastSegments[i];
 
             if (i >= currentSegments.Count) return lastSegment;
         }
@@ -184,8 +178,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         latestTime = 0;
         segmentStartTime = 0;
         done = false;
-        currentSegments = new List<(string, float, GhostFrame[]?)>();
-        lastTimeDelta = null;
+        currentSegments = new List<SpeedrunRecordingSegment>();
+        infoText = null;
         state = SpeedrunTimerState.Inactive;
     }
 
@@ -227,9 +221,12 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         segmentStartTime = time;
         if (EnableGhost) GhostModule.StartRecording();
 
-        if (EnableGhost && GetMatchingLastSegment() is (_, _, { } ghostFrames)) {
-            ToastManager.Toast($"playing back {ghostFrames.Length} frames");
-            GhostModule.Playback(ghostFrames);
+        if (EnableGhost) {
+            var matchingSegment = GetMatchingLastSegment();
+            if (matchingSegment.GhostFrames is not null) {
+                ToastManager.Toast($"playing back {matchingSegment.GhostFrames.Length} frames");
+                GhostModule.Playback(matchingSegment.GhostFrames);
+            }
         }
     }
 
@@ -237,9 +234,9 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
         done = false;
-        currentSegments = new List<(string, float, GhostFrame[]?)>();
+        currentSegments = new List<SpeedrunRecordingSegment>();
         lastSegments = null;
-        lastTimeDelta = null;
+        infoText = null;
         segmentStartTime = 0;
         startRoom = null;
     }
@@ -321,7 +318,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         state = SpeedrunTimerState.Inactive;
         lastSegments = currentSegments;
         ToastManager.Toast($"Endpoint reached in {currentSegments.Count} segments");
-        currentSegments = new List<(string, float, GhostFrame[]?)>();
+        currentSegments = new List<SpeedrunRecordingSegment>();
     }
 
     /* This is where a huge disaster occurred
@@ -438,13 +435,14 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
 
     //TODO: Track Segment PB as well to compare
     public void OnGui() {
+        style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 30 };
         const int padding = 8;
 
         if (done || state != SpeedrunTimerState.Inactive) {
-            style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 30 };
             var timeStr = $"{(done ? "Done in " : "")}{time:0.00}s";
-            if (lastTimeDelta is not null) {
-                var diffText = $"{(lastTimeDelta > 0 ? "+" : "")}{lastTimeDelta:0.00}s";
+
+            if (infoText != null) {
+                var diffText = $"{(infoText.SegmentTimeLast > 0 ? "+" : "")}{infoText.SegmentTimeLast:0.00}s";
                 timeStr += $"\nCompared to last: {diffText}";
             }
 
