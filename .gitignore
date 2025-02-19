@@ -1,5 +1,6 @@
 /*.DotSettings.user
 /.idea
+/.vs
 /thunderstore/build
 obj
 bin

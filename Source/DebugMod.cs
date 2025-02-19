@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BepInEx;
+using BepInEx.Logging;
 using BepInEx.Configuration;
 using DebugMod.Modules;
 using DebugMod.Modules.Hitbox;
@@ -11,6 +12,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace DebugMod;
 
@@ -27,7 +29,9 @@ public class DebugMod : BaseUnityPlugin {
     private InfotextModule infotextModule;
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = new();
+
     public SpeedrunTimerModule SpeedrunTimerModule;
+
     public FsmInspectorModule FsmInspectorModule;
     public GhostModule GhostModule = new();
 
@@ -62,8 +66,14 @@ public class DebugMod : BaseUnityPlugin {
         // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
 
         var changeModeShortcut = Config.Bind("SpeedrunTimer", "Change Mode", new KeyboardShortcut());
+        var resetTimerShortcut = Config.Bind("SpeedrunTimer", "Reset Timer", new KeyboardShortcut());
+        var pauseTimerShortcut = Config.Bind("SpeedrunTimer", "Pause Timer", new KeyboardShortcut());
+        var setStartpointShortcut = Config.Bind("SpeedrunTimer", "Set Startpoint", new KeyboardShortcut());
         var setEndpointShortcut = Config.Bind("SpeedrunTimer", "Set Endpoint", new KeyboardShortcut());
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimer(), () => resetTimerShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
 
         // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
