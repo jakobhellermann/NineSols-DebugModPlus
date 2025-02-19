@@ -1,11 +1,14 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using NineSolsAPI.Utils;
+using QFSW.QC.Containers;
 using RCGFSM.Animation;
 using RCGFSM.GameObjects;
 using RCGFSM.StateEvents;
@@ -29,16 +32,49 @@ public class FsmInspectorModule {
     private static AccessTools.FieldRef<AbstractStateTransition, AbstractConditionComp[]> stateTransitionConditions =
         AccessTools.FieldRefAccess<AbstractStateTransition, AbstractConditionComp[]>("conditions");
 
-    private string InspectFSMMonsterLove(FSMStateMachineRunner runner) {
+    private string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
         var text = "";
         var machines = stateMachineRunnerStateMachineList.Invoke(runner);
+
+        var mb = runner.GetComponent<MonsterBase>();
+        if (mb) text += $"\nMonster animation state {mb.currentPlayingAnimatorState}\n\n";
+
         foreach (var machine in machines) {
             var stateType = machine.GetType().GenericTypeArguments[0];
-
-            var currentState = machine.CurrentStateMap;
-
             text += $"State type: {stateType}\n";
-            text += $"Current state: {currentState.stateObj}\n";
+
+            var currentState = machine.CurrentStateMap.stateObj;
+            text += $"Current state: {currentState}\n";
+
+            var allStates = machine.AccessField<object?>("_stateMapping")!
+                .AccessProperty<IList>("getAllStates")!;
+
+            foreach (var stateObj in allStates) {
+                var state = stateObj.AccessField<object>("state")!;
+                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior")!;
+                text += $"  {state} ({stateBehaviour.GetType().Name})\n";
+
+                if (stateBehaviour is MonsterState monsterState) {
+                    text += $"    Exit State: {monsterState.exitState}\n";
+
+                    if (stateBehaviour is StealthPreAttackState pre) {
+                        text += $"    Approaching Scheme Index {pre.SchemesIndex}\n";
+                        for (var i = 0; i < pre.ApproachingSchemes.Count; i++) {
+                            var approaching = pre.ApproachingSchemes[i];
+                            text += $"    Approaching Scheme {i}: {approaching.name}\n";
+                            text += $"      exit range: {approaching.ExitApproachingRange}\n";
+                        }
+                    }
+
+                    var stateActions =
+                        ReflectionUtils.AccessBaseField<AbstractStateAction[]>(stateBehaviour, typeof(MonsterState),
+                            "stateActions");
+                    if (stateActions.Length > 0) text += "HAS STATE ACTIONS\n";
+                    // text += $"    {monsterState.AccessField<AbstractStateAction[]>("stateActions")}\n";
+                    // ToastManager.Toast(field==null);
+                    // text += $"    {monsterState.AccessField<AbstractStateAction[]>("stateActions")}\n";
+                }
+            }
         }
 
         return text;
@@ -76,7 +112,7 @@ public class FsmInspectorModule {
         var text = "";
 
         var runner = gameObject.GetComponent<FSMStateMachineRunner>();
-        if (runner) return InspectFSMMonsterLove(runner);
+        if (runner) return InspectFsmMonsterLove(runner);
 
         var owner = gameObject.GetComponent<StateMachineOwner>();
         if (!owner) return "No fsm found";
@@ -173,26 +209,23 @@ public class FsmInspectorModule {
     public List<GameObject> Objects = [];
 
     public void OnGui() {
+        Player.i?.health.GainFull();
         // if (text is null) {
         // ToastManager.Toast(Screen.fullScreenMode);
 
-        // var obj = GameObject.Find("A7_S1/Room/Prefab/PhoneCallFSM_家裡古樹暴走 潩獮䑜浥獹楴祦䕜桮湡散");
-        // var obj = GameObject.Find("A7_S1/Room/Prefab/A7_S1_三階段FSM    ");
-        // var obj = GameObject.Find("GameCore(Clone)/RCG LifeCycle/PPlayer");
-        // GameObject.Find(
-        //     "AG_S2/Room/Prefab/Treasure Chests 寶箱/LootProvider 刺蝟玉/[Mech]SealedBoxTreasure FSM Interactable Variant"),
-        // GameObject.Find(
-        //     "AG_S2/Room/Prefab/Treasure Chests 寶箱/LootProvider 刺蝟玉/0_DropPickable Bag FSM/ItemProvider/DropPickable FSM Prototype"),
+        var extra = new GameObject[] { };
+        // { GameObject.Find("A2_S5_ BossHorseman_GameLevel/Room/StealthGameMonster_SpearHorseMan") };
+
         try {
             text = "";
-            foreach (var obj in Objects) {
+            foreach (var obj in Objects.Concat(extra)) {
                 if (!obj) {
                     text += "null\n";
                     continue;
                 }
 
                 text += $"{obj.name}\n";
-                text += ObjectUtils.ObjectPath(obj);
+                text += "  " + ObjectUtils.ObjectPath(obj);
                 text += "\n";
                 try {
                     text += InspectFSM(obj);
@@ -206,9 +239,19 @@ public class FsmInspectorModule {
             ToastManager.Toast(e);
         }
 
-        const int padding = 8;
+        text = text?.Trim();
 
-        style ??= new GUIStyle(GUI.skin.label) { fontSize = 20 };
-        GUI.Label(new Rect(padding, padding, 6000, 1000), text, style);
+        const int padding = 8;
+        if (style == null) {
+            style = new GUIStyle(GUI.skin.label) { fontSize = 20 };
+            var bg = new Texture2D(1, 1);
+            bg.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.5f));
+            bg.Apply();
+            style.normal.background = bg;
+        }
+
+        var size = style.CalcSize(new GUIContent(text));
+
+        GUI.Label(new Rect(padding, padding, size.x, size.y), text, style);
     }
 }
