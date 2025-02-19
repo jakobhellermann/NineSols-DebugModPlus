@@ -3,7 +3,7 @@
         <AssemblyName>DebugModPlus</AssemblyName>
         <Description>Advanced Debug Mod for Nine Sols</Description>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <Version>1.2.0</Version>
+        <Version>1.3.0</Version>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
         <NoWarn>MSB3277</NoWarn>
@@ -72,7 +72,7 @@
         <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
         <PackageReference Include="UnityEngine.Modules" Version="2022.3.18" IncludeAssets="compile" />
 
-        <PackageReference Include="NineSolsAPI" Version="0.4.0" />
+        <PackageReference Include="NineSolsAPI" Version="0.4.2" />
         <!-- <ProjectReference Include="../../NineSolsAPI/NineSolsAPI/NineSolsAPI.csproj" />-->
     </ItemGroup>
 
