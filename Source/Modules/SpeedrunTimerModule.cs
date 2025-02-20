@@ -243,6 +243,9 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         var startpointScene = GameCore.Instance.gameLevel.SceneName;
         startpoint = (startpointPosition, startpointScene);
         SpawnStartpointTexture();
+
+        ResetTimer();
+        segments.ClearOld();
     }
 
     public void SetEndpoint() {
@@ -250,7 +253,11 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         endpointPosition.x += Player.i.Facing == Facings.Right ? 16 : -16;
         var endpointScene = GameCore.Instance.gameLevel.SceneName;
         endpoint = (endpointPosition, endpointScene);
+
         SpawnEndpointTexture();
+
+        if (state is SpeedrunTimerState.InactiveDone) state = SpeedrunTimerState.Inactive;
+        segments.ClearOld();
     }
 
     public void ClearCheckpoints() {
@@ -258,6 +265,9 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         endpoint = null;
         if (startpointObject) Object.Destroy(startpointObject);
         if (endpointObject) Object.Destroy(endpointObject);
+
+        ResetTimer();
+        segments.ClearOld();
     }
 
     private void SegmentBegin() {
@@ -280,6 +290,9 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         infoText = null;
         segmentStartTime = 0;
         startRoom = null;
+        if (state is SpeedrunTimerState.InactiveDone) {
+            state = SpeedrunTimerState.Inactive;
+        }
     }
 
     public void OnSavestateLoaded() {
