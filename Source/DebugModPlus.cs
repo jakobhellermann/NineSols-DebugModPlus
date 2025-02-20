@@ -72,7 +72,7 @@ public class DebugModPlus : BaseUnityPlugin {
         KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
         KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
         KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
-        KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimer(), () => resetTimerShortcut.Value);
+        KeybindManager.Add(this, () => SpeedrunTimerModule.ResetTimerUser(), () => resetTimerShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
         KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);

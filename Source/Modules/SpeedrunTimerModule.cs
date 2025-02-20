@@ -211,6 +211,11 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         startRoom = null;
     }
 
+    public void ResetTimerUser() {
+        ToastManager.Toast("Resetting timer");
+        ResetTimer();
+    }
+
     public void ResetTimer() {
         stopwatch.Reset();
         currentTime = 0;
