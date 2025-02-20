@@ -462,15 +462,21 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
             doCheckPoints = true;
         }
 
+        var startpointReached = false;
+        var endpointReached = false;
+
         if (doCheckPoints && startpoint is var (sposition, sscene) && sscene == sceneName) {
             var sdistance = Vector2.Distance(playerPosition, sposition);
-            if (sdistance < distanceThreshold) StartpointReached();
+            if (sdistance < distanceThreshold) startpointReached = true;
         }
 
         if (doCheckPoints && endpoint is var (eposition, escene) && escene == sceneName) {
             var edistance = Vector2.Distance(playerPosition, eposition);
-            if (edistance < distanceThreshold) EndpointReached();
+            if (edistance < distanceThreshold) endpointReached = true;
         }
+
+        if (startpointReached && !endpointReached) StartpointReached();
+        if (endpointReached && !startpointReached) EndpointReached();
     }
 
     public void OnGui() {
