@@ -28,10 +28,11 @@ public enum TimerMode {
 
 internal enum SpeedrunTimerState {
     Inactive, // Off
+    StartNextRoom, // Off, turned on next room
     Running, // On, time increasing
     Paused, // On, manually paused
     Loading, // On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
-    StartNextRoom, // Off, turned on next room
+    InactiveDone, // Off, after reaching the end
 }
 
 // ReSharper disable once InconsistentNaming
@@ -139,7 +140,6 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     private string[] timerModes = Enum.GetNames(typeof(TimerMode));
 
 
-    private bool done = false;
     private Segments segments = new();
     private SpeedrunInfoText? infoText;
 
@@ -221,7 +221,6 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         currentTime = 0;
         latestTime = 0;
         segmentStartTime = 0;
-        done = false;
         segments.Current.Clear();
         infoText = null;
         state = SpeedrunTimerState.Inactive;
@@ -277,7 +276,6 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     public void OnSavestateCreated() {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
-        done = false;
         segments.Clear();
         infoText = null;
         segmentStartTime = 0;
@@ -357,8 +355,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         if (state != SpeedrunTimerState.Running || state == SpeedrunTimerState.Loading) return;
 
         EndSegment();
-        done = true;
-        state = SpeedrunTimerState.Inactive;
+        state = SpeedrunTimerState.InactiveDone;
         segments.Finish();
         ToastManager.Toast($"Endpoint reached in {segments.Last.Count} segments");
     }
@@ -483,8 +480,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 28 };
         const int padding = 8;
 
-        if (done || state != SpeedrunTimerState.Inactive) {
-            var timeStr = $"{(done ? "Done in " : "")}{currentTime:0.00}s";
+        if (state != SpeedrunTimerState.Inactive) {
+            var timeStr = $"{currentTime:0.00}s";
 
             if (infoText != null) {
                 var segmentText = $"\nSegment: {infoText.SegmentTime:0.00}s";
