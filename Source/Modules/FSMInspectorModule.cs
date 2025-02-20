@@ -243,11 +243,12 @@ public class FsmInspectorModule {
 
         const int padding = 8;
         if (style == null) {
-            style = new GUIStyle(GUI.skin.label) { fontSize = 20 };
-            var bg = new Texture2D(1, 1);
-            bg.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.5f));
-            bg.Apply();
-            style.normal.background = bg;
+            style = new GUIStyle(GUI.skin.label) {
+                fontSize = 20,
+                normal = {
+                    background = UiUtils.GetColorTexture(new Color(0f, 0f, 0f, 0.5f)),
+                },
+            };
         }
 
         var size = style.CalcSize(new GUIContent(text));

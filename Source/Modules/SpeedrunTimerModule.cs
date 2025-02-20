@@ -37,18 +37,45 @@ internal enum SpeedrunTimerState {
 
 // ReSharper disable once InconsistentNaming
 internal class Segments {
-    public List<SpeedrunRecordingSegment> Current = new();
-    public List<SpeedrunRecordingSegment> Last = new();
-    public List<SpeedrunRecordingSegment> PB = new();
+    public List<SpeedrunRecordingSegment> segments = new();
+    public float? FinishedTime;
+
+    public void Clear() {
+        segments.Clear();
+        FinishedTime = null;
+    }
+
+    public void RecalcFinishedTime() {
+        FinishedTime = segments.Sum(segment => segment.SegmentTime);
+    }
+
+    public Segments Copy() => new() {
+        segments = new List<SpeedrunRecordingSegment>(segments),
+        FinishedTime = FinishedTime,
+    };
+}
+
+internal class SegmentHistory {
+    public Segments Current = new();
+    public Segments Last = new();
+    public Segments PB = new();
+    // ^ segments are SOB, FinishedTime is whole
+
+    public float? finishedPbDelta = null;
 
     public void Clear() {
         Current.Clear();
+        ClearOld();
+    }
+
+    public void ClearOld() {
         Last.Clear();
         PB.Clear();
+        finishedPbDelta = null;
     }
 
     public void Add(SpeedrunRecordingSegment currentSegment) {
-        Current.Add(currentSegment);
+        Current.segments.Add(currentSegment);
     }
 
     public void Finish() {
@@ -56,21 +83,32 @@ internal class Segments {
         previousLast.Clear();
 
         Last = Current;
+        Last.RecalcFinishedTime();
         Current = previousLast;
 
-        if (Last.Count != PB.Count && PB.Count > 0)
+        if (Last.segments.Count != PB.segments.Count && PB.segments.Count > 0)
             ToastManager.Toast(
-                $"Finished in {Last.Count} segments, as opposed to PB of {PB.Count} segments. Clearing PB.");
+                $"Finished in {Last.segments.Count} segments, as opposed to PB of {PB.segments.Count} segments. Clearing PB.");
 
-        if (PB.Count == 0)
-            PB = new List<SpeedrunRecordingSegment>(Last);
-        else
-            for (var i = 0; i < PB.Count; i++)
-                if (Last[i].SegmentTime < PB[i].SegmentTime)
-                    PB[i] = Last[i];
+        finishedPbDelta = Last.FinishedTime - PB.FinishedTime;
+
+        if (PB.segments.Count == 0) {
+            PB = Last.Copy();
+        } else {
+            if (Last.FinishedTime < PB.FinishedTime) {
+                PB.FinishedTime = Last.FinishedTime;
+            }
+
+            for (var i = 0; i < PB.segments.Count; i++) {
+                if (Last.segments[i].SegmentTime < PB.segments[i].SegmentTime) {
+                    PB.segments[i] = Last.segments[i];
+                }
+            }
+        }
     }
 
-    public int ActiveSegmentIndex => Current.Count;
+
+    public int ActiveSegmentIndex => Current.segments.Count;
 }
 
 internal class SpeedrunRecordingSegment {
@@ -80,7 +118,7 @@ internal class SpeedrunRecordingSegment {
 }
 
 // ReSharper disable once InconsistentNaming
-internal class SpeedrunInfoText {
+internal class SegmentDelta {
     public float SegmentTime;
     public float? SegmentTimeLast;
     public float? SegmentTimePB;
@@ -114,7 +152,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         module.OnLevelChange();
     }
 
-    private GUIStyle? style;
+
+    private Styles? styles;
 
 
     // state
@@ -140,8 +179,8 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     private string[] timerModes = Enum.GetNames(typeof(TimerMode));
 
 
-    private Segments segments = new();
-    private SpeedrunInfoText? infoText;
+    private SegmentHistory segments = new();
+    private SegmentDelta? lastSegmentDelta;
 
     private void OnLevelChange() {
         EndSegment();
@@ -170,15 +209,15 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
             GhostModule.StopRecording();
         }
 
-        var lastSegment = segments.Last.ElementAtOrDefault(segments.ActiveSegmentIndex);
-        var pbSegment = segments.PB.ElementAtOrDefault(segments.ActiveSegmentIndex);
+        var lastSegment = segments.Last.segments.ElementAtOrDefault(segments.ActiveSegmentIndex);
+        var pbSegment = segments.PB.segments.ElementAtOrDefault(segments.ActiveSegmentIndex);
         var currentSegment = new SpeedrunRecordingSegment {
             SceneName = GameCore.Instance.gameLevel.SceneName,
             SegmentTime = segmentTime,
             GhostFrames = ghostSegment,
         };
         segments.Add(currentSegment);
-        infoText = new SpeedrunInfoText {
+        lastSegmentDelta = new SegmentDelta {
             SegmentTime = currentSegment.SegmentTime,
             SegmentTimeLast = lastSegment?.SegmentTime,
             SegmentTimePB = pbSegment?.SegmentTime,
@@ -186,14 +225,14 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     }
 
     private SpeedrunRecordingSegment? GetMatchingLastSegment() {
-        if (segments.Last.Count == 0) return null;
+        if (segments.Last.segments.Count == 0) return null;
 
         for (var i = 0;; i++) {
-            if (i >= segments.Last.Count) return null;
+            if (i >= segments.Last.segments.Count) return null;
 
-            var lastSegment = segments.Last[i];
+            var lastSegment = segments.Last.segments[i];
 
-            if (i >= segments.Current.Count) return lastSegment;
+            if (i >= segments.Current.segments.Count) return lastSegment;
         }
     }
 
@@ -222,7 +261,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         latestTime = 0;
         segmentStartTime = 0;
         segments.Current.Clear();
-        infoText = null;
+        lastSegmentDelta = null;
         state = SpeedrunTimerState.Inactive;
     }
 
@@ -287,7 +326,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
         segments.Clear();
-        infoText = null;
+        lastSegmentDelta = null;
         segmentStartTime = 0;
         startRoom = null;
         if (state is SpeedrunTimerState.InactiveDone) {
@@ -370,7 +409,6 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         EndSegment();
         state = SpeedrunTimerState.InactiveDone;
         segments.Finish();
-        ToastManager.Toast($"Endpoint reached in {segments.Last.Count} segments");
     }
 
     /* This is where a huge disaster occurred
@@ -490,33 +528,82 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
     }
 
     public void OnGui() {
-        style ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 28 };
-        const int padding = 8;
+        if (state == SpeedrunTimerState.Inactive) return;
 
-        if (state != SpeedrunTimerState.Inactive) {
-            var timeStr = $"{currentTime:0.00}s";
+        styles ??= new Styles();
 
-            if (infoText != null) {
-                var segmentText = $"\nSegment: {infoText.SegmentTime:0.00}s";
-                if (infoText.SegmentTimeLast is { } segLast)
-                    segmentText += $"\nLast: {segLast:0.00}s ({FormatTimeDelta(infoText.SegmentTime - segLast)})";
-                if (infoText.SegmentTimePB is { } segPb)
-                    segmentText += $"\nPB: {segPb:0.00}s ({FormatTimeDelta(infoText.SegmentTime - segPb)})";
-                timeStr += segmentText;
-            }
+        const int paddingX = 8;
+        const int paddingY = 14;
 
+        var delta = segments.finishedPbDelta;
 
-            GUI.Label(new Rect(padding, padding, 800, 500), timeStr, style);
+        var timeStr = $"{currentTime:0.00}s";
+        var pbStr = segments.PB.FinishedTime is { } pb ? $"PB: {pb:0.00}" : "";
+
+        var deltaStr = delta != 0 && delta is { } d ? FormatTimeDelta(d) : null;
+
+        var timeStyle = state switch {
+            SpeedrunTimerState.InactiveDone => (delta is null or < 0) switch {
+                true => styles.StyleGold,
+                false => styles.StyleGreen,
+            },
+            _ => styles.Style,
+        };
+
+        var sizeTime = LabelSized(timeStyle, timeStr, paddingX, paddingY);
+        if (deltaStr != null) {
+            LabelSized(styles.StyleDelta, deltaStr, paddingX + sizeTime.x + 6, paddingY, overrideH: sizeTime.y);
         }
+
+        LabelSized(styles.StylePb, pbStr, paddingX, paddingY + sizeTime.y);
+    }
+
+    private Vector2 LabelSized(
+        GUIStyle style, string text, float x, float y,
+        float? overrideW = null,
+        float? overrideH = null) {
+        var size = style.CalcSize(new GUIContent(text));
+        GUI.Label(new Rect(x, y, overrideW ?? size.x, overrideH ?? size.y), text, style);
+        return size;
     }
 
     private string FormatTimeDelta(float delta) {
-        var sign = delta > 0 ? "+" : "";
+        var sign = delta >= 0 ? "+" : "";
         return $"{sign}{delta:0.00}s";
     }
 
     public void Destroy() {
         if (startpointObject) Object.Destroy(startpointObject);
         if (endpointObject) Object.Destroy(endpointObject);
+    }
+}
+
+internal class Styles {
+    public GUIStyle Style;
+    public GUIStyle StyleGreen;
+    public GUIStyle StyleGold;
+    public GUIStyle StyleDelta;
+
+    public GUIStyle StylePb;
+
+    public Styles() {
+        Style = new GUIStyle(GUI.skin.label) {
+            fontStyle = FontStyle.Bold, fontSize = 28, padding = new RectOffset(),
+        };
+        StyleGreen = new GUIStyle(Style) { normal = { textColor = new Color(0.55f, 0.8f, 0.1f) } };
+        StyleGold = new GUIStyle(Style) { normal = { textColor = new Color(1, 0.8f, 0) } };
+        StyleDelta = new GUIStyle(Style) {
+            fontSize = 22, alignment = TextAnchor.LowerLeft,
+            normal = {
+                textColor = new Color(0.7f, 0.7f, 0.7f, 10f),
+            },
+        };
+        StylePb = new GUIStyle(GUI.skin.label) {
+            fontStyle = FontStyle.Bold, fontSize = 22,
+            padding = new RectOffset(),
+            normal = {
+                textColor = new Color(0.7f, 0.7f, 0.7f, 10f),
+            },
+        };
     }
 }
