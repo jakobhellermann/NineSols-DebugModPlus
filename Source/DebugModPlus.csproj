@@ -53,9 +53,6 @@
         <Reference Include="UnityEngine.UI">
             <HintPath>$(DllPath)/UnityEngine.UI.dll</HintPath>
         </Reference>
-        <Reference Include="UnityEngine.InputModule">
-            <HintPath>$(DllPath)/UnityEngine.InputModule.dll</HintPath>
-        </Reference>
         <Reference Include="Newtonsoft.Json">
             <HintPath>$(DllPath)/Newtonsoft.Json.dll</HintPath>
         </Reference>
