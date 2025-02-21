@@ -40,7 +40,7 @@ public class SavestateModule {
 
         const string slot = "0";
         module.CreateSavestate(slot);
-        ToastManager.Toast($"Savestate '{slot}' created");
+        ToastManager.Toast($"Savestate {slot} created");
     }
 
     [BindableMethod(Name = "Load Savestate")]
@@ -49,7 +49,7 @@ public class SavestateModule {
 
         const string slot = "0";
         if (!module.savestates.TryGetValue(slot, out var savestate)) {
-            ToastManager.Toast($"Savestate '{slot}' not found");
+            ToastManager.Toast($"Savestate {slot} not found");
             return;
         }
 
@@ -168,7 +168,6 @@ public class SavestateModule {
             OnSavestateLoaded();
         }
 
-        ToastManager.Toast("Savestate loaded");
         IsLoadingSavestate = false;
     }
 
