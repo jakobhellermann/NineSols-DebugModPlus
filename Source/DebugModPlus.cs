@@ -57,7 +57,7 @@ public class DebugModPlus : BaseUnityPlugin {
                 Config.Bind("SpeedrunTimer Shortcuts", "Clear Checkpoints", new KeyboardShortcut());
 
             configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
-                new KeyboardShortcut(KeyCode.LeftControl),
+                new KeyboardShortcut(),
                 new ConfigDescription(
                     "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
 
