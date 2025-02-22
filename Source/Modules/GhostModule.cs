@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BepInEx.Configuration;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -12,7 +13,7 @@ internal class GhostPlayback(SpriteRenderer playerCopy, GhostFrame[] frames, int
     public int PlaybackIndex = playbackIndex;
 }
 
-public class GhostModule {
+public class GhostModule(ConfigEntry<Color> ghostColor) {
     // sprite cache
     private Dictionary<string, Sprite> playerSprites = new();
 
@@ -43,6 +44,8 @@ public class GhostModule {
         var player = Player.i;
         var playerCopy = Object.Instantiate(player.PlayerSprite.gameObject).GetComponent<SpriteRenderer>();
         Object.DontDestroyOnLoad(playerCopy);
+
+        playerCopy.color = ghostColor.Value;
 
         playbacks.Add(new GhostPlayback(playerCopy, frames, 0));
     }

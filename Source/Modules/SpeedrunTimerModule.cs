@@ -125,11 +125,10 @@ internal class SegmentDelta {
 }
 
 [HarmonyPatch]
-public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
-    private static bool isLoading = false;
-
-    private const bool EnableGhost = false;
-
+public class SpeedrunTimerModule(
+    ConfigEntry<TimerMode> configTimerMode,
+    ConfigEntry<bool> configRecordGhost
+) {
     private GhostModule GhostModule => DebugModPlus.Instance.GhostModule;
     private Stopwatch stopwatch = new();
 
@@ -204,7 +203,7 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
         Log.Info($"Ending segment of {segmentTime:0.00}s");
 
         GhostFrame[]? ghostSegment = null;
-        if (EnableGhost) {
+        if (configRecordGhost.Value) {
             ghostSegment = GhostModule.CurrentRecording;
             GhostModule.StopRecording();
         }
@@ -311,14 +310,16 @@ public class SpeedrunTimerModule(ConfigEntry<TimerMode> configTimerMode) {
 
     private void SegmentBegin() {
         segmentStartTime = currentTime;
-        if (EnableGhost) GhostModule.StartRecording();
+        if (configRecordGhost.Value) GhostModule.StartRecording();
+        
+        ToastManager.Toast("segment begin");
 
-        if (EnableGhost) {
-            var matchingSegment = GetMatchingLastSegment();
-            if (matchingSegment.GhostFrames is not null) {
-                ToastManager.Toast($"playing back {matchingSegment.GhostFrames.Length} frames");
-                GhostModule.Playback(matchingSegment.GhostFrames);
-            }
+        if (configRecordGhost.Value) {
+            if (segments.PB.segments.ElementAtOrDefault(segments.ActiveSegmentIndex) is not
+                { GhostFrames: not null } pbSeg) return;
+
+            ToastManager.Toast($"playing back {pbSeg.GhostFrames.Length} frames");
+            GhostModule.Playback(pbSeg.GhostFrames);
         }
     }
 

@@ -31,7 +31,7 @@ public class DebugModPlus : BaseUnityPlugin {
     public SpeedrunTimerModule SpeedrunTimerModule = null!;
 
     public FsmInspectorModule FsmInspectorModule = new();
-    public GhostModule GhostModule = new();
+    public GhostModule GhostModule = null!;
 
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
 
@@ -61,7 +61,12 @@ public class DebugModPlus : BaseUnityPlugin {
                 new ConfigDescription(
                     "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
 
-            SpeedrunTimerModule = new SpeedrunTimerModule(configTimerMode);
+            var configTimerRecordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
+            var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
+
+
+            SpeedrunTimerModule = new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost);
+            GhostModule = new GhostModule(configGhostColorPb);
 
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
