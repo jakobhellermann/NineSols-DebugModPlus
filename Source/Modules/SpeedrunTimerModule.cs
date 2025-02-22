@@ -129,7 +129,7 @@ public class SpeedrunTimerModule(
     [HarmonyPostfix]
     private static void InitializeGameLevel() {
         var module = DebugModPlus.Instance.SpeedrunTimerModule;
-        if (module.startRoom != GameCore.Instance.gameLevel.SceneName) module.OnLevelChangeDone();
+        module.OnLevelChangeDone();
         module.SpawnStartpointTexture();
         module.SpawnEndpointTexture();
     }
@@ -176,9 +176,9 @@ public class SpeedrunTimerModule(
     }
 
     private void OnLevelChangeDone() {
-        SegmentBegin();
-
-        if (state == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
+        if (state is SpeedrunTimerState.Running or SpeedrunTimerState.Loading) {
+            SegmentBegin();
+        } else if (state == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
             state = SpeedrunTimerState.Running;
             SegmentBegin();
         }
@@ -279,16 +279,16 @@ public class SpeedrunTimerModule(
     }
 
     private void SegmentBegin() {
+        Log.Info("Starting segment");
+
         segmentStartTime = currentTime;
         if (configRecordGhost.Value) GhostModule.StartRecording();
-        
-        ToastManager.Toast("segment begin");
 
         if (configRecordGhost.Value) {
             if (segments.PB.segments.ElementAtOrDefault(segments.ActiveSegmentIndex) is not
                 { GhostFrames: not null } pbSeg) return;
 
-            ToastManager.Toast($"playing back {pbSeg.GhostFrames.Length} frames");
+            Log.Info($"Playing back ghost segment of {pbSeg.GhostFrames.Length} frames");
             GhostModule.Playback(pbSeg.GhostFrames);
         }
     }
@@ -307,6 +307,7 @@ public class SpeedrunTimerModule(
     public void OnSavestateLoaded() {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
+
         ResetTimer();
         startRoom ??= GameCore.Instance.gameLevel.SceneName;
         state = TimerMode switch {
@@ -315,7 +316,9 @@ public class SpeedrunTimerModule(
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        if (state == SpeedrunTimerState.Running) SegmentBegin();
+        if (TimerMode == TimerMode.AfterSavestate) {
+            SegmentBegin();
+        }
     }
 
     private Sprite? checkpointSprite;
