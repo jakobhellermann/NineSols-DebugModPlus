@@ -61,7 +61,7 @@ internal class SegmentHistory {
     public Segments PB = new();
     // ^ segments are SOB, FinishedTime is whole
 
-    public float? finishedPbDelta = null;
+    public float? FinishedPbDelta = null;
 
     public void Clear() {
         Current.Clear();
@@ -71,7 +71,7 @@ internal class SegmentHistory {
     public void ClearOld() {
         Last.Clear();
         PB.Clear();
-        finishedPbDelta = null;
+        FinishedPbDelta = null;
     }
 
     public void Add(SpeedrunRecordingSegment currentSegment) {
@@ -90,7 +90,7 @@ internal class SegmentHistory {
             ToastManager.Toast(
                 $"Finished in {Last.segments.Count} segments, as opposed to PB of {PB.segments.Count} segments. Clearing PB.");
 
-        finishedPbDelta = Last.FinishedTime - PB.FinishedTime;
+        FinishedPbDelta = Last.FinishedTime - PB.FinishedTime;
 
         if (PB.segments.Count == 0) {
             PB = Last.Copy();
@@ -117,13 +117,6 @@ internal class SpeedrunRecordingSegment {
     public GhostFrame[]? GhostFrames;
 }
 
-// ReSharper disable once InconsistentNaming
-internal class SegmentDelta {
-    public float SegmentTime;
-    public float? SegmentTimeLast;
-    public float? SegmentTimePB;
-}
-
 [HarmonyPatch]
 public class SpeedrunTimerModule(
     ConfigEntry<TimerMode> configTimerMode,
@@ -135,7 +128,6 @@ public class SpeedrunTimerModule(
     [HarmonyPatch(typeof(GameCore), "InitializeGameLevel")]
     [HarmonyPostfix]
     private static void InitializeGameLevel() {
-        isLoading = false;
         var module = DebugModPlus.Instance.SpeedrunTimerModule;
         if (module.startRoom != GameCore.Instance.gameLevel.SceneName) module.OnLevelChangeDone();
         module.SpawnStartpointTexture();
@@ -146,7 +138,6 @@ public class SpeedrunTimerModule(
         typeof(bool), typeof(bool))]
     [HarmonyPostfix]
     private static void ChangeScene() {
-        isLoading = true;
         var module = DebugModPlus.Instance.SpeedrunTimerModule;
         module.OnLevelChange();
     }
@@ -179,7 +170,6 @@ public class SpeedrunTimerModule(
 
 
     private SegmentHistory segments = new();
-    private SegmentDelta? lastSegmentDelta;
 
     private void OnLevelChange() {
         EndSegment();
@@ -208,31 +198,12 @@ public class SpeedrunTimerModule(
             GhostModule.StopRecording();
         }
 
-        var lastSegment = segments.Last.segments.ElementAtOrDefault(segments.ActiveSegmentIndex);
-        var pbSegment = segments.PB.segments.ElementAtOrDefault(segments.ActiveSegmentIndex);
         var currentSegment = new SpeedrunRecordingSegment {
             SceneName = GameCore.Instance.gameLevel.SceneName,
             SegmentTime = segmentTime,
             GhostFrames = ghostSegment,
         };
         segments.Add(currentSegment);
-        lastSegmentDelta = new SegmentDelta {
-            SegmentTime = currentSegment.SegmentTime,
-            SegmentTimeLast = lastSegment?.SegmentTime,
-            SegmentTimePB = pbSegment?.SegmentTime,
-        };
-    }
-
-    private SpeedrunRecordingSegment? GetMatchingLastSegment() {
-        if (segments.Last.segments.Count == 0) return null;
-
-        for (var i = 0;; i++) {
-            if (i >= segments.Last.segments.Count) return null;
-
-            var lastSegment = segments.Last.segments[i];
-
-            if (i >= segments.Current.segments.Count) return lastSegment;
-        }
     }
 
     public void CycleTimerMode() {
@@ -260,7 +231,6 @@ public class SpeedrunTimerModule(
         latestTime = 0;
         segmentStartTime = 0;
         segments.Current.Clear();
-        lastSegmentDelta = null;
         state = SpeedrunTimerState.Inactive;
     }
 
@@ -327,7 +297,6 @@ public class SpeedrunTimerModule(
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
         segments.Clear();
-        lastSegmentDelta = null;
         segmentStartTime = 0;
         startRoom = null;
         if (state is SpeedrunTimerState.InactiveDone) {
@@ -536,7 +505,7 @@ public class SpeedrunTimerModule(
         const int paddingX = 8;
         const int paddingY = 14;
 
-        var delta = segments.finishedPbDelta;
+        var delta = segments.FinishedPbDelta;
 
         var timeStr = $"{currentTime:0.00}s";
         var pbStr = segments.PB.FinishedTime is { } pb ? $"PB: {pb:0.00}" : "";
