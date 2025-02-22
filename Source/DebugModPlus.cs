@@ -46,7 +46,7 @@ public class DebugModPlus : BaseUnityPlugin {
             Log.Info($"Patched {harmony.GetPatchedMethods().Count()} methods...");
 
             // config
-            var configTimerMode = Config.Bind("SpeedrunTimer", "Timer Mode", TimerMode.AfterSavestate);
+            var configTimerMode = Config.Bind("SpeedrunTimer", "Timer Mode", TimerMode.Triggers);
             var changeModeShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Cycle Timer Mode", new KeyboardShortcut());
             var resetTimerShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Reset Timer", new KeyboardShortcut());
             var pauseTimerShortcut = Config.Bind("SpeedrunTimer Shortcuts", "Pause Timer", new KeyboardShortcut());
