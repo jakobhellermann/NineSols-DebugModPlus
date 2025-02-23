@@ -18,47 +18,18 @@ internal class Savestate {
 }
 
 public class SavestateModule {
-    #region Flag Load/Save
-
-    private static MethodInfo? oldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
-
-    private static MethodInfo? newLoadFlagsMethodInfo =
-        typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
-
-    private void LoadFlags(byte[] flags, GameFlagCollection into) {
-        const TestMode testMode = TestMode.Build;
-        if (oldLoadFlagsMethodInfo != null) {
-            oldLoadFlagsMethodInfo.Invoke(null,
-                new object[] { Encoding.UTF8.GetString(flags), into, testMode });
-        } else {
-            if (newLoadFlagsMethodInfo == null) {
-                Log.Error("LoadFlagsFromBinarySave doesn't exist");
-                return;
-            }
-
-            newLoadFlagsMethodInfo.Invoke(null, new object[] { flags, into, testMode });
-        }
-    }
-
-    private static MethodInfo? flagsToBinary =
-        typeof(GameFlagManager).GetMethod("FlagsToBinary");
-
-    private byte[] EncodeFlags(GameFlagCollection flags) {
-        return flagsToBinary != null
-            ? (byte[])flagsToBinary.Invoke(null, new object[] { flags })
-            : Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(flags));
-    }
-
-    #endregion
-
     public static bool IsLoadingSavestate = false;
 
     public event EventHandler? SavestateLoaded;
     public event EventHandler? SavestateCreated;
 
-    // TODO unload
     private Dictionary<string, Savestate> savestates = new();
 
+    public void Unload() {
+        savestates.Clear();
+    }
+
+    #region Entrypoints
 
     [BindableMethod(Name = "Create Savestate")]
     private static void CreateSavestateMethod() {
@@ -115,6 +86,10 @@ public class SavestateModule {
         }
     }
 
+    #endregion
+
+    #region Create Savestate
+
     // TODO: Save Player Data, Reset Jades, and write to file
     //      HP, Direction, Qi, Ammo, Revival Jade
     private void CreateSavestate(string slot) {
@@ -145,6 +120,10 @@ public class SavestateModule {
 
         SavestateCreated?.Invoke(this, EventArgs.Empty);
     }
+
+    #endregion
+
+    #region Load Savestate
 
     // TODO: Implement loading from file
     private void LoadSavestate(Savestate savestate, bool reload = true) {
@@ -196,7 +175,38 @@ public class SavestateModule {
         SavestateLoaded?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Unload() {
-        savestates = new Dictionary<string, Savestate>();
+    #endregion
+
+    #region Flag Load/Save
+
+    private static MethodInfo? oldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
+
+    private static MethodInfo? newLoadFlagsMethodInfo =
+        typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
+
+    private void LoadFlags(byte[] flags, GameFlagCollection into) {
+        const TestMode testMode = TestMode.Build;
+        if (oldLoadFlagsMethodInfo != null) {
+            oldLoadFlagsMethodInfo.Invoke(null,
+                new object[] { Encoding.UTF8.GetString(flags), into, testMode });
+        } else {
+            if (newLoadFlagsMethodInfo == null) {
+                Log.Error("LoadFlagsFromBinarySave doesn't exist");
+                return;
+            }
+
+            newLoadFlagsMethodInfo.Invoke(null, new object[] { flags, into, testMode });
+        }
     }
+
+    private static MethodInfo? flagsToBinary =
+        typeof(GameFlagManager).GetMethod("FlagsToBinary");
+
+    private byte[] EncodeFlags(GameFlagCollection flags) {
+        return flagsToBinary != null
+            ? (byte[])flagsToBinary.Invoke(null, new object[] { flags })
+            : Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(flags));
+    }
+
+    #endregion
 }
