@@ -77,7 +77,7 @@ public class SavestateModule {
         }
     }
 
-    //TODO: Save Player Data, Reset Jades, and write to file
+    // TODO: Save Player Data, Reset Jades, and write to file
     //      HP, Direction, Qi, Ammo, Revival Jade
     private void CreateSavestate(string slot) {
         var saveManager = SaveManager.Instance;
@@ -126,7 +126,7 @@ public class SavestateModule {
     }
 
 
-    //TODO: Implement loading from file
+    // TODO: Implement loading from file
     private void LoadSavestate(Savestate savestate, bool reload = true) {
         IsLoadingSavestate = true;
 
@@ -141,7 +141,7 @@ public class SavestateModule {
         saveManager.allFlags.AllFlagInitStartAndEquip();
 
         // var teleportPointWithPath = GameFlagManager.Instance.GetTeleportPointWithPath(meta.lastTeleportPointPath);
-        //ApplicationUIGroupManager.Instance.PopAll();
+        // ApplicationUIGroupManager.Instance.PopAll();
 
         // reload scene
         if (reload) {
@@ -172,7 +172,7 @@ public class SavestateModule {
     }
 
     private void OnSavestateLoaded() {
-        //reset level cuz enemies often get killed and scene transition doesnt reset it
+        // reset level cuz enemies often get killed and scene transition doesnt reset it
         GameCore.Instance.ResetLevel();
         SavestateLoaded?.Invoke(this, EventArgs.Empty);
     }

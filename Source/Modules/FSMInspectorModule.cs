@@ -209,10 +209,6 @@ public class FsmInspectorModule {
     public List<GameObject> Objects = [];
 
     public void OnGui() {
-        Player.i?.health.GainFull();
-        // if (text is null) {
-        // ToastManager.Toast(Screen.fullScreenMode);
-
         var extra = new GameObject[] { };
         // { GameObject.Find("A2_S5_ BossHorseman_GameLevel/Room/StealthGameMonster_SpearHorseMan") };
 
