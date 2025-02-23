@@ -26,11 +26,12 @@ public enum TimerMode {
     NextRoom, // Timer starts next room after savestate load
 }
 
-internal enum SpeedrunTimerState {
+public enum SpeedrunTimerState {
     Inactive, // Off
     StartNextRoom, // Off, turned on next room
     Running, // On, time increasing
     Paused, // On, manually paused
+    GamePaused, //User setting, checks if game is paused
     Loading, // On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
     InactiveDone, // Off, after reaching the end
 }
@@ -120,10 +121,11 @@ internal class SpeedrunRecordingSegment {
 [HarmonyPatch]
 public class SpeedrunTimerModule(
     ConfigEntry<TimerMode> configTimerMode,
-    ConfigEntry<bool> configRecordGhost
+    ConfigEntry<bool> configRecordGhost,
+    ConfigEntry<bool> configPauseStopsTimer
 ) {
     private GhostModule GhostModule => DebugModPlus.Instance.GhostModule;
-    private Stopwatch stopwatch = new();
+    public Stopwatch stopwatch { get; private set; } = new();
 
     [HarmonyPatch(typeof(GameCore), "InitializeGameLevel")]
     [HarmonyPostfix]
@@ -149,10 +151,11 @@ public class SpeedrunTimerModule(
     // state
     private float segmentStartTime = 0;
 
-    private float currentTime = 0;
+    public float currentTime { get; private set; } = 0;
 
     // helps track loads and deltaTime
     private float latestTime = 0;
+ 
 
     private string? startRoom = null;
 
@@ -161,7 +164,7 @@ public class SpeedrunTimerModule(
         set => configTimerMode.Value = value;
     }
 
-    private SpeedrunTimerState state = SpeedrunTimerState.Inactive;
+    public SpeedrunTimerState state {get; private set;} = SpeedrunTimerState.Inactive;
 
     // added startpoint
     private (Vector2, string)? startpoint = null;
@@ -185,7 +188,7 @@ public class SpeedrunTimerModule(
     }
 
     private void EndSegment() {
-        if (state != SpeedrunTimerState.Running) return;
+        //if (state != SpeedrunTimerState.Running) return;
 
         var segmentTime = currentTime - segmentStartTime;
         segmentStartTime = currentTime;
@@ -226,6 +229,7 @@ public class SpeedrunTimerModule(
     }
 
     public void ResetTimer() {
+        GhostModule.ClearGhosts();
         stopwatch.Reset();
         currentTime = 0;
         latestTime = 0;
@@ -251,8 +255,6 @@ public class SpeedrunTimerModule(
         var startpointScene = GameCore.Instance.gameLevel.SceneName;
         startpoint = (startpointPosition, startpointScene);
         SpawnStartpointTexture();
-
-        ResetTimer();
         segments.ClearOld();
     }
 
@@ -273,8 +275,6 @@ public class SpeedrunTimerModule(
         endpoint = null;
         if (startpointObject) Object.Destroy(startpointObject);
         if (endpointObject) Object.Destroy(endpointObject);
-
-        ResetTimer();
         segments.ClearOld();
     }
 
@@ -282,7 +282,7 @@ public class SpeedrunTimerModule(
         Log.Info("Starting segment");
 
         segmentStartTime = currentTime;
-        if (configRecordGhost.Value) GhostModule.StartRecording();
+        if (configRecordGhost.Value) GhostModule.StartRecording(configPauseStopsTimer.Value);
 
         if (configRecordGhost.Value) {
             if (segments.PB.segments.ElementAtOrDefault(segments.ActiveSegmentIndex) is not
@@ -368,16 +368,15 @@ public class SpeedrunTimerModule(
     }
 
     private void StartpointReached() {
-        if (state == SpeedrunTimerState.Running || state == SpeedrunTimerState.Loading) return;
+        if (state != SpeedrunTimerState.Inactive && state != SpeedrunTimerState.InactiveDone) return;
 
         ResetTimer();
-
         state = SpeedrunTimerState.Running;
         SegmentBegin();
     }
 
     private void EndpointReached() {
-        if (state != SpeedrunTimerState.Running || state == SpeedrunTimerState.Loading) return;
+        if (state == SpeedrunTimerState.Inactive || state == SpeedrunTimerState.InactiveDone) return;
 
         EndSegment();
         state = SpeedrunTimerState.InactiveDone;
@@ -413,9 +412,15 @@ public class SpeedrunTimerModule(
             // check timer triggers, start trigger might happen when inactive
             CheckTriggers(sceneName);
 
+            if (configPauseStopsTimer.Value)
+            {
+                if (state == SpeedrunTimerState.Running && RCGTime.timeScale == 0) state = SpeedrunTimerState.GamePaused;
+                else if (state == SpeedrunTimerState.GamePaused && RCGTime.timeScale != 0) state = SpeedrunTimerState.Running;
+            }
+
             if (state == SpeedrunTimerState.Inactive)
                 return;
-            else if (state == SpeedrunTimerState.Paused) {
+            else if (state == SpeedrunTimerState.Paused || state == SpeedrunTimerState.GamePaused) {
                 stopwatch.Stop();
                 latestTime = (float)stopwatch.Elapsed.TotalSeconds;
                 return;
