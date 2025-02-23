@@ -136,15 +136,6 @@ public class SpeedrunTimerModule(
         module.SpawnEndpointTexture();
     }
 
-    [HarmonyPatch(typeof(GameCore), nameof(GameCore.ChangeScene), typeof(SceneConnectionPoint.ChangeSceneData),
-        typeof(bool), typeof(bool))]
-    [HarmonyPostfix]
-    private static void ChangeScene() {
-        var module = DebugModPlus.Instance.SpeedrunTimerModule;
-        module.OnLevelChange();
-    }
-
-
     private Styles? styles;
 
 
@@ -178,7 +169,7 @@ public class SpeedrunTimerModule(
 
     private SegmentHistory segments = new();
 
-    private void OnLevelChange() {
+    public void OnLevelChange() {
         EndSegment();
     }
 

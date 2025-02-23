@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +13,7 @@ using UnityEngine;
 namespace DebugModPlus;
 
 [BepInDependency(NineSolsAPICore.PluginGUID)]
-[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
+[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class DebugModPlus : BaseUnityPlugin {
     public static DebugModPlus Instance = null!;
 
@@ -39,10 +37,17 @@ public class DebugModPlus : BaseUnityPlugin {
     private void Awake() {
         Instance = this;
         Log.Init(Logger);
-        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} started loading...");
 
         try {
             harmony = Harmony.CreateAndPatchAll(typeof(DebugModPlus).Assembly);
+
+            var versionPatches = GameVersions.Select(GameVersions.SpeedrunPatch,
+                typeof(PatchesSpeedrunPatch),
+                typeof(PatchesCurrentPatch));
+            harmony.PatchAll(versionPatches);
+
+
             Log.Info($"Patched {harmony.GetPatchedMethods().Count()} methods...");
 
             // config
@@ -100,7 +105,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
             RCGLifeCycle.DontDestroyForever(gameObject);
 
-            Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+            Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
         } catch (Exception e) {
             Log.Error(e);
         }
@@ -196,6 +201,6 @@ public class DebugModPlus : BaseUnityPlugin {
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();
 
-        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} unloaded\n\n");
     }
 }
