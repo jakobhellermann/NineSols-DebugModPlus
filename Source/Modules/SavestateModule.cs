@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using NineSolsAPI;
@@ -64,7 +65,15 @@ public class SavestateModule {
         var module = DebugModPlus.Instance.SavestateModule;
 
         const string slot = "0";
-        module.CreateSavestate(slot);
+        try {
+            var sw = Stopwatch.StartNew();
+            module.CreateSavestate(slot);
+            Log.Info($"Loaded savestate {slot} in {sw.ElapsedMilliseconds}ms");
+        } catch (Exception e) {
+            ToastManager.Toast(e.Message);
+            return;
+        }
+
         ToastManager.Toast($"Savestate {slot} created");
     }
 
@@ -79,7 +88,9 @@ public class SavestateModule {
         }
 
         try {
+            var sw = Stopwatch.StartNew();
             module.LoadSavestate(savestate);
+            Log.Info($"Loaded savestate {slot} in {sw.ElapsedMilliseconds}ms");
         } catch (Exception e) {
             ToastManager.Toast(e);
         }
@@ -96,7 +107,9 @@ public class SavestateModule {
         }
 
         try {
+            var sw = Stopwatch.StartNew();
             module.LoadSavestate(savestate, false);
+            Log.Info($"Loaded savestate {slot} in {sw.ElapsedMilliseconds}ms");
         } catch (Exception e) {
             ToastManager.Toast(e);
         }
@@ -105,9 +118,14 @@ public class SavestateModule {
     // TODO: Save Player Data, Reset Jades, and write to file
     //      HP, Direction, Qi, Ammo, Revival Jade
     private void CreateSavestate(string slot) {
-        var saveManager = SaveManager.Instance;
-        var gameCore = GameCore.Instance;
+        if (!GameCore.IsAvailable()) {
+            throw new Exception("Can't create savestate outside of game level");
+        }
 
+        var gameCore = GameCore.Instance;
+        if (!gameCore.gameLevel) {
+            throw new Exception("Can't create savestate outside of game level");
+        }
 
         var player = Player.i;
         var currentPos = player.transform.position;
