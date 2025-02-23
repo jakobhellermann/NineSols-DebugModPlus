@@ -293,6 +293,7 @@ public class SpeedrunTimerModule(
     public void OnSavestateCreated() {
         // dont reset timer if trigger mode
         if (TimerMode == TimerMode.Triggers) return;
+
         segments.Clear();
         segmentStartTime = 0;
         startRoom = null;
@@ -325,10 +326,15 @@ public class SpeedrunTimerModule(
     private Sprite GetCheckpointSprite() {
         var checkpointTexture = AssemblyUtils.GetEmbeddedTexture("DebugModPlus.checkmark.png")!;
         return checkpointSprite ??= Sprite.CreateSprite(
-            checkpointTexture, new Rect(0, 0, checkpointTexture.width, checkpointTexture.height), new Vector2(0.5f, 0f),
+            checkpointTexture,
+            new Rect(0, 0, checkpointTexture.width, checkpointTexture.height),
+            new Vector2(0.5f, 0f),
             16f,
             0,
-            SpriteMeshType.FullRect, Vector4.zero, false, new SecondarySpriteTexture[] { }
+            SpriteMeshType.FullRect,
+            Vector4.zero,
+            false,
+            new SecondarySpriteTexture[] { }
         );
     }
 

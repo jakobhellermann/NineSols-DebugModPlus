@@ -218,7 +218,10 @@ public class HitboxRender : MonoBehaviour {
                     DrawPointSequence(boxPoints, camera, collider2D, hitboxType, lineWidth);
                     break;
                 case EdgeCollider2D edgeCollider2D:
-                    DrawPointSequence(new List<Vector2>(edgeCollider2D.points), camera, collider2D, hitboxType,
+                    DrawPointSequence(new List<Vector2>(edgeCollider2D.points),
+                        camera,
+                        collider2D,
+                        hitboxType,
                         lineWidth);
                     break;
                 case PolygonCollider2D polygonCollider2D:

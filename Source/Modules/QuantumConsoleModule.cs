@@ -48,11 +48,13 @@ public class QuantumConsoleModule {
 
     private void QuantumConsoleActivate() {
         if (!GameCore.IsAvailable()) return;
+
         GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, DebugModPlus.Instance);
     }
 
     private void QuantumConsoleDeactivate() {
         if (!GameCore.IsAvailable()) return;
+
         GameCore.Instance.player.playerInput.RevokeAllMyVote(DebugModPlus.Instance);
     }
 }

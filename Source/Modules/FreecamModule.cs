@@ -46,6 +46,7 @@ public class FreecamModule {
 
     public static void Update() {
         if (!FreecamActive) return;
+
         var goFast = Input.GetKey(KeyCode.LeftShift);
         var freecamSpeed = Speed * (goFast ? FastMultiplier : 1);
 

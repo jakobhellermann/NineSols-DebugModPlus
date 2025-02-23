@@ -23,6 +23,7 @@ public class TimeModule {
     private static IEnumerator AdvanceFrameCoro() {
         RCGTime.GlobalSimulationSpeed = 1;
         yield return null;
+
         RCGTime.GlobalSimulationSpeed = 0;
     }
 }

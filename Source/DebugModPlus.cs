@@ -7,8 +7,11 @@ using DebugModPlus.Modules;
 using DebugModPlus.Modules.Hitbox;
 using HarmonyLib;
 using MonsterLove.StateMachine;
+using Newtonsoft.Json;
 using NineSolsAPI;
+using NineSolsAPI.Utils;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DebugModPlus;
 
@@ -32,6 +35,58 @@ public class DebugModPlus : BaseUnityPlugin {
     public GhostModule GhostModule = null!;
 
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
+    private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsCreate = null!;
+    private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsLoad = null!;
+
+
+    public static GameObject? LookupPath(string path) {
+        var ddlScene = ApplicationCore.Instance.gameObject.scene;
+        var gameObjectA = ObjectUtils.LookupPath(ddlScene, path);
+        if (gameObjectA != null) {
+            return gameObjectA;
+        }
+
+        for (var index = 0; index < SceneManager.sceneCount; ++index) {
+            var gameObject = ObjectUtils.LookupPath(SceneManager.GetSceneAt(index), path);
+            if (gameObject != null)
+                return gameObject;
+        }
+
+        return null;
+    }
+
+
+    private class JsonConverterByTomlTypeConverter : JsonConverter {
+        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) {
+            if (value is null) {
+                writer.WriteNull();
+                return;
+            }
+
+            writer.WriteValue(TomlTypeConverter.ConvertToString(value, value.GetType()));
+        }
+
+        public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue,
+            JsonSerializer serializer) {
+            return TomlTypeConverter.ConvertToValue(reader.ReadAsString(), objectType);
+        }
+
+        public override bool CanConvert(Type objectType) {
+            // Corecursive loop:
+            /*var underlying = Nullable.GetUnderlyingType(objectType) ?? objectType;
+            return TomlTypeConverter.CanConvert(underlying);*/
+            return objectType == typeof(KeyboardShortcut);
+        }
+    }
+
+    private static JsonSerializerSettings jsonTypeConverterSettings = new() {
+        Converters = [new JsonConverterByTomlTypeConverter()],
+    };
+
+    private static TypeConverter jsonTypeConverter = new() {
+        ConvertToString = (val, _) => JsonConvert.SerializeObject(val, jsonTypeConverterSettings),
+        ConvertToObject = (obj, ty) => JsonConvert.DeserializeObject(obj, ty, jsonTypeConverterSettings),
+    };
 
 
     private void Awake() {
@@ -61,7 +116,8 @@ public class DebugModPlus : BaseUnityPlugin {
             var clearCheckpointsShortcut =
                 Config.Bind("SpeedrunTimer Shortcuts", "Clear Checkpoints", new KeyboardShortcut());
 
-            configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
+            configShortcutFsmPickerModifier = Config.Bind("Shortcuts",
+                "FSM Picker Modifier",
                 new KeyboardShortcut(),
                 new ConfigDescription(
                     "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
@@ -70,13 +126,35 @@ public class DebugModPlus : BaseUnityPlugin {
             var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
             var configPauseStopsTimer = Config.Bind("SpeedrunTimer", "Pause Timer Stops Speedrun Timer", false);
 
+            if (!TomlTypeConverter.CanConvert(typeof(Dictionary<KeyboardShortcut, string>))) {
+                TomlTypeConverter.AddConverter(typeof(Dictionary<KeyboardShortcut, string>), jsonTypeConverter);
+            }
+
+            configSavestateShortcutsCreate = Config.Bind("Savestates",
+                "Create savestate shortcuts",
+                new Dictionary<KeyboardShortcut, string> {
+                    { new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
+                    { new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
+                    { new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
+                });
+            configSavestateShortcutsLoad = Config.Bind("Savestates",
+                "Load savestate shortcuts",
+                new Dictionary<KeyboardShortcut, string> {
+                    { new KeyboardShortcut(KeyCode.Keypad1), "1" },
+                    { new KeyboardShortcut(KeyCode.Keypad2), "2" },
+                    { new KeyboardShortcut(KeyCode.Keypad3), "3" },
+                });
+
+            // module initialization
+
+
             SpeedrunTimerModule =
                 new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
             GhostModule = new GhostModule(configGhostColorPb);
 
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
-
+            // SavestateModule.TryCreateSavestate("awake");
 
             KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
             KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
@@ -85,7 +163,8 @@ public class DebugModPlus : BaseUnityPlugin {
             KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
             KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
             KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
-            KeybindManager.Add(this, () => SpeedrunTimerModule.ClearCheckpoints(),
+            KeybindManager.Add(this,
+                () => SpeedrunTimerModule.ClearCheckpoints(),
                 () => clearCheckpointsShortcut.Value);
 
             // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
@@ -128,36 +207,57 @@ public class DebugModPlus : BaseUnityPlugin {
         MapTeleportModule.Update();
         infotextModule.Update();
 
+        bool didCreate = false;
+        foreach (var binding in configSavestateShortcutsCreate.Value) {
+            if (KeybindManager.CheckShortcutOnly(binding.Key)) {
+                SavestateModule.TryCreateSavestate(binding.Value);
+                didCreate = true;
+            }
+        }
+
+        if (!didCreate) {
+            foreach (var binding in configSavestateShortcutsLoad.Value) {
+                if (KeybindManager.CheckShortcutOnly(binding.Key)) {
+                    SavestateModule.TryLoadSavestate(binding.Value);
+                }
+            }
+        }
+
+
         var canUseFsmPicker = Player.i?.playerInput.fsm.State is not PlayerInputStateType.UI;
 
         if (canUseFsmPicker && configShortcutFsmPickerModifier.Value.IsPressed()) {
             Cursor.visible = true;
-
             if (Input.GetMouseButtonDown(0)) {
-                FsmInspectorModule.Objects.Clear();
-
-                try {
-                    var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
-                    var worldPosition =
-                        mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
-                            -mainCamera.transform.position.z));
-                    worldPosition.z = 0; // Set z to 0 to match the 2D plane
-                    var visible = PickVisible(worldPosition);
-
-                    var stateMachine = visible.Select(sprite =>
-                            sprite.GetComponentInParent<StateMachineOwner>()?.gameObject ??
-                            sprite.GetComponentInParent<FSMStateMachineRunner>()?.gameObject)
-                        .Where(x => x)
-                        .Distinct()
-                        .FirstOrDefault();
-                    if (stateMachine)
-                        FsmInspectorModule.Objects.Add(stateMachine!);
-                    else
-                        ToastManager.Toast($"No state machine found at cursor");
-                } catch (Exception e) {
-                    ToastManager.Toast(e);
-                }
+                TryPickFsm();
             }
+        }
+    }
+
+    private void TryPickFsm() {
+        FsmInspectorModule.Objects.Clear();
+
+        try {
+            var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
+            var worldPosition =
+                mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x,
+                    Input.mousePosition.y,
+                    -mainCamera.transform.position.z));
+            worldPosition.z = 0; // Set z to 0 to match the 2D plane
+            var visible = PickVisible(worldPosition);
+
+            var stateMachine = visible.Select(sprite =>
+                    sprite.GetComponentInParent<StateMachineOwner>()?.gameObject ??
+                    sprite.GetComponentInParent<FSMStateMachineRunner>()?.gameObject)
+                .Where(x => x)
+                .Distinct()
+                .FirstOrDefault();
+            if (stateMachine)
+                FsmInspectorModule.Objects.Add(stateMachine!);
+            else
+                ToastManager.Toast($"No state machine found at cursor");
+        } catch (Exception e) {
+            ToastManager.Toast(e);
         }
     }
 
@@ -180,8 +280,8 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private void LateUpdate() {
         try {
-            GhostModule.LateUpdate();
-            SpeedrunTimerModule.LateUpdate();
+            // GhostModule.LateUpdate();
+            // SpeedrunTimerModule.LateUpdate();
         } catch (Exception e) {
             Log.Error(e);
         }

@@ -29,9 +29,23 @@ public class FsmInspectorModule {
     private static AccessTools.FieldRef<AbstractStateTransition, AbstractConditionComp[]> stateTransitionConditions =
         AccessTools.FieldRefAccess<AbstractStateTransition, AbstractConditionComp[]>("conditions");
 
+    public static List<IStateMachine> FsmListMachines(FSMStateMachineRunner runner) =>
+        stateMachineRunnerStateMachineList.Invoke(runner);
+
+    public static IEnumerable<(object, MappingState)> FsmListStates(IStateMachine machine) {
+        return machine.AccessField<object?>("_stateMapping")!
+            .AccessProperty<IList>("getAllStates")!
+            .Cast<object>()
+            .Select(stateObj => {
+                var state = stateObj.AccessField<object>("state")!;
+                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior")!;
+                return (state, stateBehaviour);
+            });
+    }
+
     private string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
         var text = "";
-        var machines = stateMachineRunnerStateMachineList.Invoke(runner);
+        var machines = FsmListMachines(runner);
 
         var mb = runner.GetComponent<MonsterBase>();
         if (mb) text += $"\nMonster animation state {mb.currentPlayingAnimatorState}\n\n";
@@ -43,12 +57,7 @@ public class FsmInspectorModule {
             var currentState = machine.CurrentStateMap.stateObj;
             text += $"Current state: {currentState}\n";
 
-            var allStates = machine.AccessField<object?>("_stateMapping")!
-                .AccessProperty<IList>("getAllStates")!;
-
-            foreach (var stateObj in allStates) {
-                var state = stateObj.AccessField<object>("state")!;
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior")!;
+            foreach (var (state, stateBehaviour) in FsmListStates(machine)) {
                 text += $"  {state} ({stateBehaviour.GetType().Name})\n";
 
                 if (stateBehaviour is MonsterState monsterState) {
@@ -64,7 +73,8 @@ public class FsmInspectorModule {
                     }
 
                     var stateActions =
-                        ReflectionUtils.AccessBaseField<AbstractStateAction[]>(stateBehaviour, typeof(MonsterState),
+                        ReflectionUtils.AccessBaseField<AbstractStateAction[]>(stateBehaviour,
+                            typeof(MonsterState),
                             "stateActions");
                     if (stateActions.Length > 0) text += "HAS STATE ACTIONS\n";
                     // text += $"    {monsterState.AccessField<AbstractStateAction[]>("stateActions")}\n";
@@ -81,6 +91,7 @@ public class FsmInspectorModule {
 
     private string VariableName(AbstractVariable? variable) {
         if (variable == null) return "null";
+
         var name = variable.ToString().TrimStartMatches("[Variable] ")
             .TrimEndMatches(" (VariableBool)").ToString();
 
@@ -134,6 +145,7 @@ public class FsmInspectorModule {
 
                 if (action is AnimatorPlayAction animAction) {
                     if (hideAnimationTransitions) continue;
+
                     actionStr = $"play animation {animAction.StateName} on '{animAction.animator?.name}'";
                 } else if (action is GameObjectActivateAction activateAction) {
                     actionStr =
