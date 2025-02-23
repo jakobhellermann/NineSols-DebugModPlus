@@ -65,7 +65,8 @@ public class DebugModPlus : BaseUnityPlugin {
             var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
             var configPauseStopsTimer = Config.Bind("SpeedrunTimer", "Pause Timer Stops Speedrun Timer", false);
 
-            SpeedrunTimerModule = new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
+            SpeedrunTimerModule =
+                new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
             GhostModule = new GhostModule(configGhostColorPb);
 
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();

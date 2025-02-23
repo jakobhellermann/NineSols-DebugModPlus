@@ -125,7 +125,7 @@ public class HitboxRender : MonoBehaviour {
             else if (collider2D.GetComponent<GeneralFinder>())
                 colliders[HitboxType.Finder].Add(collider2D);
             else if (collider2D.GetComponent<ItemPicker>())
-                colliders[HitboxType.Player].Add(collider2D); //Todo
+                colliders[HitboxType.Player].Add(collider2D); // Todo
             else if (collider2D.GetComponent<InteractableArea>())
                 colliders[HitboxType.Interactable].Add(collider2D);
             else if (collider2D.GetComponent<InteractableFinder>())
@@ -156,7 +156,7 @@ public class HitboxRender : MonoBehaviour {
                 } else if (go.name.Contains("LampFinder")) {
                 } else if (go.name.Contains("LightSourceFinder")) {*/
             } else
-                //if (go.name.Contains("Interactable"))
+                // if (go.name.Contains("Interactable"))
                 // Plugin.Instance.ToastManager.Toast(go.GetComponents<object>()[0]);
                 colliders[HitboxType.Other].Add(collider2D);
 
