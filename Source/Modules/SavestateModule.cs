@@ -146,7 +146,7 @@ public class SavestateModule {
         // reload scene
         if (reload) {
             var currentPos = savestate.PlayerPosition;
-            GameCore.Instance.ChangeScene(
+            GameCore.Instance.ChangeSceneCompat(
                 new SceneConnectionPoint.ChangeSceneData {
                     sceneName = savestate.Scene,
                     panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },

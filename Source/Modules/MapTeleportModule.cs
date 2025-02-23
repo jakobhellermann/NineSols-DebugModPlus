@@ -52,7 +52,7 @@ public static class MapTeleportModule {
             playerSpawnPosition = () => worldPosition,
             changeSceneMode = SceneConnectionPoint.ChangeSceneMode.Teleport,
         };
-        GameCore.Instance.ChangeScene(changeSceneData, showTip);
+        GameCore.Instance.ChangeSceneCompat(changeSceneData, showTip);
     }
 }
 
