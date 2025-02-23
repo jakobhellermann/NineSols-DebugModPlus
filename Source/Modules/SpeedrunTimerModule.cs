@@ -260,6 +260,7 @@ public class SpeedrunTimerModule(
         startpoint = (startpointPosition, startpointScene);
         SpawnStartpointTexture();
         segments.ClearOld();
+        ResetTimer();
     }
 
     public void SetEndpoint() {
@@ -280,6 +281,7 @@ public class SpeedrunTimerModule(
         if (startpointObject) Object.Destroy(startpointObject);
         if (endpointObject) Object.Destroy(endpointObject);
         segments.ClearOld();
+        ResetTimer();
     }
 
     private void SegmentBegin() {
