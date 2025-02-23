@@ -28,12 +28,12 @@ public enum TimerMode {
 
 public enum SpeedrunTimerState {
     Inactive, // Off
+    InactiveDone, // Off, after reaching the end
     StartNextRoom, // Off, turned on next room
     Running, // On, time increasing
     Paused, // On, manually paused
-    GamePaused, // User setting, checks if game is paused
+    RunningGamePaused, // When the game is paused *during running*
     Loading, // On, load remover following autosplitter logic https://github.com/buanjautista/LiveSplit-ASL/blob/main/NineSols-LoadRemover.asl
-    InactiveDone, // Off, after reaching the end
 }
 
 // ReSharper disable once InconsistentNaming
@@ -166,6 +166,10 @@ public class SpeedrunTimerModule(
 
     public SpeedrunTimerState State { get; private set; } = SpeedrunTimerState.Inactive;
 
+    private bool Active => State is not
+        (SpeedrunTimerState.Inactive or SpeedrunTimerState.InactiveDone or SpeedrunTimerState.StartNextRoom);
+
+
     // added startpoint
     private (Vector2, string)? startpoint = null;
     private (Vector2, string)? endpoint = null;
@@ -179,7 +183,7 @@ public class SpeedrunTimerModule(
     }
 
     private void OnLevelChangeDone() {
-        if (State is SpeedrunTimerState.Running or SpeedrunTimerState.Loading) {
+        if (Active) {
             SegmentBegin();
         } else if (State == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
             State = SpeedrunTimerState.Running;
@@ -188,7 +192,7 @@ public class SpeedrunTimerModule(
     }
 
     private void EndSegment() {
-        // if (state != SpeedrunTimerState.Running) return;
+        if (!Active) return;
 
         var segmentTime = CurrentTime - segmentStartTime;
         segmentStartTime = CurrentTime;
@@ -414,14 +418,14 @@ public class SpeedrunTimerModule(
 
             if (configPauseStopsTimer.Value) {
                 if (State == SpeedrunTimerState.Running && RCGTime.timeScale == 0)
-                    State = SpeedrunTimerState.GamePaused;
-                else if (State == SpeedrunTimerState.GamePaused && RCGTime.timeScale != 0)
+                    State = SpeedrunTimerState.RunningGamePaused;
+                else if (State == SpeedrunTimerState.RunningGamePaused && RCGTime.timeScale != 0)
                     State = SpeedrunTimerState.Running;
             }
 
             if (State == SpeedrunTimerState.Inactive)
                 return;
-            else if (State == SpeedrunTimerState.Paused || State == SpeedrunTimerState.GamePaused) {
+            else if (State == SpeedrunTimerState.Paused || State == SpeedrunTimerState.RunningGamePaused) {
                 Stopwatch.Stop();
                 latestTime = (float)Stopwatch.Elapsed.TotalSeconds;
                 return;
