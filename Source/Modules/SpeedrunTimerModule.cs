@@ -185,7 +185,7 @@ public class SpeedrunTimerModule(
     private void OnLevelChangeDone() {
         if (Active) {
             SegmentBegin();
-        } else if (State == SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
+        } else if (State is SpeedrunTimerState.StartNextRoom && startRoom != GameCore.Instance.gameLevel.SceneName) {
             State = SpeedrunTimerState.Running;
             SegmentBegin();
         }
@@ -243,7 +243,7 @@ public class SpeedrunTimerModule(
     }
 
     public void PauseTimer() {
-        if (State == SpeedrunTimerState.Running) {
+        if (State is SpeedrunTimerState.Running) {
             ToastManager.Toast("Pausing timer");
             State = SpeedrunTimerState.Paused;
         } else {
@@ -380,7 +380,7 @@ public class SpeedrunTimerModule(
     }
 
     private void EndpointReached() {
-        if (State == SpeedrunTimerState.Inactive || State == SpeedrunTimerState.InactiveDone) return;
+        if (State is SpeedrunTimerState.Inactive or SpeedrunTimerState.InactiveDone) return;
 
         EndSegment();
         State = SpeedrunTimerState.InactiveDone;
@@ -417,15 +417,15 @@ public class SpeedrunTimerModule(
             CheckTriggers(sceneName);
 
             if (configPauseStopsTimer.Value) {
-                if (State == SpeedrunTimerState.Running && RCGTime.timeScale == 0)
+                if (State is SpeedrunTimerState.Running && RCGTime.timeScale == 0)
                     State = SpeedrunTimerState.RunningGamePaused;
-                else if (State == SpeedrunTimerState.RunningGamePaused && RCGTime.timeScale != 0)
+                else if (State is SpeedrunTimerState.RunningGamePaused && RCGTime.timeScale != 0)
                     State = SpeedrunTimerState.Running;
             }
 
-            if (State == SpeedrunTimerState.Inactive)
+            if (State is SpeedrunTimerState.Inactive)
                 return;
-            else if (State == SpeedrunTimerState.Paused || State == SpeedrunTimerState.RunningGamePaused) {
+            else if (State is SpeedrunTimerState.Paused or SpeedrunTimerState.RunningGamePaused) {
                 Stopwatch.Stop();
                 latestTime = (float)Stopwatch.Elapsed.TotalSeconds;
                 return;
@@ -434,7 +434,7 @@ public class SpeedrunTimerModule(
             GrabInfoSafe();
             CheckLoading(sceneName, coreState, blackCover, loadingScreen);
 
-            if (State == SpeedrunTimerState.Running) {
+            if (State is SpeedrunTimerState.Running) {
                 // Stopwatch is preferred over deltatime so it's unaffected by bow and other things, more accurate to livesplit
                 Stopwatch.Start();
                 CurrentTime += (float)Stopwatch.Elapsed.TotalSeconds - latestTime;
@@ -465,12 +465,12 @@ public class SpeedrunTimerModule(
                                || coreState is GameCoreState.ChangingScene or GameCoreState.Init;
 
             if (doPauseTimer) {
-                if (State == SpeedrunTimerState.Running) {
+                if (State is SpeedrunTimerState.Running) {
                     Log.Info("Pausing timer now");
                     State = SpeedrunTimerState.Loading;
                 }
             } else {
-                if (State == SpeedrunTimerState.Loading) {
+                if (State is SpeedrunTimerState.Loading) {
                     var oldLatestTime = latestTime;
                     latestTime = (float)Stopwatch.Elapsed.TotalSeconds;
                     Log.Info("Unpausing timer, load time removed is " + (latestTime - oldLatestTime));
@@ -511,7 +511,7 @@ public class SpeedrunTimerModule(
     }
 
     public void OnGui() {
-        if (State == SpeedrunTimerState.Inactive) return;
+        if (State is SpeedrunTimerState.Inactive) return;
 
         styles ??= new Styles();
 
