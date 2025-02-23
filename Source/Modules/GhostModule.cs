@@ -29,8 +29,7 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
     // playback
     private List<GhostPlayback> playbacks = new();
 
-    // flag
-    private bool doClearGhosts = false;
+    // config
     private bool pauseStopsTimer = false;
 
     public void StartRecording(bool pauseStopsTimer = false) {
@@ -82,7 +81,7 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
             new GhostFrame(player.transform.position, player.PlayerSprite.sprite.name, (int)player.Facing, time));
     }
 
-    private void CheckPlayback(GhostPlayback playback, bool clearingGhosts = false, int playbacksIndex = 0) {
+    private void CheckPlayback(GhostPlayback playback, int playbacksIndex = 0) {
         var time = speedrunTimerModule.CurrentTime;
         var stopwatchTime = (float)speedrunTimerModule.Stopwatch.Elapsed.TotalSeconds;
         if (time == 0 || speedrunTimerModule.State is SpeedrunTimerState.InactiveDone or SpeedrunTimerState.Inactive)
@@ -115,19 +114,16 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
         // Increment index when the frame actually plays
         playback.PlaybackIndex++;
         // Loop this until it's caught up to the current time
-        CheckPlayback(playback, false, playbacksIndex);
+        CheckPlayback(playback, playbacksIndex);
     }
 
     public void LateUpdate() {
-        var clearingGhosts = doClearGhosts;
-        doClearGhosts = false;
-
         if (recording) UpdateRecord();
 
         for (var i = playbacks.Count - 1; i >= 0; i--) {
             var playback = playbacks[i];
 
-            CheckPlayback(playback, clearingGhosts, i);
+            CheckPlayback(playback, i);
         }
 
         if (Player.i is { } player) {
