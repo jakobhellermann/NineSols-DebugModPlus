@@ -76,8 +76,8 @@
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
         <PackageReference Include="UnityEngine.Modules" Version="2022.3.18" IncludeAssets="compile" />
 
-                <PackageReference Include="NineSolsAPI" Version="1.2.0" />
-<!--        <ProjectReference Include="../../NineSolsAPI/NineSolsAPI/NineSolsAPI.csproj" />-->
+        <PackageReference Include="NineSolsAPI" Version="1.2.0" />
+        <!--        <ProjectReference Include="../../NineSolsAPI/NineSolsAPI/NineSolsAPI.csproj" />-->
     </ItemGroup>
 
     <Target Name="CheckReferences" BeforeTargets="BeforeBuild">

@@ -6,7 +6,6 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using NineSolsAPI;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
@@ -150,7 +149,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
 
             if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
                 var generics = type.GetGenericArguments();
-                shouldSerialize &= generics[0].IsPrimitive||generics[0] == typeof(string);
+                shouldSerialize &= generics[0].IsPrimitive || generics[0] == typeof(string);
                 shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[1]);
             }
 
