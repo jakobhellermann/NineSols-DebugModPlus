@@ -12,8 +12,6 @@ public class FreecamModule {
 
     public static bool FreecamActive;
 
-    private static PlayerInputStateType stateBefore = PlayerInputStateType.Cutscene;
-
     private static Camera sceneCamera => GameCore.Instance.gameLevel.sceneCamera;
     private static ProCamera2D proCamera => CameraManager.Instance.cameraCore.proCamera2D;
 
