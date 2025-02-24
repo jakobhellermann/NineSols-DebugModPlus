@@ -21,6 +21,7 @@ namespace DebugModPlus.Modules;
 internal class Savestate {
     public required string Scene;
     public Vector3 PlayerPosition;
+    public required string LastTeleportId;
     public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
     public required List<FsmSnapshot> FsmSnapshots;
     public required List<ReferenceFixups> ReferenceFixups;
@@ -325,12 +326,15 @@ public class SavestateModule {
 
         // PERF: remove parse(encode(val))
         // var flagsJson = new JObject();
+#pragma warning disable CS0618 // Type or member is obsolete
         var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var savestate = new Savestate {
             Flags = flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
             PlayerPosition = currentPos,
+            LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
             FsmSnapshots = fsmSnapshots,
             ReferenceFixups = referenceFixups,
@@ -354,6 +358,10 @@ public class SavestateModule {
         SaveManager.Instance.LoadSaveAtSlot(100);
         ApplicationUIGroupManager.Instance.ClearAll();
         RuntimeInitHandler.LoadCore();
+
+        if (!GameVersions.IsVersion(GameVersions.SpeedrunPatch)) {
+            typeof(GameConfig).GetMethod("InstantiateGameCore")!.Invoke(GameConfig.Instance, []);
+        }
     }
 
     // ReSharper disable Unity.PerformanceAnalysis
@@ -371,11 +379,14 @@ public class SavestateModule {
         }
     }
 
+
     private async Task<bool> LoadSavestateInner(Savestate savestate, bool reload = true) {
         if (!GameCore.IsAvailable()) {
             LoadDebugSave();
-            // await ApplicationCore.Instance.ChangeSceneCompat(savestate.Scene);
-            await ApplicationCore.Instance.StartGameGoTo(GameFlagManager.Instance.startPoint);
+            var tp = GameFlagManager.Instance.GetTeleportPointWithPath(savestate.LastTeleportId);
+            ApplicationCore.Instance.lastSaveTeleportPoint = tp;
+            await ApplicationCore.Instance.ChangeSceneCompat(tp.sceneName);
+            // TODO: figure out what to wait for
             await UniTask.DelayFrame(10);
         }
 

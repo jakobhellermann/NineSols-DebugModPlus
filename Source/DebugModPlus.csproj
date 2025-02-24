@@ -50,6 +50,9 @@
         <Reference Include="UniTask">
             <HintPath>$(DllPath)/UniTask.dll</HintPath>
         </Reference>
+        <Reference Include="PrimeTween.Runtime">
+            <HintPath>$(DllPath)/PrimeTween.Runtime.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine.UI">
             <HintPath>$(DllPath)/UnityEngine.UI.dll</HintPath>
         </Reference>
