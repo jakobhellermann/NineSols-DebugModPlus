@@ -9,9 +9,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json;
 using NineSolsAPI;
-using NineSolsAPI.Utils;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace DebugModPlus;
 
@@ -37,23 +35,6 @@ public class DebugModPlus : BaseUnityPlugin {
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
     private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsCreate = null!;
     private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsLoad = null!;
-
-
-    public static GameObject? LookupPath(string path) {
-        var ddlScene = ApplicationCore.Instance.gameObject.scene;
-        var gameObjectA = ObjectUtils.LookupPath(ddlScene, path);
-        if (gameObjectA != null) {
-            return gameObjectA;
-        }
-
-        for (var index = 0; index < SceneManager.sceneCount; ++index) {
-            var gameObject = ObjectUtils.LookupPath(SceneManager.GetSceneAt(index), path);
-            if (gameObject != null)
-                return gameObject;
-        }
-
-        return null;
-    }
 
 
     private class JsonConverterByTomlTypeConverter : JsonConverter {
@@ -154,7 +135,6 @@ public class DebugModPlus : BaseUnityPlugin {
 
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
-            // SavestateModule.TryCreateSavestate("awake");
 
             KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
             KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);

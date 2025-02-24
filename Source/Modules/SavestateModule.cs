@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using BepInEx;
 using Cysharp.Threading.Tasks;
+using MonsterLove.StateMachine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NineSolsAPI;
@@ -19,7 +20,9 @@ namespace DebugModPlus.Modules;
 internal class Savestate {
     public required string Scene;
     public Vector3 PlayerPosition;
-    public required List<MonoBehaviourSnapshot> SceneBehaviours;
+    public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
+    public required List<FsmSnapshot> FsmSnapshots;
+    public required List<ReferenceFixups> ReferenceFixups;
     public required JObject Flags;
 
     public void SerializeTo(StreamWriter writer) {
@@ -82,17 +85,35 @@ class SavestateCollection {
     }
 }
 
+internal class FsmSnapshot {
+    public required string Path;
+    public required object CurrentState;
+
+    public static FsmSnapshot Of(IStateMachine machine) => new() {
+        Path = ObjectUtils.ObjectPath(machine.Component.gameObject),
+        CurrentState = machine.CurrentStateMap.stateObj,
+    };
+}
+
 internal class MonoBehaviourSnapshot {
     public required string Path;
-    public required string Component;
-    public required string Type;
     public required JToken Data;
 
     public static MonoBehaviourSnapshot Of(MonoBehaviour mb) => new() {
-        Path = ObjectUtils.ObjectPath(mb.gameObject),
-        Component = mb.name,
-        Type = mb.GetType().Name,
+        Path = SavestateModule.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
+    };
+}
+
+internal record ReferenceFixupField(string Field, string? Reference);
+
+internal class ReferenceFixups {
+    public required string Path;
+    public required List<ReferenceFixupField> Fields;
+
+    public static ReferenceFixups Of(MonoBehaviour mb, List<ReferenceFixupField> fixups) => new() {
+        Path = SavestateModule.ObjectComponentPath(mb),
+        Fields = fixups,
     };
 }
 
@@ -105,6 +126,28 @@ public class SavestateModule {
     private SavestateCollection savestates = new();
 
     public void Unload() {
+    }
+
+    [return: NotNullIfNotNull(nameof(component))]
+    public static string? ObjectComponentPath(Component? component) {
+        if (!component) return null;
+
+        var objectPath = ObjectUtils.ObjectPath(component!.gameObject);
+        return $"{objectPath}@{component.GetType().Name}";
+    }
+
+    public static Component? LookupObjectComponentPath(string path) {
+        var i = path.LastIndexOf('@');
+        if (i == -1) throw new Exception($"Object-Component path contains no component: {path}");
+        var objectPath = path[..i];
+        var componentName = path[(i+1)..];
+
+        var obj = ObjectUtils.LookupPath(objectPath);
+        if (obj == null) return null;
+
+        // PERF
+        var components = obj.GetComponents<Component>();
+        return components.FirstOrDefault(c => c.GetType().Name == componentName);
     }
 
     #region Monobehaviour State Tracking
@@ -270,11 +313,26 @@ public class SavestateModule {
         // PERF: remove parse(encode(val))
         // var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
 
+        // var fsms = Object.FindObjectsByType<FSMStateMachineRunner>(FindObjectsSortMode.InstanceID);
+        var fsms = new[] { player.fsm.runner };
+        var fsmSnapshots = fsms
+            .SelectMany(FsmInspectorModule.FsmListMachines)
+            .Select(FsmSnapshot.Of)
+            .ToList();
+
+        var referenceFixups = new List<ReferenceFixups>();
+        referenceFixups.Add(ReferenceFixups.Of(Player.i,
+        [
+            new ReferenceFixupField(nameof(Player.i.touchingRope), ObjectComponentPath(Player.i.touchingRope)),
+        ]));
+
         var savestate = new Savestate {
             Flags = flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
             PlayerPosition = currentPos,
-            SceneBehaviours = sceneBehaviours,
+            MonobehaviourSnapshots = sceneBehaviours,
+            FsmSnapshots = fsmSnapshots,
+            ReferenceFixups = referenceFixups,
         };
 
         try {
@@ -347,9 +405,28 @@ public class SavestateModule {
         // GameCore.Instance.ResetLevel();
 
         sw.Restart();
-        ApplySnapshots(savestate.SceneBehaviours);
+        ApplySnapshots(savestate.MonobehaviourSnapshots);
         Log.Info($"- Apply to scene in {sw.ElapsedMilliseconds}ms");
         sw.Stop();
+
+        ApplyFixups(savestate.ReferenceFixups);
+
+        foreach (var fsm in savestate.FsmSnapshots) {
+            var targetGo = ObjectUtils.LookupPath(fsm.Path);
+            if (targetGo == null) {
+                Log.Error($"Savestate stored fsm state on {fsm.Path}, which does not exist at load time");
+                continue;
+            }
+
+            var runner = targetGo.GetComponent<FSMStateMachineRunner>();
+            foreach (var machine in FsmInspectorModule.FsmListMachines(runner)) {
+                var changeStateMethod = machine.GetType().GetMethods()
+                    .First(method => method.Name == "ChangeState" && method.GetParameters().Length == 3);
+                var stateObj = Enum.ToObject(machine.CurrentStateMap.stateObj.GetType(), fsm.CurrentState);
+                // TODO: maybe this shouldn't call OnStateEnter
+                changeStateMethod.Invoke(machine, [stateObj, StateTransition.Overwrite, false]);
+            }
+        }
 
         //CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
 
@@ -358,28 +435,42 @@ public class SavestateModule {
         return true;
     }
 
-    private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
-        List<MonoBehaviour> components = new();
 
+    private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
         foreach (var mb in snapshots) {
-            var targetGo = DebugModPlus.LookupPath(mb.Path);
-            if (targetGo == null) {
+            var targetComponent = LookupObjectComponentPath(mb.Path);
+            if (targetComponent == null) {
                 Log.Error($"Savestate stored state on {mb.Path}, which does not exist at load time");
                 continue;
             }
+            SnapshotSerializer.Populate(targetComponent, mb.Data);
+        }
+    }
 
-            targetGo.GetComponents(components);
-            var targetComponent = components.Find(component => component.name == mb.Component);
+    private static void ApplyFixups(List<ReferenceFixups> fixups) {
+        foreach (var fields in fixups) {
+            var targetComponent = LookupObjectComponentPath(fields.Path);
             if (targetComponent == null) {
-                Log.Error(
-                    $"Savestate stored state on {mb.Path}.{mb.Component}, but the component does not exist at load time");
+                Log.Error($"Savestate stored reference fixup on {fields.Path}, which does not exist at load time");
                 continue;
             }
 
-            components.Clear();
+            foreach (var (fieldName, referencedPath) in fields.Fields) {
+                var field = targetComponent.GetType().GetField(fieldName,
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
+                if (referencedPath == null) {
+                    field.SetValue(targetComponent, null);
+                } else {
+                    var referencedObject = LookupObjectComponentPath(referencedPath);
+                    if (referencedObject == null) {
+                        Log.Error(
+                            $"Savestate stored reference fixup on {fields.Path}.{fieldName}, but the target {referencedPath} does not exist at load time");
+                        continue;
+                    }
 
-            Log.Debug($"Applying into {mb.Path}@{mb.Component}");
-            SnapshotSerializer.Populate(targetComponent, mb.Data);
+                    field.SetValue(targetComponent, referencedObject);
+                }
+            }
         }
     }
 

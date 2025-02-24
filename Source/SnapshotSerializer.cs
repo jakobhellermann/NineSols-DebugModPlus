@@ -140,6 +140,8 @@ file class SnapshotStateResolver : DefaultContractResolver {
         if (type.IsGenericType) {
             if (type.GetGenericTypeDefinition() == typeof(List<>)) {
                 shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[0]);
+
+                property.ObjectCreationHandling = ObjectCreationHandling.Replace;
             }
 
             if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
