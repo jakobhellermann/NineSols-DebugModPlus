@@ -45,6 +45,7 @@ public static class SnapshotSerializer {
             new Vector3Converter(),
             new Vector4Converter(),
             new QuatConverter(),
+            new AnimatorConverter(),
         },
     };
 
@@ -90,7 +91,6 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(LayerMask), // maybe
         typeof(Collider2D), // maybe
         typeof(AbilityWrapper), // bugs out
-        typeof(Animator),
         typeof(EffectHitData),
         typeof(IStateMachine),
         typeof(RuntimeConditionVote),
@@ -161,6 +161,36 @@ file class SnapshotStateResolver : DefaultContractResolver {
         property.ShouldSerialize = _ => shouldSerialize;
 
         return property;
+    }
+}
+
+file class AnimatorConverter : JsonConverter<Animator> {
+    public override void WriteJson(JsonWriter writer, Animator? value, JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        var snapshot = AnimatorSnapshot.Snapshot(value);
+        serializer.Serialize(writer, snapshot);
+    }
+
+    public override Animator? ReadJson(JsonReader reader, Type objectType, Animator? existingValue,
+        bool hasExistingValue, JsonSerializer serializer) {
+        if (!hasExistingValue) {
+            Log.Error("Cannot deserialize animator without existing instance");
+            return null;
+        }
+
+        if (existingValue == null) {
+            Log.Error("Cannot deserialize animator with null existing value");
+            return null;
+        }
+
+        var snapshot = serializer.Deserialize<AnimatorSnapshot>(reader)!;
+        snapshot.Restore(existingValue);
+
+        return existingValue;
     }
 }
 
