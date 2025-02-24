@@ -6,6 +6,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using NineSolsAPI;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
@@ -114,6 +115,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
             .GetProperties(BindingFlags.Instance | BindingFlags.Public /* | BindingsFlags.NonPublic */ | extraFlags)
             .Where(x => x.CanWrite && x.CanRead)
             .Cast<MemberInfo>();
+
         return fields.Concat(properties).ToList();
     }
 
@@ -123,6 +125,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
         var property = base.CreateProperty(member, memberSerialization);
         property.Readable = true;
         property.Writable = true;
+        property.Ignored = false;
 
         // var shouldSerialize = property.Writable;
         var shouldSerialize = true;

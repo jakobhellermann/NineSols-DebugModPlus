@@ -322,7 +322,7 @@ public class SavestateModule {
         [
             new ReferenceFixupField(nameof(Player.i.touchingRope), ObjectComponentPath(Player.i.touchingRope)),
         ]));
-        
+
         // PERF: remove parse(encode(val))
         // var flagsJson = new JObject();
         var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
@@ -423,16 +423,7 @@ public class SavestateModule {
             foreach (var machine in FsmInspectorModule.FsmListMachines(runner)) {
                 var stateObj = Enum.ToObject(machine.CurrentStateMap.stateObj.GetType(), fsm.CurrentState);
 
-                // this calls OnStateEnter
-                // var changeStateMethod = machine.GetType().GetMethods()
-                // .First(method => method.Name == "ChangeState" && method.GetParameters().Length == 3);
-                // changeStateMethod.Invoke(machine, [stateObj, StateTransition.Overwrite, false]);
-
                 EnterStateDirectly(machine, stateObj);
-
-                if (stateObj.Equals(PlayerStateType.Roll)) {
-                    machine.CurrentStateMap.EnterCall();
-                }
             }
         }
 
