@@ -421,6 +421,8 @@ public class SavestateModule(ConfigEntry<SavestateFilter> currentFilter) {
         }
 
         //CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
+        Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
+        
 
         SavestateLoaded?.Invoke(this, EventArgs.Empty);
 

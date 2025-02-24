@@ -84,6 +84,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(LineRenderer),
         typeof(Color),
         typeof(VelocityModifierParam),
+        typeof(ParticleSystem),
         typeof(TestRope.RopeSegment),
         // todo
         typeof(Rigidbody2D), // maybe
@@ -148,6 +149,8 @@ file class SnapshotStateResolver : DefaultContractResolver {
             }
 
             if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
+                var generics = type.GetGenericArguments();
+                shouldSerialize &= generics[0].IsPrimitive||generics[0] == typeof(string);
                 shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[1]);
             }
 
