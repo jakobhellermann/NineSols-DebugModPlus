@@ -7,8 +7,8 @@ using HarmonyLib;
 namespace DebugModPlus;
 
 public static class ReflectionUtils {
-    public static T? AccessField<T>(this object val, string fieldName) {
-        var flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+    public static FieldInfo AccessFieldInfo(this object val, string fieldName) {
+        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
 
         var field = val.GetType().GetField(fieldName, flags);
         if (field == null) {
@@ -17,7 +17,11 @@ public static class ReflectionUtils {
                 $"Field {fieldName} was not found in type {val.GetType()} or base types \n{actualNames}");
         }
 
-        return (T?)field.GetValue(val);
+        return field;
+    }
+
+    public static T AccessField<T>(this object val, string fieldName) {
+        return (T)val.AccessFieldInfo(fieldName).GetValue(val);
     }
 
     public static T? AccessProperty<T>(this object val, string propertyName) =>

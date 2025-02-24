@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -139,8 +140,9 @@ public class SavestateModule {
     public static Component? LookupObjectComponentPath(string path) {
         var i = path.LastIndexOf('@');
         if (i == -1) throw new Exception($"Object-Component path contains no component: {path}");
+
         var objectPath = path[..i];
-        var componentName = path[(i+1)..];
+        var componentName = path[(i + 1)..];
 
         var obj = ObjectUtils.LookupPath(objectPath);
         if (obj == null) return null;
@@ -308,11 +310,6 @@ public class SavestateModule {
             }
         }
 
-        var flagsJson = new JObject();
-
-        // PERF: remove parse(encode(val))
-        // var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
-
         // var fsms = Object.FindObjectsByType<FSMStateMachineRunner>(FindObjectsSortMode.InstanceID);
         var fsms = new[] { player.fsm.runner };
         var fsmSnapshots = fsms
@@ -325,6 +322,10 @@ public class SavestateModule {
         [
             new ReferenceFixupField(nameof(Player.i.touchingRope), ObjectComponentPath(Player.i.touchingRope)),
         ]));
+        
+        // PERF: remove parse(encode(val))
+        // var flagsJson = new JObject();
+        var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
 
         var savestate = new Savestate {
             Flags = flagsJson,
@@ -420,11 +421,18 @@ public class SavestateModule {
 
             var runner = targetGo.GetComponent<FSMStateMachineRunner>();
             foreach (var machine in FsmInspectorModule.FsmListMachines(runner)) {
-                var changeStateMethod = machine.GetType().GetMethods()
-                    .First(method => method.Name == "ChangeState" && method.GetParameters().Length == 3);
                 var stateObj = Enum.ToObject(machine.CurrentStateMap.stateObj.GetType(), fsm.CurrentState);
-                // TODO: maybe this shouldn't call OnStateEnter
-                changeStateMethod.Invoke(machine, [stateObj, StateTransition.Overwrite, false]);
+
+                // this calls OnStateEnter
+                // var changeStateMethod = machine.GetType().GetMethods()
+                // .First(method => method.Name == "ChangeState" && method.GetParameters().Length == 3);
+                // changeStateMethod.Invoke(machine, [stateObj, StateTransition.Overwrite, false]);
+
+                EnterStateDirectly(machine, stateObj);
+
+                if (stateObj.Equals(PlayerStateType.Roll)) {
+                    machine.CurrentStateMap.EnterCall();
+                }
             }
         }
 
@@ -435,6 +443,50 @@ public class SavestateModule {
         return true;
     }
 
+    void EnterStateDirectly(IStateMachine sm, object stateObj) {
+        // TODO: handle transitions
+
+        var engine = sm.AccessField<FSMStateMachineRunner>("engine");
+        var stateLookup = sm.AccessField<IDictionary>("stateLookup");
+        if (!stateLookup.Contains(stateObj)) {
+            throw new Exception($"state {stateObj} not found in fsm");
+        }
+
+        var newStateMapping = stateLookup[stateObj];
+
+        var queuedChangeField = sm.AccessFieldInfo("queuedChange");
+        var currentTransitionField = sm.AccessFieldInfo("currentTransition");
+        var exitRoutineField = sm.AccessFieldInfo("exitRoutine");
+        var enterRoutineField = sm.AccessFieldInfo("enterRoutine");
+        var lastStateField = sm.AccessFieldInfo("lastState");
+        var currentStateField = sm.AccessFieldInfo("currentState");
+        var isInTransitionField = sm.AccessFieldInfo("isInTransition");
+
+        if (queuedChangeField.GetValue(sm) is IEnumerator queuedChange) {
+            engine.StopCoroutine(queuedChange);
+            queuedChangeField.SetValue(sm, null);
+        }
+
+        if (currentTransitionField.GetValue(sm) is IEnumerator currentTransition) {
+            engine.StopCoroutine(currentTransition);
+            currentTransitionField.SetValue(sm, null);
+        }
+
+        if (exitRoutineField.GetValue(sm) is IEnumerator exitRoutine) {
+            engine.StopCoroutine(exitRoutine);
+            exitRoutineField.SetValue(sm, null);
+        }
+
+        if (enterRoutineField.GetValue(sm) is IEnumerator enterRoutine) {
+            engine.StopCoroutine(enterRoutine);
+            enterRoutineField.SetValue(sm, null);
+        }
+
+        lastStateField.SetValue(sm, newStateMapping);
+        currentStateField.SetValue(sm, newStateMapping);
+        isInTransitionField.SetValue(sm, false);
+    }
+
 
     private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
         foreach (var mb in snapshots) {
@@ -443,6 +495,7 @@ public class SavestateModule {
                 Log.Error($"Savestate stored state on {mb.Path}, which does not exist at load time");
                 continue;
             }
+
             SnapshotSerializer.Populate(targetComponent, mb.Data);
         }
     }
