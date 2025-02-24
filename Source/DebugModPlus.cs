@@ -7,7 +7,6 @@ using DebugModPlus.Modules;
 using DebugModPlus.Modules.Hitbox;
 using HarmonyLib;
 using MonsterLove.StateMachine;
-using Newtonsoft.Json;
 using NineSolsAPI;
 using UnityEngine;
 
@@ -33,42 +32,8 @@ public class DebugModPlus : BaseUnityPlugin {
     public GhostModule GhostModule = null!;
 
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
-    private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsCreate = null!;
-    private ConfigEntry<Dictionary<KeyboardShortcut, string>> configSavestateShortcutsLoad = null!;
-
-
-    private class JsonConverterByTomlTypeConverter : JsonConverter {
-        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) {
-            if (value is null) {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteValue(TomlTypeConverter.ConvertToString(value, value.GetType()));
-        }
-
-        public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue,
-            JsonSerializer serializer) {
-            return TomlTypeConverter.ConvertToValue(reader.ReadAsString(), objectType);
-        }
-
-        public override bool CanConvert(Type objectType) {
-            // Corecursive loop:
-            /*var underlying = Nullable.GetUnderlyingType(objectType) ?? objectType;
-            return TomlTypeConverter.CanConvert(underlying);*/
-            return objectType == typeof(KeyboardShortcut);
-        }
-    }
-
-    private static JsonSerializerSettings jsonTypeConverterSettings = new() {
-        Converters = [new JsonConverterByTomlTypeConverter()],
-    };
-
-    private static TypeConverter jsonTypeConverter = new() {
-        ConvertToString = (val, _) => JsonConvert.SerializeObject(val, jsonTypeConverterSettings),
-        ConvertToObject = (obj, ty) => JsonConvert.DeserializeObject(obj, ty, jsonTypeConverterSettings),
-    };
-
+    private Dictionary<KeyboardShortcut, string> configSavestateShortcutsCreate = null!;
+    private Dictionary<KeyboardShortcut, string> configSavestateShortcutsLoad = null!;
 
     private void Awake() {
         Instance = this;
@@ -107,24 +72,16 @@ public class DebugModPlus : BaseUnityPlugin {
             var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
             var configPauseStopsTimer = Config.Bind("SpeedrunTimer", "Pause Timer Stops Speedrun Timer", false);
 
-            if (!TomlTypeConverter.CanConvert(typeof(Dictionary<KeyboardShortcut, string>))) {
-                TomlTypeConverter.AddConverter(typeof(Dictionary<KeyboardShortcut, string>), jsonTypeConverter);
-            }
-
-            configSavestateShortcutsCreate = Config.Bind("Savestates",
-                "Create savestate shortcuts",
-                new Dictionary<KeyboardShortcut, string> {
-                    { new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
-                    { new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
-                    { new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
-                });
-            configSavestateShortcutsLoad = Config.Bind("Savestates",
-                "Load savestate shortcuts",
-                new Dictionary<KeyboardShortcut, string> {
-                    { new KeyboardShortcut(KeyCode.Keypad1), "1" },
-                    { new KeyboardShortcut(KeyCode.Keypad2), "2" },
-                    { new KeyboardShortcut(KeyCode.Keypad3), "3" },
-                });
+            configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
+                { new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
+                { new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
+                { new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
+            };
+            configSavestateShortcutsLoad = new Dictionary<KeyboardShortcut, string> {
+                { new KeyboardShortcut(KeyCode.Keypad1), "1" },
+                { new KeyboardShortcut(KeyCode.Keypad2), "2" },
+                { new KeyboardShortcut(KeyCode.Keypad3), "3" },
+            };
 
             // module initialization
 
@@ -187,8 +144,8 @@ public class DebugModPlus : BaseUnityPlugin {
         MapTeleportModule.Update();
         infotextModule.Update();
 
-        bool didCreate = false;
-        foreach (var binding in configSavestateShortcutsCreate.Value) {
+        var didCreate = false;
+        foreach (var binding in configSavestateShortcutsCreate) {
             if (KeybindManager.CheckShortcutOnly(binding.Key)) {
                 SavestateModule.TryCreateSavestate(binding.Value);
                 didCreate = true;
@@ -196,7 +153,7 @@ public class DebugModPlus : BaseUnityPlugin {
         }
 
         if (!didCreate) {
-            foreach (var binding in configSavestateShortcutsLoad.Value) {
+            foreach (var binding in configSavestateShortcutsLoad) {
                 if (KeybindManager.CheckShortcutOnly(binding.Key)) {
                     SavestateModule.TryLoadSavestate(binding.Value);
                 }
