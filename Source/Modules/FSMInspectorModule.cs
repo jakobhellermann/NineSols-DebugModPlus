@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -37,8 +38,8 @@ public class FsmInspectorModule {
             .AccessProperty<IList>("getAllStates")!
             .Cast<object>()
             .Select(stateObj => {
-                var state = stateObj.AccessField<object>("state")!;
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior")!;
+                var state = stateObj.AccessField<object>("state");
+                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior");
                 return (state, stateBehaviour);
             });
     }
@@ -73,9 +74,7 @@ public class FsmInspectorModule {
                     }
 
                     var stateActions =
-                        ReflectionUtils.AccessBaseField<AbstractStateAction[]>(stateBehaviour,
-                            typeof(MonsterState),
-                            "stateActions");
+                        AccessBaseField<AbstractStateAction[]>(stateBehaviour, typeof(MonsterState), "stateActions");
                     if (stateActions.Length > 0) text += "HAS STATE ACTIONS\n";
                     // text += $"    {monsterState.AccessField<AbstractStateAction[]>("stateActions")}\n";
                     // ToastManager.Toast(field==null);
@@ -260,4 +259,9 @@ public class FsmInspectorModule {
 
         GUI.Label(new Rect(padding, padding, size.x, size.y), text, style);
     }
+
+    private static T AccessBaseField<T>(object val, Type baseType, string fieldName) =>
+        (T)baseType
+            .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)!
+            .GetValue(val);
 }

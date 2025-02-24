@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using BepInEx;
 using Cysharp.Threading.Tasks;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json;
@@ -53,7 +52,7 @@ internal class Savestate {
 
 class SavestateCollection {
     private string? backingDir;
-    private string BackingDir => backingDir ??= SavestateModule.ModDataDir(DebugModPlus.Instance, "Savestates");
+    private string BackingDir => backingDir ??= ModDirs.DataDir(DebugModPlus.Instance, "Savestates");
 
     private string SavestatePath(string slot) {
         return Path.Join(BackingDir, $"{slot}.json");
@@ -102,7 +101,7 @@ internal class MonoBehaviourSnapshot {
     public required JToken Data;
 
     public static MonoBehaviourSnapshot Of(MonoBehaviour mb) => new() {
-        Path = SavestateModule.ObjectComponentPath(mb),
+        Path = ObjectUtils.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
     };
 }
@@ -114,7 +113,7 @@ internal class ReferenceFixups {
     public required List<ReferenceFixupField> Fields;
 
     public static ReferenceFixups Of(MonoBehaviour mb, List<ReferenceFixupField> fixups) => new() {
-        Path = SavestateModule.ObjectComponentPath(mb),
+        Path = ObjectUtils.ObjectComponentPath(mb),
         Fields = fixups,
     };
 }
@@ -126,32 +125,6 @@ public class SavestateModule {
     public event EventHandler? SavestateCreated;
 
     private SavestateCollection savestates = new();
-
-    public void Unload() {
-    }
-
-    [return: NotNullIfNotNull(nameof(component))]
-    public static string? ObjectComponentPath(Component? component) {
-        if (!component) return null;
-
-        var objectPath = ObjectUtils.ObjectPath(component!.gameObject);
-        return $"{objectPath}@{component.GetType().Name}";
-    }
-
-    public static Component? LookupObjectComponentPath(string path) {
-        var i = path.LastIndexOf('@');
-        if (i == -1) throw new Exception($"Object-Component path contains no component: {path}");
-
-        var objectPath = path[..i];
-        var componentName = path[(i + 1)..];
-
-        var obj = ObjectUtils.LookupPath(objectPath);
-        if (obj == null) return null;
-
-        // PERF
-        var components = obj.GetComponents<Component>();
-        return components.FirstOrDefault(c => c.GetType().Name == componentName);
-    }
 
     #region Monobehaviour State Tracking
 
@@ -213,20 +186,6 @@ public class SavestateModule {
     }
 
     #endregion
-
-    public static string ModDataDir(BaseUnityPlugin mod, params string[] subDirs) =>
-        ModDataDir(mod.Info.Metadata.GUID, subDirs);
-
-    private static string ModDataDir(string modGuid, params string[] subDirs) {
-        var gameDir = Directory.GetParent(Application.dataPath);
-        if (gameDir == null) {
-            throw new Exception($"{Application.dataPath} is not a valid game directory?");
-        }
-
-        var folder = subDirs.Aggregate(Path.Combine(gameDir.FullName, "ModData", modGuid), Path.Combine);
-        Directory.CreateDirectory(folder);
-        return folder;
-    }
 
     #region Entrypoints
 
@@ -321,7 +280,8 @@ public class SavestateModule {
         var referenceFixups = new List<ReferenceFixups>();
         referenceFixups.Add(ReferenceFixups.Of(Player.i,
         [
-            new ReferenceFixupField(nameof(Player.i.touchingRope), ObjectComponentPath(Player.i.touchingRope)),
+            new ReferenceFixupField(nameof(Player.i.touchingRope),
+                ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
         ]));
 
         // PERF: remove parse(encode(val))
@@ -492,7 +452,7 @@ public class SavestateModule {
 
     private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
         foreach (var mb in snapshots) {
-            var targetComponent = LookupObjectComponentPath(mb.Path);
+            var targetComponent = ObjectUtils.LookupObjectComponentPath(mb.Path);
             if (targetComponent == null) {
                 Log.Error($"Savestate stored state on {mb.Path}, which does not exist at load time");
                 continue;
@@ -504,7 +464,7 @@ public class SavestateModule {
 
     private static void ApplyFixups(List<ReferenceFixups> fixups) {
         foreach (var fields in fixups) {
-            var targetComponent = LookupObjectComponentPath(fields.Path);
+            var targetComponent = ObjectUtils.LookupObjectComponentPath(fields.Path);
             if (targetComponent == null) {
                 Log.Error($"Savestate stored reference fixup on {fields.Path}, which does not exist at load time");
                 continue;
@@ -516,7 +476,7 @@ public class SavestateModule {
                 if (referencedPath == null) {
                     field.SetValue(targetComponent, null);
                 } else {
-                    var referencedObject = LookupObjectComponentPath(referencedPath);
+                    var referencedObject = ObjectUtils.LookupObjectComponentPath(referencedPath);
                     if (referencedObject == null) {
                         Log.Error(
                             $"Savestate stored reference fixup on {fields.Path}.{fieldName}, but the target {referencedPath} does not exist at load time");

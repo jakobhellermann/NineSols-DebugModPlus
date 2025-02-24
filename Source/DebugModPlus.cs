@@ -28,7 +28,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
     public SpeedrunTimerModule SpeedrunTimerModule = null!;
 
-    public FsmInspectorModule FsmInspectorModule = new();
+    private FsmInspectorModule fsmInspectorModule = new();
     public GhostModule GhostModule = null!;
 
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
@@ -172,7 +172,7 @@ public class DebugModPlus : BaseUnityPlugin {
     }
 
     private void TryPickFsm() {
-        FsmInspectorModule.Objects.Clear();
+        fsmInspectorModule.Objects.Clear();
 
         try {
             var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
@@ -190,7 +190,7 @@ public class DebugModPlus : BaseUnityPlugin {
                 .Distinct()
                 .FirstOrDefault();
             if (stateMachine)
-                FsmInspectorModule.Objects.Add(stateMachine!);
+                fsmInspectorModule.Objects.Add(stateMachine!);
             else
                 ToastManager.Toast($"No state machine found at cursor");
         } catch (Exception e) {
@@ -226,14 +226,13 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private void OnGUI() {
         SpeedrunTimerModule.OnGui();
-        FsmInspectorModule.OnGui();
+        fsmInspectorModule.OnGui();
     }
 
 
     private void OnDestroy() {
         harmony.UnpatchSelf();
         HitboxModule.Unload();
-        SavestateModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();
