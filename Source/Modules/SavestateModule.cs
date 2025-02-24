@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using BepInEx.Configuration;
 using Cysharp.Threading.Tasks;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json;
@@ -14,8 +15,19 @@ using Newtonsoft.Json.Linq;
 using NineSolsAPI;
 using NineSolsAPI.Utils;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DebugModPlus.Modules;
+
+[Flags]
+public enum SavestateFilter {
+    None = 0,
+    Player = 1 << 1,
+    Monsters = 1 << 2,
+    Flags = 1 << 3,
+
+    All = Flags | Player | Monsters,
+}
 
 internal class Savestate {
     public required string Scene;
@@ -118,7 +130,7 @@ internal class ReferenceFixups {
     };
 }
 
-public class SavestateModule {
+public class SavestateModule(ConfigEntry<SavestateFilter> currentFilter) {
     public static bool IsLoadingSavestate;
 
     public event EventHandler? SavestateLoaded;
@@ -198,7 +210,7 @@ public class SavestateModule {
     public void TryCreateSavestate(string slot) {
         try {
             var sw = Stopwatch.StartNew();
-            CreateSavestate(slot);
+            CreateSavestate(slot, currentFilter.Value);
             Log.Info($"Created savestate {slot} in {sw.ElapsedMilliseconds}ms");
         } catch (Exception e) {
             ToastManager.Toast(e.Message);
@@ -241,7 +253,7 @@ public class SavestateModule {
 
     #region Create Savestate
 
-    private void CreateSavestate(string slot) {
+    private void CreateSavestate(string slot, SavestateFilter filter) {
         if (!GameCore.IsAvailable()) {
             throw new Exception("Can't create savestate outside of game level");
         }
@@ -252,48 +264,53 @@ public class SavestateModule {
         }
 
         var player = Player.i;
-        var currentPos = player.transform.position;
 
         var sceneBehaviours = new List<MonoBehaviourSnapshot>();
-        {
-            var seen = new HashSet<MonoBehaviour>();
+        var fsmSnapshots = new List<FsmSnapshot>();
+        var referenceFixups = new List<ReferenceFixups>();
+        var flagsJson = new JObject();
 
-            // TODO:
-            // - jades
-            //  - revival jade
-            // - qi in UI
-            // - broken floor
+        // TODO:
+        // - jades
+        //  - revival jade
+        // - qi in UI
+        // - broken floor
 
+        var seen = new HashSet<MonoBehaviour>();
+        if (filter.HasFlag(SavestateFilter.Player)) {
             SnapshotReferencedMonoBehaviours(player, sceneBehaviours, seen, maxDepth: 4);
             foreach (var (_, state) in FsmInspectorModule.FsmListStates(player.fsm)) {
                 SnapshotReferencedMonoBehaviours(state, sceneBehaviours, seen);
             }
         }
 
-        // var fsms = Object.FindObjectsByType<FSMStateMachineRunner>(FindObjectsSortMode.InstanceID);
-        var fsms = new[] { player.fsm.runner };
-        var fsmSnapshots = fsms
-            .SelectMany(FsmInspectorModule.FsmListMachines)
-            .Select(FsmSnapshot.Of)
-            .ToList();
+        if (filter.HasFlag(SavestateFilter.Monsters)) {
+            foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
+                SnapshotReferencedMonoBehaviours(monster, sceneBehaviours, seen);
+                fsmSnapshots.Add(FsmSnapshot.Of(monster.fsm));
+            }
+        }
 
-        var referenceFixups = new List<ReferenceFixups>();
-        referenceFixups.Add(ReferenceFixups.Of(Player.i,
-        [
-            new ReferenceFixupField(nameof(Player.i.touchingRope),
-                ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
-        ]));
+        if (filter.HasFlag(SavestateFilter.Player)) {
+            fsmSnapshots.Add(FsmSnapshot.Of(player.fsm));
+            referenceFixups.Add(ReferenceFixups.Of(Player.i,
+            [
+                new ReferenceFixupField(nameof(Player.i.touchingRope),
+                    ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
+            ]));
+        }
 
-        // PERF: remove parse(encode(val))
-        // var flagsJson = new JObject();
+        if (filter.HasFlag(SavestateFilter.Flags)) {
+            // PERF: remove parse(encode(val))
 #pragma warning disable CS0618 // Type or member is obsolete
-        var flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
+            flagsJson = JObject.Parse(GameFlagManager.FlagsToJson(SaveManager.Instance.allFlags));
 #pragma warning restore CS0618 // Type or member is obsolete
+        }
 
         var savestate = new Savestate {
             Flags = flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
-            PlayerPosition = currentPos,
+            PlayerPosition = player.transform.position,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
             FsmSnapshots = fsmSnapshots,
@@ -359,7 +376,7 @@ public class SavestateModule {
         Log.Info($"- Applied flags in {sw.ElapsedMilliseconds}ms");
 
         // Change scene
-        var isCurrentScene = savestate.Scene == GameCore.Instance.gameLevel?.SceneName;
+        var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
         if (!isCurrentScene || reload) {
             sw.Restart();
             var task = ChangeSceneAsync(new SceneConnectionPoint.ChangeSceneData {
@@ -391,6 +408,11 @@ public class SavestateModule {
             }
 
             var runner = targetGo.GetComponent<FSMStateMachineRunner>();
+            if (!runner) {
+                Log.Error($"Savestate stored fsm state on {fsm.Path}, which has no FSMStateMachineRunner");
+                continue;
+            }
+
             foreach (var machine in FsmInspectorModule.FsmListMachines(runner)) {
                 var stateObj = Enum.ToObject(machine.CurrentStateMap.stateObj.GetType(), fsm.CurrentState);
 

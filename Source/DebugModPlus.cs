@@ -24,7 +24,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private InfotextModule infotextModule = new();
     public HitboxModule HitboxModule = new();
-    public SavestateModule SavestateModule = new();
+    public SavestateModule SavestateModule = null!;
 
     public SpeedrunTimerModule SpeedrunTimerModule = null!;
 
@@ -72,6 +72,10 @@ public class DebugModPlus : BaseUnityPlugin {
             var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
             var configPauseStopsTimer = Config.Bind("SpeedrunTimer", "Pause Timer Stops Speedrun Timer", false);
 
+            var configSavestateFilter = Config.Bind("Savestates",
+                "Savestate filter",
+                SavestateFilter.Flags | SavestateFilter.Player);
+
             configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
                 { new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
                 { new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
@@ -85,6 +89,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
             // module initialization
 
+            SavestateModule = new SavestateModule(configSavestateFilter);
 
             SpeedrunTimerModule =
                 new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
