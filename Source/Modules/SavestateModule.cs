@@ -182,6 +182,20 @@ public class SavestateModule(
 
     private SavestateUIState uiState = SavestateUIState.Off;
 
+    private SavestateUIState UiState {
+        get => uiState;
+        set {
+            uiState = value;
+            if (uiState == SavestateUIState.Off) {
+                // PlayerInputBinder.Instance.RevokeAllMyVote(DebugModPlus.Instance);
+                RCGTime.GlobalSimulationSpeed = 1;
+            } else {
+                // PlayerInputBinder.Instance.VoteForState(PlayerInputStateType.Console + 1, DebugModPlus.Instance);
+                RCGTime.GlobalSimulationSpeed = 0;
+            }
+        }
+    }
+
     private Dictionary<int, SavestateInfo> infos = [];
 
     private void LoadInfos() {
@@ -196,23 +210,23 @@ public class SavestateModule(
     public void Update() {
         try {
             if (KeybindManager.CheckShortcutOnly(openLoad.Value)) {
-                uiState = uiState == SavestateUIState.Load ? SavestateUIState.Off : SavestateUIState.Load;
+                UiState = UiState == SavestateUIState.Load ? SavestateUIState.Off : SavestateUIState.Load;
             } else if (KeybindManager.CheckShortcutOnly(openSave.Value)) {
-                uiState = uiState == SavestateUIState.Save ? SavestateUIState.Off : SavestateUIState.Save;
+                UiState = UiState == SavestateUIState.Save ? SavestateUIState.Off : SavestateUIState.Save;
             } else if (KeybindManager.CheckShortcutOnly(openDelete.Value)) {
-                uiState = uiState == SavestateUIState.Delete ? SavestateUIState.Off : SavestateUIState.Delete;
+                UiState = UiState == SavestateUIState.Delete ? SavestateUIState.Off : SavestateUIState.Delete;
             } else if (KeybindManager.CheckShortcutOnly(tabNext.Value)) {
                 currentPage++;
             } else if (KeybindManager.CheckShortcutOnly(tabPrev.Value)) {
                 currentPage = Math.Max(currentPage - 1, 0);
             }
 
-            if (uiState != SavestateUIState.Off) {
+            if (UiState != SavestateUIState.Off) {
                 LoadInfos();
             }
 
-            if (uiState != SavestateUIState.Off) {
-                if (Input.GetKeyDown(KeyCode.Escape)) uiState = SavestateUIState.Off;
+            if (UiState != SavestateUIState.Off) {
+                if (Input.GetKeyDown(KeyCode.Escape)) UiState = SavestateUIState.Off;
 
                 for (var i = 0; i < 10; i++) {
                     if (!Input.GetKeyDown(KeyCode.Alpha0 + i)
@@ -220,15 +234,15 @@ public class SavestateModule(
 
                     var saveIndex = currentPage * ItemsPerPage + i;
 
-                    if (uiState == SavestateUIState.Save) {
+                    if (UiState == SavestateUIState.Save) {
                         SaveToSlot(saveIndex);
-                        uiState = SavestateUIState.Off;
-                    } else if (uiState == SavestateUIState.Load) {
+                        UiState = SavestateUIState.Off;
+                    } else if (UiState == SavestateUIState.Load) {
                         LoadFromSlot(saveIndex);
-                        uiState = SavestateUIState.Off;
-                    } else if (uiState == SavestateUIState.Delete) {
+                        UiState = SavestateUIState.Off;
+                    } else if (UiState == SavestateUIState.Delete) {
                         savestates.Delete(saveIndex);
-                        uiState = SavestateUIState.Off;
+                        UiState = SavestateUIState.Off;
                     }
                 }
             }
@@ -244,7 +258,7 @@ public class SavestateModule(
         style ??= new GUIStyle(GUI.skin.label) { fontSize = 18, wordWrap = false };
         styleBox ??= new GUIStyle(GUI.skin.box) { fontSize = 18 };
 
-        if (uiState != SavestateUIState.Off) {
+        if (UiState != SavestateUIState.Off) {
             var maxSlotIndex = infos.Count > 0 ? infos.Max(kv => kv.Key) : 0;
             var totalPages = Math.Max(Mathf.CeilToInt((float)maxSlotIndex / ItemsPerPage), currentPage + 1);
 
@@ -258,7 +272,7 @@ public class SavestateModule(
             const int boxY = 50;
 
             var boxRect = new Rect(boxX, boxY, boxWidth, boxHeight);
-            GUI.Box(boxRect, $"Page {currentPage + 1}/{totalPages} ({uiState})", styleBox);
+            GUI.Box(boxRect, $"Page {currentPage + 1}/{totalPages} ({UiState})", styleBox);
 
             // Display Items Dynamically
             GUILayout.BeginArea(new Rect(boxX + boxInset, boxY + 25, boxWidth - boxInset * 2, boxHeight));

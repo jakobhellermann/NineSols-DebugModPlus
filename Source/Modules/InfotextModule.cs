@@ -47,7 +47,8 @@ public class InfotextModule {
         var text = "";
 
         if (!SingletonBehaviour<GameCore>.IsAvailable()) {
-            text += "not yet available\n";
+            text += "MainMenu\n";
+            text += PlayerInputBinder.Instance.currentStateType.ToString();
             debugCanvasInfoText.text = text;
             return;
         }
