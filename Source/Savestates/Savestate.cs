@@ -28,15 +28,12 @@ public class Savestate {
                throw new Exception("Failed to deserialize savestate");
     }
 
-    public string Serialize() {
-        return JsonConvert.SerializeObject(this, Formatting.Indented);
-    }
+    public string Serialize() => JsonConvert.SerializeObject(this, Formatting.Indented);
 
-    public static Savestate Deserialize(string data) {
-        return JsonConvert.DeserializeObject<Savestate>(data) ?? throw new Exception("Failed to deserialize savestate");
-    }
+    public static Savestate Deserialize(string data) => JsonConvert.DeserializeObject<Savestate>(data) ??
+                                                        throw new Exception("Failed to deserialize savestate");
 
-    private static JsonSerializerSettings jsonSettings = new JsonSerializerSettings {
+    private static JsonSerializerSettings jsonSettings = new() {
         Formatting = Formatting.Indented,
         Converters = [new Vector3Converter()],
     };

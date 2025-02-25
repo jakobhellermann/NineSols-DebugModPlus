@@ -182,7 +182,7 @@ public class DebugModPlus : BaseUnityPlugin {
         var didCreate = false;
         foreach (var binding in configSavestateShortcutsCreate) {
             if (KeybindManager.CheckShortcutOnly(binding.Key)) {
-                SavestateModule.TryCreateSavestate(binding.Value);
+                SavestateModule.CreateSavestate(binding.Value);
                 didCreate = true;
             }
         }
@@ -190,7 +190,7 @@ public class DebugModPlus : BaseUnityPlugin {
         if (!didCreate) {
             foreach (var binding in configSavestateShortcutsLoad) {
                 if (KeybindManager.CheckShortcutOnly(binding.Key)) {
-                    SavestateModule.TryLoadSavestate(binding.Value);
+                    SavestateModule.LoadSavestateAt(binding.Value);
                 }
             }
         }

@@ -93,7 +93,7 @@ public static class SavestateLogic {
     }
 
 
-    public static async Task Load(Savestate savestate, bool reload = true) {
+    public static async Task Load(Savestate savestate, bool forceReload = false) {
         if (!GameCore.IsAvailable()) {
             throw new Exception("Attempted to load savestate outside of scene");
         }
@@ -103,11 +103,11 @@ public static class SavestateLogic {
         // Load flags
         sw.Start();
         FlagLogic.LoadFlags(savestate.Flags, SaveManager.Instance.allFlags);
-        Log.Info($"- Applied flags in {sw.ElapsedMilliseconds}ms");
+        Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
 
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
-        if (!isCurrentScene || reload) {
+        if (!isCurrentScene || forceReload) {
             sw.Restart();
             var task = ChangeSceneAsync(new SceneConnectionPoint.ChangeSceneData {
                 sceneName = savestate.Scene,
@@ -125,7 +125,7 @@ public static class SavestateLogic {
 
         sw.Restart();
         ApplySnapshots(savestate.MonobehaviourSnapshots);
-        Log.Info($"- Apply to scene in {sw.ElapsedMilliseconds}ms");
+        Log.Info($"- Applied snapshots to scene in {sw.ElapsedMilliseconds}ms");
         sw.Stop();
 
         ApplyFixups(savestate.ReferenceFixups);

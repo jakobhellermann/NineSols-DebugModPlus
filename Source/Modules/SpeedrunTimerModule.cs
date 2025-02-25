@@ -87,9 +87,10 @@ internal class SegmentHistory {
         Last.RecalcFinishedTime();
         Current = previousLast;
 
-        if (Last.segments.Count != PB.segments.Count && PB.segments.Count > 0)
+        if (Last.segments.Count != PB.segments.Count && PB.segments.Count > 0) {
             ToastManager.Toast(
                 $"Finished in {Last.segments.Count} segments, as opposed to PB of {PB.segments.Count} segments. Clearing PB.");
+        }
 
         FinishedPbDelta = Last.FinishedTime - PB.FinishedTime;
 
