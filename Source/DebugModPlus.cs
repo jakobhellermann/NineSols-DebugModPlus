@@ -78,19 +78,41 @@ public class DebugModPlus : BaseUnityPlugin {
                 SavestateFilter.Flags | SavestateFilter.Player);
 
             configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
-                { new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
-                { new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
-                { new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
+                //{ new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
+                //{ new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
+                //{ new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
             };
             configSavestateShortcutsLoad = new Dictionary<KeyboardShortcut, string> {
-                { new KeyboardShortcut(KeyCode.Keypad1), "1" },
-                { new KeyboardShortcut(KeyCode.Keypad2), "2" },
-                { new KeyboardShortcut(KeyCode.Keypad3), "3" },
+                //{ new KeyboardShortcut(KeyCode.Keypad1), "1" },
+                //{ new KeyboardShortcut(KeyCode.Keypad2), "2" },
+                //{ new KeyboardShortcut(KeyCode.Keypad3), "3" },
             };
 
             // module initialization
 
-            SavestateModule = new SavestateModule(configSavestateFilter);
+            SavestateModule = new SavestateModule(
+                configSavestateFilter,
+                Config.Bind("Savestates",
+                    "Save",
+                    new KeyboardShortcut(KeyCode.KeypadPlus)
+                ),
+                Config.Bind("Savestates",
+                    "Load",
+                    new KeyboardShortcut(KeyCode.KeypadEnter)
+                ),
+                Config.Bind("Savestates",
+                    "Delete",
+                    new KeyboardShortcut(KeyCode.KeypadMinus)
+                ),
+                Config.Bind("Savestates",
+                    "Page next",
+                    new KeyboardShortcut(KeyCode.RightArrow)
+                ),
+                Config.Bind("Savestates",
+                    "Page prev",
+                    new KeyboardShortcut(KeyCode.LeftArrow)
+                )
+            );
 
             SpeedrunTimerModule =
                 new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
@@ -149,6 +171,7 @@ public class DebugModPlus : BaseUnityPlugin {
         FreecamModule.Update();
         MapTeleportModule.Update();
         infotextModule.Update();
+        SavestateModule.Update();
 
         var didCreate = false;
         foreach (var binding in configSavestateShortcutsCreate) {
@@ -231,8 +254,13 @@ public class DebugModPlus : BaseUnityPlugin {
     }
 
     private void OnGUI() {
-        SpeedrunTimerModule.OnGui();
-        fsmInspectorModule.OnGui();
+        try {
+            SpeedrunTimerModule.OnGui();
+            fsmInspectorModule.OnGui();
+            SavestateModule.OnGui();
+        } catch (Exception e) {
+            Log.Error(e);
+        }
     }
 
 
