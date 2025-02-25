@@ -137,7 +137,7 @@ public class SavestateModule(
             var sw = Stopwatch.StartNew();
 
             var scene = GameCore.Instance.gameLevel.SceneName;
-            var defaultName = $"{scene} {DateTime.Now:yyyy-mMM-dd HH-mm-ss}";
+            var defaultName = $"{scene} {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
 
 
             var savestate = SavestateLogic.Create(currentFilter.Value);
