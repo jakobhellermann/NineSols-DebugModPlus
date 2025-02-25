@@ -39,7 +39,8 @@ public class DebugUI : MonoBehaviour {
 
                 var shortcutName = new string(Array.FindAll(actionName.ToCharArray(), char.IsLetterOrDigit));
                 var keyboardShortcut =
-                    config.Bind("Shortcuts", shortcutName,
+                    config.Bind("Shortcuts",
+                        shortcutName,
                         attr.DefaultKeybind != null
                             ? new KeyboardShortcut(attr.DefaultKeybind[^1], attr.DefaultKeybind[..^1])
                             : new KeyboardShortcut());
@@ -51,10 +52,11 @@ public class DebugUI : MonoBehaviour {
     }
 
     public void AddToggle(string actionName, Action<bool> onChange, bool defaultValue = false) {
-        toggles.Add(actionName, new DebugActionToggle {
-            Value = defaultValue,
-            OnChange = onChange,
-        });
+        toggles.Add(actionName,
+            new DebugActionToggle {
+                Value = defaultValue,
+                OnChange = onChange,
+            });
     }
 
     private void OnGUI() {

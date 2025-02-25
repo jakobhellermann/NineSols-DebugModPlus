@@ -21,7 +21,8 @@ public static class FlagLoggerModule {
     [BindableMethod]
     public static void LogFlags() {
         try {
-            var json = JsonConvert.SerializeObject(GameConfig.Instance.allGameFlags.flagDict, Formatting.Indented,
+            var json = JsonConvert.SerializeObject(GameConfig.Instance.allGameFlags.flagDict,
+                Formatting.Indented,
                 new JsonSerializerSettings {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver =
@@ -208,6 +209,7 @@ file class GameFlagConverter : JsonConverter<GameFlagBase> {
                     or "_variableEntriesIncludeZDoorMaps"
                     or "MistMapDataEntries" or "weaponPrefab")
                     continue;
+
                 writer.WritePropertyName(field.Name);
                 var propValue = field.GetValue(value);
                 serializer.Serialize(writer, propValue);

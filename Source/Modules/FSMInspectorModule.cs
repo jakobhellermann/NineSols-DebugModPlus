@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +7,6 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using NineSolsAPI.Utils;
-using QFSW.QC.Containers;
 using RCGFSM.Animation;
 using RCGFSM.GameObjects;
 using RCGFSM.StateEvents;
@@ -32,9 +30,23 @@ public class FsmInspectorModule {
     private static AccessTools.FieldRef<AbstractStateTransition, AbstractConditionComp[]> stateTransitionConditions =
         AccessTools.FieldRefAccess<AbstractStateTransition, AbstractConditionComp[]>("conditions");
 
+    public static List<IStateMachine> FsmListMachines(FSMStateMachineRunner runner) =>
+        stateMachineRunnerStateMachineList.Invoke(runner);
+
+    public static IEnumerable<(object, MappingState)> FsmListStates(IStateMachine machine) {
+        return machine.AccessField<object?>("_stateMapping")!
+            .AccessProperty<IList>("getAllStates")!
+            .Cast<object>()
+            .Select(stateObj => {
+                var state = stateObj.AccessField<object>("state");
+                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior");
+                return (state, stateBehaviour);
+            });
+    }
+
     private string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
         var text = "";
-        var machines = stateMachineRunnerStateMachineList.Invoke(runner);
+        var machines = FsmListMachines(runner);
 
         var mb = runner.GetComponent<MonsterBase>();
         if (mb) text += $"\nMonster animation state {mb.currentPlayingAnimatorState}\n\n";
@@ -46,12 +58,7 @@ public class FsmInspectorModule {
             var currentState = machine.CurrentStateMap.stateObj;
             text += $"Current state: {currentState}\n";
 
-            var allStates = machine.AccessField<object?>("_stateMapping")!
-                .AccessProperty<IList>("getAllStates")!;
-
-            foreach (var stateObj in allStates) {
-                var state = stateObj.AccessField<object>("state")!;
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior")!;
+            foreach (var (state, stateBehaviour) in FsmListStates(machine)) {
                 text += $"  {state} ({stateBehaviour.GetType().Name})\n";
 
                 if (stateBehaviour is MonsterState monsterState) {
@@ -67,8 +74,7 @@ public class FsmInspectorModule {
                     }
 
                     var stateActions =
-                        ReflectionUtils.AccessBaseField<AbstractStateAction[]>(stateBehaviour, typeof(MonsterState),
-                            "stateActions");
+                        AccessBaseField<AbstractStateAction[]>(stateBehaviour, typeof(MonsterState), "stateActions");
                     if (stateActions.Length > 0) text += "HAS STATE ACTIONS\n";
                     // text += $"    {monsterState.AccessField<AbstractStateAction[]>("stateActions")}\n";
                     // ToastManager.Toast(field==null);
@@ -84,6 +90,7 @@ public class FsmInspectorModule {
 
     private string VariableName(AbstractVariable? variable) {
         if (variable == null) return "null";
+
         var name = variable.ToString().TrimStartMatches("[Variable] ")
             .TrimEndMatches(" (VariableBool)").ToString();
 
@@ -137,6 +144,7 @@ public class FsmInspectorModule {
 
                 if (action is AnimatorPlayAction animAction) {
                     if (hideAnimationTransitions) continue;
+
                     actionStr = $"play animation {animAction.StateName} on '{animAction.animator?.name}'";
                 } else if (action is GameObjectActivateAction activateAction) {
                     actionStr =
@@ -209,12 +217,6 @@ public class FsmInspectorModule {
     public List<GameObject> Objects = [];
 
     public void OnGui() {
-        //why was this here??? Makes it impossible to practice with gui open
-
-        //Player.i?.health.GainFull();
-        // if (text is null) {
-        // ToastManager.Toast(Screen.fullScreenMode);
-
         var extra = new GameObject[] { };
         // { GameObject.Find("A2_S5_ BossHorseman_GameLevel/Room/StealthGameMonster_SpearHorseMan") };
 
@@ -257,4 +259,9 @@ public class FsmInspectorModule {
 
         GUI.Label(new Rect(padding, padding, size.x, size.y), text, style);
     }
+
+    private static T AccessBaseField<T>(object val, Type baseType, string fieldName) =>
+        (T)baseType
+            .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)!
+            .GetValue(val);
 }

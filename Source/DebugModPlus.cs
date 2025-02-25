@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +5,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using DebugModPlus.Modules;
 using DebugModPlus.Modules.Hitbox;
+using DebugModPlus.Savestates;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -15,7 +14,7 @@ using UnityEngine;
 namespace DebugModPlus;
 
 [BepInDependency(NineSolsAPICore.PluginGUID)]
-[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
+[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class DebugModPlus : BaseUnityPlugin {
     public static DebugModPlus Instance = null!;
 
@@ -26,23 +25,31 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private InfotextModule infotextModule = new();
     public HitboxModule HitboxModule = new();
-    public SavestateModule SavestateModule = new();
+    public SavestateModule SavestateModule = null!;
 
     public SpeedrunTimerModule SpeedrunTimerModule = null!;
 
-    public FsmInspectorModule FsmInspectorModule = new();
+    private FsmInspectorModule fsmInspectorModule = new();
     public GhostModule GhostModule = null!;
 
     private ConfigEntry<KeyboardShortcut> configShortcutFsmPickerModifier = null!;
-
+    private Dictionary<KeyboardShortcut, string> configSavestateShortcutsCreate = null!;
+    private Dictionary<KeyboardShortcut, string> configSavestateShortcutsLoad = null!;
 
     private void Awake() {
         Instance = this;
         Log.Init(Logger);
-        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} started loading...");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} started loading...");
 
         try {
             harmony = Harmony.CreateAndPatchAll(typeof(DebugModPlus).Assembly);
+
+            var versionPatches = GameVersions.Select(GameVersions.SpeedrunPatch,
+                typeof(PatchesSpeedrunPatch),
+                typeof(PatchesCurrentPatch));
+            harmony.PatchAll(versionPatches);
+
+
             Log.Info($"Patched {harmony.GetPatchedMethods().Count()} methods...");
 
             // config
@@ -56,7 +63,8 @@ public class DebugModPlus : BaseUnityPlugin {
             var clearCheckpointsShortcut =
                 Config.Bind("SpeedrunTimer Shortcuts", "Clear Checkpoints", new KeyboardShortcut());
 
-            configShortcutFsmPickerModifier = Config.Bind("Shortcuts", "FSM Picker Modifier",
+            configShortcutFsmPickerModifier = Config.Bind("Shortcuts",
+                "FSM Picker Modifier",
                 new KeyboardShortcut(),
                 new ConfigDescription(
                     "When this key is pressed and you click on a sprite, it will try to open the FSM inspector for that object"));
@@ -65,12 +73,53 @@ public class DebugModPlus : BaseUnityPlugin {
             var configGhostColorPb = Config.Bind("SpeedrunTimer", "PB Ghost Color", new Color(1f, 0.8f, 0f, 0.5f));
             var configPauseStopsTimer = Config.Bind("SpeedrunTimer", "Pause Timer Stops Speedrun Timer", false);
 
-            SpeedrunTimerModule = new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
+            var configSavestateFilter = Config.Bind("Savestates",
+                "Savestate filter",
+                SavestateFilter.Flags | SavestateFilter.Player);
+
+            configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
+                //{ new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
+                //{ new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
+                //{ new KeyboardShortcut(KeyCode.Keypad3, KeyCode.LeftControl), "3" },
+            };
+            configSavestateShortcutsLoad = new Dictionary<KeyboardShortcut, string> {
+                //{ new KeyboardShortcut(KeyCode.Keypad1), "1" },
+                //{ new KeyboardShortcut(KeyCode.Keypad2), "2" },
+                //{ new KeyboardShortcut(KeyCode.Keypad3), "3" },
+            };
+
+            // module initialization
+
+            SavestateModule = new SavestateModule(
+                configSavestateFilter,
+                Config.Bind("Savestates",
+                    "Save",
+                    new KeyboardShortcut(KeyCode.KeypadPlus)
+                ),
+                Config.Bind("Savestates",
+                    "Load",
+                    new KeyboardShortcut(KeyCode.KeypadEnter)
+                ),
+                Config.Bind("Savestates",
+                    "Delete",
+                    new KeyboardShortcut(KeyCode.KeypadMinus)
+                ),
+                Config.Bind("Savestates",
+                    "Page next",
+                    new KeyboardShortcut(KeyCode.RightArrow)
+                ),
+                Config.Bind("Savestates",
+                    "Page prev",
+                    new KeyboardShortcut(KeyCode.LeftArrow)
+                )
+            );
+
+            SpeedrunTimerModule =
+                new SpeedrunTimerModule(configTimerMode, configTimerRecordGhost, configPauseStopsTimer);
             GhostModule = new GhostModule(configGhostColorPb);
 
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
-
 
             KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
             KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
@@ -79,7 +128,8 @@ public class DebugModPlus : BaseUnityPlugin {
             KeybindManager.Add(this, () => SpeedrunTimerModule.PauseTimer(), () => pauseTimerShortcut.Value);
             KeybindManager.Add(this, () => SpeedrunTimerModule.SetStartpoint(), () => setStartpointShortcut.Value);
             KeybindManager.Add(this, () => SpeedrunTimerModule.SetEndpoint(), () => setEndpointShortcut.Value);
-            KeybindManager.Add(this, () => SpeedrunTimerModule.ClearCheckpoints(),
+            KeybindManager.Add(this,
+                () => SpeedrunTimerModule.ClearCheckpoints(),
                 () => clearCheckpointsShortcut.Value);
 
             // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
@@ -99,7 +149,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
             RCGLifeCycle.DontDestroyForever(gameObject);
 
-            Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+            Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
         } catch (Exception e) {
             Log.Error(e);
         }
@@ -121,37 +171,59 @@ public class DebugModPlus : BaseUnityPlugin {
         FreecamModule.Update();
         MapTeleportModule.Update();
         infotextModule.Update();
+        SavestateModule.Update();
+
+        var didCreate = false;
+        foreach (var binding in configSavestateShortcutsCreate) {
+            if (KeybindManager.CheckShortcutOnly(binding.Key)) {
+                SavestateModule.TryCreateSavestate(binding.Value);
+                didCreate = true;
+            }
+        }
+
+        if (!didCreate) {
+            foreach (var binding in configSavestateShortcutsLoad) {
+                if (KeybindManager.CheckShortcutOnly(binding.Key)) {
+                    SavestateModule.TryLoadSavestate(binding.Value);
+                }
+            }
+        }
+
 
         var canUseFsmPicker = Player.i?.playerInput.fsm.State is not PlayerInputStateType.UI;
 
         if (canUseFsmPicker && configShortcutFsmPickerModifier.Value.IsPressed()) {
             Cursor.visible = true;
-
             if (Input.GetMouseButtonDown(0)) {
-                FsmInspectorModule.Objects.Clear();
-
-                try {
-                    var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
-                    var worldPosition =
-                        mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
-                            -mainCamera.transform.position.z));
-                    worldPosition.z = 0; // Set z to 0 to match the 2D plane
-                    var visible = PickVisible(worldPosition);
-
-                    var stateMachine = visible.Select(sprite =>
-                            sprite.GetComponentInParent<StateMachineOwner>()?.gameObject ??
-                            sprite.GetComponentInParent<FSMStateMachineRunner>()?.gameObject)
-                        .Where(x => x)
-                        .Distinct()
-                        .FirstOrDefault();
-                    if (stateMachine)
-                        FsmInspectorModule.Objects.Add(stateMachine!);
-                    else
-                        ToastManager.Toast($"No state machine found at cursor");
-                } catch (Exception e) {
-                    ToastManager.Toast(e);
-                }
+                TryPickFsm();
             }
+        }
+    }
+
+    private void TryPickFsm() {
+        fsmInspectorModule.Objects.Clear();
+
+        try {
+            var mainCamera = CameraManager.Instance.cameraCore.theRealSceneCamera;
+            var worldPosition =
+                mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x,
+                    Input.mousePosition.y,
+                    -mainCamera.transform.position.z));
+            worldPosition.z = 0; // Set z to 0 to match the 2D plane
+            var visible = PickVisible(worldPosition);
+
+            var stateMachine = visible.Select(sprite =>
+                    sprite.GetComponentInParent<StateMachineOwner>()?.gameObject ??
+                    sprite.GetComponentInParent<FSMStateMachineRunner>()?.gameObject)
+                .Where(x => x)
+                .Distinct()
+                .FirstOrDefault();
+            if (stateMachine)
+                fsmInspectorModule.Objects.Add(stateMachine!);
+            else
+                ToastManager.Toast($"No state machine found at cursor");
+        } catch (Exception e) {
+            ToastManager.Toast(e);
         }
     }
 
@@ -174,27 +246,31 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private void LateUpdate() {
         try {
-            GhostModule.LateUpdate();
-            SpeedrunTimerModule.LateUpdate();
+            // GhostModule.LateUpdate();
+            // SpeedrunTimerModule.LateUpdate();
         } catch (Exception e) {
             Log.Error(e);
         }
     }
 
     private void OnGUI() {
-        SpeedrunTimerModule.OnGui();
-        FsmInspectorModule.OnGui();
+        try {
+            SpeedrunTimerModule.OnGui();
+            fsmInspectorModule.OnGui();
+            SavestateModule.OnGui();
+        } catch (Exception e) {
+            Log.Error(e);
+        }
     }
 
 
     private void OnDestroy() {
         harmony.UnpatchSelf();
         HitboxModule.Unload();
-        SavestateModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();
 
-        Log.Info($"Plugin {PluginInfo.PLUGIN_GUID} unloaded\n\n");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} unloaded\n\n");
     }
 }

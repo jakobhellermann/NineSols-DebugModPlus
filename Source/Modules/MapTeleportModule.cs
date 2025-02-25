@@ -1,6 +1,5 @@
 using System;
 using NineSolsAPI;
-using RCGSetting;
 using UnityEngine;
 
 namespace DebugModPlus.Modules;
@@ -26,7 +25,11 @@ public static class MapTeleportModule {
         var gameplayUiCam = UIManager.Instance.gameObject.GetComponentInChildren<Camera>();
 
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                minimapRect, screenPosition, gameplayUiCam, out var localPoint)) return;
+                minimapRect,
+                screenPosition,
+                gameplayUiCam,
+                out var localPoint)) return;
+
         var clickRatio = localPoint / minimapRect.sizeDelta;
         var worldPosition = minimap.MapData.ImageRatioToWorldPosition(clickRatio);
 
@@ -52,7 +55,7 @@ public static class MapTeleportModule {
             playerSpawnPosition = () => worldPosition,
             changeSceneMode = SceneConnectionPoint.ChangeSceneMode.Teleport,
         };
-        GameCore.Instance.ChangeScene(changeSceneData, showTip);
+        GameCore.Instance.ChangeSceneCompat(changeSceneData, showTip);
     }
 }
 

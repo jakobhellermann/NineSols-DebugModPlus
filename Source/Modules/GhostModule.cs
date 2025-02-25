@@ -1,10 +1,8 @@
+using System;
 using System.Collections.Generic;
-using DebugModPlus;
-using System.Security.Cryptography;
 using BepInEx.Configuration;
 using UnityEngine;
 using Object = UnityEngine.Object;
-using UnityEngine.UIElements;
 
 namespace DebugModPlus.Modules;
 
@@ -17,7 +15,8 @@ internal class GhostPlayback(SpriteRenderer playerCopy, GhostFrame[] frames, int
 }
 
 public class GhostModule(ConfigEntry<Color> ghostColor) {
-    private SpeedrunTimerModule SpeedrunTimerModule = DebugModPlus.Instance.SpeedrunTimerModule;
+    private SpeedrunTimerModule speedrunTimerModule = DebugModPlus.Instance.SpeedrunTimerModule;
+
     // sprite cache
     private Dictionary<string, Sprite> playerSprites = new();
 
@@ -30,14 +29,13 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
     // playback
     private List<GhostPlayback> playbacks = new();
 
-    //flag
-    private bool doClearGhosts = false;
+    // config
     private bool pauseStopsTimer = false;
 
-    public void StartRecording(bool _pauseStopsTimer = false) {
+    public void StartRecording(bool pauseStopsTimer = false) {
         recordingFrames.Clear();
         recording = true;
-        pauseStopsTimer = _pauseStopsTimer;
+        this.pauseStopsTimer = pauseStopsTimer;
     }
 
     public void StopRecording() {
@@ -49,19 +47,16 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
         else StartRecording();
     }
 
-    public void ClearGhosts()
-    {
-        for (var i = playbacks.Count - 1; i >= 0; i--)
-        {
+    public void ClearGhosts() {
+        for (var i = playbacks.Count - 1; i >= 0; i--) {
             var playback = playbacks[i];
             GhostDestroy(playback, i);
         }
     }
 
-    private void GhostDestroy(GhostPlayback playback, int _playbacksIndex)
-    {
+    private void GhostDestroy(GhostPlayback playback, int playbacksIndex) {
         Object.Destroy(playback.PlayerCopy);
-        playbacks.RemoveAt(_playbacksIndex);
+        playbacks.RemoveAt(playbacksIndex);
     }
 
     public void Playback(GhostFrame[] frames) {
@@ -76,76 +71,59 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
 
     private void UpdateRecord() {
         var player = Player.i;
-        //we want to use current time since loads can interrupt the stopwatch pause, but if we need to we'll use stopwatch
-        var time = SpeedrunTimerModule.currentTime;
-        if (time == 0) time = (float)SpeedrunTimerModule.stopwatch.Elapsed.TotalSeconds;
+        // we want to use current time since loads can interrupt the stopwatch pause, but if we need to we'll use stopwatch
+        var time = speedrunTimerModule.CurrentTime;
+        if (time == 0) time = (float)speedrunTimerModule.Stopwatch.Elapsed.TotalSeconds;
         if (!player) return; // TODO?
         if (pauseStopsTimer && RCGTime.timeScale == 0) return;
-        
+
         recordingFrames.Add(
             new GhostFrame(player.transform.position, player.PlayerSprite.sprite.name, (int)player.Facing, time));
     }
 
-    private void CheckPlayback(GhostPlayback playback, bool _clearingGhosts = false, int _playbacksIndex = 0)
-    {
-        int playbacksIndex = _playbacksIndex;
-        var time = SpeedrunTimerModule.currentTime;
-        var stopwatchTime = (float)SpeedrunTimerModule.stopwatch.Elapsed.TotalSeconds;
-        if (time == 0 || SpeedrunTimerModule.state == SpeedrunTimerState.InactiveDone
-                      || SpeedrunTimerModule.state == SpeedrunTimerState.Inactive)
+    private void CheckPlayback(GhostPlayback playback, int playbacksIndex = 0) {
+        var time = speedrunTimerModule.CurrentTime;
+        var stopwatchTime = (float)speedrunTimerModule.Stopwatch.Elapsed.TotalSeconds;
+        if (time == 0 || speedrunTimerModule.State is SpeedrunTimerState.InactiveDone or SpeedrunTimerState.Inactive)
             time = stopwatchTime;
 
-        try
-        {
-            if (playback.PlaybackIndex < playback.Frames.Length)
-            {
-                GhostFrame ghostFrame = playback.Frames[playback.PlaybackIndex];
-                //check if games paused
+        try {
+            if (playback.PlaybackIndex < playback.Frames.Length) {
+                var ghostFrame = playback.Frames[playback.PlaybackIndex];
+                // check if games paused
                 if (pauseStopsTimer && RCGTime.timeScale == 0) return;
-                else if (ghostFrame.Timestamp < time)
-                {
+                else if (ghostFrame.Timestamp < time) {
                     UpdatePlayback(playback, ghostFrame, playbacksIndex);
-                }
-                else if (time == 0)
-                {
+                } else if (time == 0) {
                     GhostDestroy(playback, playbacksIndex);
                 }
-            }
-            else
-            {
+            } else {
                 GhostDestroy(playback, playbacksIndex);
             }
-        }
-        catch (System.Exception e)
-        {
+        } catch (Exception e) {
             Log.Error("Playback Index: " + playback.PlaybackIndex + "Playback Frame Length: " + playback.Frames.Length);
             Log.Error(e);
         }
     }
 
-    private void UpdatePlayback(GhostPlayback playback, GhostFrame ghostFrame, int _playbacksIndex) {
-
-        int playbacksIndex = _playbacksIndex;
+    private void UpdatePlayback(GhostPlayback playback, GhostFrame ghostFrame, int playbacksIndex) {
         playback.PlayerCopy.transform.position = ghostFrame.Position + Vector3.down * 3.5f;
         playerSprites.TryGetValue(ghostFrame.SpriteName, out var sprite);
         playback.PlayerCopy.sprite = sprite;
         playback.PlayerCopy.transform.localScale = new Vector3(ghostFrame.Facing, 1f, 1f);
-        //Increment index when the frame actually plays
+        // Increment index when the frame actually plays
         playback.PlaybackIndex++;
-        //Loop this until its caught up to the current time
-        CheckPlayback(playback, false, playbacksIndex);
+        // Loop this until it's caught up to the current time
+        CheckPlayback(playback, playbacksIndex);
     }
 
     public void LateUpdate() {
-        bool clearingGhosts = doClearGhosts;
-        doClearGhosts = false;
-
         if (recording) UpdateRecord();
 
         for (var i = playbacks.Count - 1; i >= 0; i--) {
             var playback = playbacks[i];
 
-            CheckPlayback(playback, clearingGhosts, i);
+            CheckPlayback(playback, i);
         }
 
         if (Player.i is { } player) {

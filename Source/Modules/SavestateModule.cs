@@ -1,183 +1,291 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using BepInEx.Configuration;
+using Cysharp.Threading.Tasks;
+using DebugModPlus.Savestates;
 using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Modules;
 
-internal class Savestate {
-    public required string MetaJson;
-    public required byte[] Flags;
-
-    public required string Scene;
-    public Vector3 PlayerPosition;
-    public Vector2 PlayerVelocity;
-}
-
-public class SavestateModule {
-    private static MethodInfo? oldLoadFlagsMethodInfo = typeof(GameFlagManager).GetMethod("LoadFlags");
-
-    private static MethodInfo? newLoadFlagsMethodInfo =
-        typeof(GameFlagManager).GetMethod("LoadFlagsFromBinarySave");
-
-    private static MethodInfo? flagsToBinary =
-        typeof(GameFlagManager).GetMethod("FlagsToBinary");
-
-    public static bool IsLoadingSavestate = false;
+public class SavestateModule(
+    ConfigEntry<SavestateFilter> currentFilter,
+    ConfigEntry<KeyboardShortcut> openSave,
+    ConfigEntry<KeyboardShortcut> openLoad,
+    ConfigEntry<KeyboardShortcut> openDelete,
+    ConfigEntry<KeyboardShortcut> tabNext,
+    ConfigEntry<KeyboardShortcut> tabPrev
+) {
+    public static bool IsLoadingSavestate;
 
     public event EventHandler? SavestateLoaded;
     public event EventHandler? SavestateCreated;
 
-    // TODO unload
-    private Dictionary<string, Savestate> savestates = new();
+    private SavestateStore savestates = new();
 
+    #region Entrypoints
 
     [BindableMethod(Name = "Create Savestate")]
     private static void CreateSavestateMethod() {
-        var module = DebugModPlus.Instance.SavestateModule;
-
-        const string slot = "0";
-        module.CreateSavestate(slot);
-        ToastManager.Toast($"Savestate {slot} created");
+        const string slot = "main";
+        DebugModPlus.Instance.SavestateModule.TryCreateSavestate(slot);
     }
 
     [BindableMethod(Name = "Load Savestate")]
     private static void LoadSavestateMethod() {
-        var module = DebugModPlus.Instance.SavestateModule;
-
-        const string slot = "0";
-        if (!module.savestates.TryGetValue(slot, out var savestate)) {
-            ToastManager.Toast($"Savestate {slot} not found");
-            return;
-        }
-
-        try {
-            module.LoadSavestate(savestate);
-        } catch (Exception e) {
-            ToastManager.Toast(e);
-        }
+        const string slot = "main";
+        DebugModPlus.Instance.SavestateModule.TryLoadSavestate(slot, true);
     }
 
     [BindableMethod(Name = "Load Savestate\n(No reload)")]
     private static void LoadSavestateMethodNoReload() {
-        var module = DebugModPlus.Instance.SavestateModule;
+        const string slot = "main";
+        DebugModPlus.Instance.SavestateModule.TryLoadSavestate(slot);
+    }
 
-        const string slot = "0";
-        if (!module.savestates.TryGetValue(slot, out var savestate)) {
+    public void TryCreateSavestate(string slot) {
+        try {
+            var sw = Stopwatch.StartNew();
+            CreateSavestate(slot, currentFilter.Value);
+            Log.Info($"Created savestate {slot} in {sw.ElapsedMilliseconds}ms");
+        } catch (Exception e) {
+            ToastManager.Toast(e.Message);
+            return;
+        }
+
+        ToastManager.Toast($"Savestate {slot} created");
+    }
+
+    public async void TryLoadSavestate(string slot, bool reload = false) {
+        if (!savestates.TryGetValue(slot, out var savestate)) {
             ToastManager.Toast($"Savestate '{slot}' not found");
             return;
         }
 
         try {
-            module.LoadSavestate(savestate, false);
+            var sw = Stopwatch.StartNew();
+            await LoadSavestate(savestate, reload);
+            Log.Info($"Loaded savestate {slot} in {sw.ElapsedMilliseconds}ms");
         } catch (Exception e) {
             ToastManager.Toast(e);
         }
     }
 
-    //TODO: Save Player Data, Reset Jades, and write to file
-    //      HP, Direction, Qi, Ammo, Revival Jade
-    private void CreateSavestate(string slot) {
-        var saveManager = SaveManager.Instance;
-        var gameCore = GameCore.Instance;
+    #endregion
 
+    private void CreateSavestate(string slot, SavestateFilter filter) {
+        var savestate = SavestateLogic.Create(filter);
 
-        var player = Player.i;
-        var currentPos = player.transform.position;
-        var currentVelocity = player.Velocity;
-        var saveSlotMetaData = gameCore.playerGameData.SaveMetaData();
-        var metaJson = JsonUtility.ToJson(saveSlotMetaData);
-
-        var flags = oldLoadFlagsMethodInfo != null
-            ? Encoding.UTF8.GetBytes(GameFlagManager.FlagsToJson(saveManager.allFlags))
-            : (byte[])flagsToBinary!.Invoke(null, new object[] { saveManager.allFlags });
-
-        var savestate = new Savestate {
-            MetaJson = metaJson,
-            Flags = flags,
-            Scene = gameCore.gameLevel.gameObject.scene.name,
-            PlayerPosition = currentPos,
-            PlayerVelocity = currentVelocity,
-        };
-
-        savestates[slot] = savestate;
+        try {
+            savestates.Save(slot, savestate);
+        } catch (Exception e) {
+            ToastManager.Toast($"Could not persist savestate to disk: {e.Message}");
+            Log.Error(e);
+        }
 
         SavestateCreated?.Invoke(this, EventArgs.Empty);
     }
 
+    private static void LoadDebugSave() {
+        SaveManager.Instance.LoadSaveAtSlot(100);
+        ApplicationUIGroupManager.Instance.ClearAll();
+        RuntimeInitHandler.LoadCore();
 
-    private void LoadFlags(Savestate savestate) {
-        const TestMode testMode = TestMode.Build;
-        var gameFlagCollection = SaveManager.Instance.allFlags;
+        if (!GameVersions.IsVersion(GameVersions.SpeedrunPatch)) {
+            typeof(GameConfig).GetMethod("InstantiateGameCore")!.Invoke(GameConfig.Instance, []);
+        }
+    }
 
-        if (oldLoadFlagsMethodInfo != null)
-            oldLoadFlagsMethodInfo.Invoke(null,
-                new object[] { Encoding.UTF8.GetString(savestate.Flags), gameFlagCollection, testMode });
-        else {
-            if (newLoadFlagsMethodInfo == null) {
-                Log.Error("LoadFlagsFromBinarySave doesn't exist");
-                return;
-            }
+    // ReSharper disable Unity.PerformanceAnalysis
+    private async Task LoadSavestate(Savestate savestate, bool reload = false) {
+        if (IsLoadingSavestate) {
+            Log.Error("Attempted to load savestate while loading savestate");
+            return;
+        }
 
-            newLoadFlagsMethodInfo.Invoke(null, new object[] { savestate.Flags, gameFlagCollection, testMode });
+        try {
+            IsLoadingSavestate = true;
+            await LoadSavestateInner(savestate, reload);
+        } finally {
+            IsLoadingSavestate = false;
         }
     }
 
 
-    //TODO: Implement loading from file
-    private void LoadSavestate(Savestate savestate, bool reload = true) {
-        IsLoadingSavestate = true;
-
-        var saveManager = SaveManager.Instance;
-
-        // var meta = JsonUtility.FromJson<SaveSlotMetaData>(savestate.MetaJson);
-
-
-        // saveManager.allStatData.ClearStats();
-        // saveManager.allFlags.AllFlagAwake(TestMode.Build);
-        LoadFlags(savestate);
-        saveManager.allFlags.AllFlagInitStartAndEquip();
-
-        // var teleportPointWithPath = GameFlagManager.Instance.GetTeleportPointWithPath(meta.lastTeleportPointPath);
-        //ApplicationUIGroupManager.Instance.PopAll();
-
-        // reload scene
-        if (reload) {
-            var currentPos = savestate.PlayerPosition;
-            GameCore.Instance.ChangeScene(
-                new SceneConnectionPoint.ChangeSceneData {
-                    sceneName = savestate.Scene,
-                    panData = { panType = SceneConnectionPoint.CameraPanType.NoPan, fromPosition = currentPos },
-                    // changeSceneMode = SceneConnectionPoint.Cha   ngeSceneMode.Teleport
-                    playerSpawnPosition = () => currentPos,
-                    ChangedDoneEvent = () => {
-                        Player.i.Velocity = savestate.PlayerVelocity;
-                        OnSavestateLoaded();
-                    },
-                },
-                false
-            );
-        }
-        // no reload
-        else {
-            MapTeleportModule.TeleportTo(savestate.PlayerPosition, savestate.Scene, false);
-            Player.i.Velocity = savestate.PlayerVelocity;
-
-            OnSavestateLoaded();
+    private async Task LoadSavestateInner(Savestate savestate, bool reload = true) {
+        if (!GameCore.IsAvailable()) {
+            LoadDebugSave();
+            var tp = GameFlagManager.Instance.GetTeleportPointWithPath(savestate.LastTeleportId);
+            ApplicationCore.Instance.lastSaveTeleportPoint = tp;
+            await ApplicationCore.Instance.ChangeSceneCompat(tp.sceneName);
+            // TODO: figure out what to wait for
+            await UniTask.DelayFrame(10);
         }
 
-        IsLoadingSavestate = false;
-    }
-
-    private void OnSavestateLoaded() {
-        //reset level cuz enemies often get killed and scene transition doesnt reset it
-        GameCore.Instance.ResetLevel();
+        await SavestateLogic.Load(savestate, reload);
         SavestateLoaded?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Unload() {
-        savestates = new Dictionary<string, Savestate>();
+    // 
+
+
+    private void SaveToSlot(int slot) {
+        try {
+            var sw = Stopwatch.StartNew();
+
+            var scene = GameCore.Instance.gameLevel.SceneName;
+            var defaultName = $"{scene} {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
+
+
+            var savestate = SavestateLogic.Create(currentFilter.Value);
+            savestates.Save(slot, defaultName, savestate);
+            Log.Info($"Created savestate {slot}-{defaultName} in {sw.ElapsedMilliseconds}ms");
+            ToastManager.Toast($"Savestate {slot}-{defaultName} created");
+        } catch (Exception e) {
+            ToastManager.Toast(e.Message);
+        }
     }
+
+    private async void LoadFromSlot(int slot) {
+        var bySlot = savestates.List(slot).ToList();
+        switch (bySlot.Count) {
+            case 0:
+                ToastManager.Toast($"Savestate '{slot}' not found");
+                return;
+            case > 1:
+                ToastManager.Toast($"Multiple savestates found at slot {slot}, picking {bySlot[0].FullName}");
+                break;
+        }
+
+        if (!savestates.TryGetValue(bySlot[0], out var savestate)) {
+            return;
+        }
+
+        try {
+            var sw = Stopwatch.StartNew();
+            await LoadSavestate(savestate);
+            Log.Info($"Loaded savestate {slot} in {sw.ElapsedMilliseconds}ms");
+        } catch (Exception e) {
+            ToastManager.Toast(e);
+        }
+    }
+
+    private enum SavestateUIState {
+        Off,
+        Save,
+        Load,
+        Delete,
+    }
+
+    private SavestateUIState uiState = SavestateUIState.Off;
+
+    private Dictionary<int, SavestateInfo> infos = [];
+
+    private void LoadInfos() {
+        infos.Clear();
+        foreach (var info in savestates.List()) {
+            if (info.index is not { } index) continue;
+
+            infos.TryAdd(index, info);
+        }
+    }
+
+    public void Update() {
+        try {
+            if (KeybindManager.CheckShortcutOnly(openLoad.Value)) {
+                uiState = uiState == SavestateUIState.Load ? SavestateUIState.Off : SavestateUIState.Load;
+            } else if (KeybindManager.CheckShortcutOnly(openSave.Value)) {
+                uiState = uiState == SavestateUIState.Save ? SavestateUIState.Off : SavestateUIState.Save;
+            } else if (KeybindManager.CheckShortcutOnly(openDelete.Value)) {
+                uiState = uiState == SavestateUIState.Delete ? SavestateUIState.Off : SavestateUIState.Delete;
+            } else if (KeybindManager.CheckShortcutOnly(tabNext.Value)) {
+                currentPage++;
+            } else if (KeybindManager.CheckShortcutOnly(tabPrev.Value)) {
+                currentPage = Math.Max(currentPage - 1, 0);
+            }
+
+            if (uiState != SavestateUIState.Off) {
+                LoadInfos();
+            }
+
+            if (uiState != SavestateUIState.Off) {
+                if (Input.GetKeyDown(KeyCode.Escape)) uiState = SavestateUIState.Off;
+
+                for (var i = 0; i < 10; i++) {
+                    if (!Input.GetKeyDown(KeyCode.Alpha0 + i)
+                        && !Input.GetKeyDown(KeyCode.Keypad0 + i)) continue;
+
+                    var saveIndex = currentPage * ItemsPerPage + i;
+
+                    if (uiState == SavestateUIState.Save) {
+                        SaveToSlot(saveIndex);
+                        uiState = SavestateUIState.Off;
+                    } else if (uiState == SavestateUIState.Load) {
+                        LoadFromSlot(saveIndex);
+                        uiState = SavestateUIState.Off;
+                    } else if (uiState == SavestateUIState.Delete) {
+                        savestates.Delete(saveIndex);
+                        uiState = SavestateUIState.Off;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            ToastManager.Toast(e);
+        }
+    }
+
+    private const int ItemsPerPage = 10;
+    private int currentPage = 0;
+
+    public void OnGui() {
+        style ??= new GUIStyle(GUI.skin.label) { fontSize = 18, wordWrap = false };
+        styleBox ??= new GUIStyle(GUI.skin.box) { fontSize = 18 };
+
+        if (uiState != SavestateUIState.Off) {
+            var maxSlotIndex = infos.Count > 0 ? infos.Max(kv => kv.Key) : 0;
+            var totalPages = Math.Max(Mathf.CeilToInt((float)maxSlotIndex / ItemsPerPage), currentPage + 1);
+
+            const int itemHeight = 27;
+            var visibleItems = Mathf.Max(ItemsPerPage, infos.Count);
+            var boxHeight = (visibleItems + 2) * itemHeight;
+
+            const int boxWidth = 450;
+            const int boxInset = 10;
+            var boxX = Screen.width / 2 - boxWidth / 2;
+            const int boxY = 50;
+
+            var boxRect = new Rect(boxX, boxY, boxWidth, boxHeight);
+            GUI.Box(boxRect, $"Page {currentPage + 1}/{totalPages} ({uiState})", styleBox);
+
+            // Display Items Dynamically
+            GUILayout.BeginArea(new Rect(boxX + boxInset, boxY + 25, boxWidth - boxInset * 2, boxHeight));
+            for (var i = 0; i < 10; i++) {
+                var index = currentPage * ItemsPerPage + i;
+
+                if (infos.TryGetValue(index, out var info)) {
+                    GUILayout.Label($"{index}    {info.name}", style);
+                } else {
+                    GUILayout.Label($"{index}    (free)", style);
+                }
+            }
+
+            GUILayout.EndArea();
+
+            /*// Pagination Controls
+            if (GUI.Button(new Rect(20, boxHeight + 10, 80, 30), "Prev") && currentPage > 0) {
+                currentPage--;
+            }
+
+            if (GUI.Button(new Rect(120, boxHeight + 10, 80, 30), "Next") &&
+                (currentPage + 1) * itemsPerPage < names.Length) {
+                currentPage++;
+            }*/
+        }
+    }
+
+    private GUIStyle? style;
+    private GUIStyle? styleBox;
 }
