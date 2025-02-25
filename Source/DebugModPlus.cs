@@ -167,6 +167,12 @@ public class DebugModPlus : BaseUnityPlugin {
         }
     }
 
+    internal static bool JustGainedFocus = false;
+
+    private void OnApplicationFocus(bool hasFocus) {
+        JustGainedFocus |= hasFocus;
+    }
+
     private void Update() {
         FreecamModule.Update();
         MapTeleportModule.Update();
@@ -198,6 +204,8 @@ public class DebugModPlus : BaseUnityPlugin {
                 TryPickFsm();
             }
         }
+
+        JustGainedFocus = false;
     }
 
     private void TryPickFsm() {
