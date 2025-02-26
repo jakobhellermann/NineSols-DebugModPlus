@@ -38,7 +38,7 @@ public static class SavestateLogic {
         var player = Player.i;
 
         var sceneBehaviours = new List<MonoBehaviourSnapshot>();
-        var fsmSnapshots = new List<FsmSnapshot>();
+        var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
         var referenceFixups = new List<ReferenceFixups>();
         var flagsJson = new JObject();
 
@@ -59,12 +59,12 @@ public static class SavestateLogic {
         if (filter.HasFlag(SavestateFilter.Monsters)) {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
                 MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen);
-                fsmSnapshots.Add(FsmSnapshot.Of(monster.fsm));
+                monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
             }
         }
 
         if (filter.HasFlag(SavestateFilter.Player)) {
-            fsmSnapshots.Add(FsmSnapshot.Of(player.fsm));
+            monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(player.fsm));
             referenceFixups.Add(ReferenceFixups.Of(Player.i,
             [
                 new ReferenceFixupField(nameof(Player.i.touchingRope),
@@ -85,7 +85,7 @@ public static class SavestateLogic {
             PlayerPosition = player.transform.position,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
-            FsmSnapshots = fsmSnapshots,
+            FsmSnapshots = monsterLoveFsmSnapshots,
             ReferenceFixups = referenceFixups,
         };
 

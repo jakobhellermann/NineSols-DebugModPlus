@@ -14,7 +14,7 @@ public class Savestate {
     public Vector3 PlayerPosition;
     public required string LastTeleportId;
     public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
-    public required List<FsmSnapshot> FsmSnapshots;
+    public required List<MonsterLoveFsmSnapshot> FsmSnapshots;
     public required List<ReferenceFixups> ReferenceFixups;
     public required JObject Flags;
 
@@ -49,11 +49,11 @@ public class MonoBehaviourSnapshot {
     };
 }
 
-public class FsmSnapshot {
+public class MonsterLoveFsmSnapshot {
     public required string Path;
     public required object CurrentState;
 
-    public static FsmSnapshot Of(IStateMachine machine) => new() {
+    public static MonsterLoveFsmSnapshot Of(IStateMachine machine) => new() {
         Path = ObjectUtils.ObjectPath(machine.Component.gameObject),
         CurrentState = machine.CurrentStateMap.stateObj,
     };
