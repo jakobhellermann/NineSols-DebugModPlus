@@ -147,7 +147,7 @@ public static class SavestateLogic {
             }
         }
 
-        // GameCore.Instance.ResetLevel();
+        GameCore.Instance.ResetLevel();
 
         sw.Restart();
         if (savestate.MonobehaviourSnapshots != null) {
