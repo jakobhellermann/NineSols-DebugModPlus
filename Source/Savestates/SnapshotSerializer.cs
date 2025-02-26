@@ -91,6 +91,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(IActiveOverrider),
         typeof(CullingObserver),
         typeof(Rect),
+        typeof(Timer.DelayTask),
         // todo
         typeof(Rigidbody2D), // maybe
         typeof(Transform), // maybe
