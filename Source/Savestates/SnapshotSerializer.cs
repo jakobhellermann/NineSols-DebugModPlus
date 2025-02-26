@@ -1,11 +1,12 @@
-using System;
 using System.Collections.Generic;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using NineSolsAPI;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
@@ -86,6 +87,9 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(ParticleSystem),
         typeof(TestRope.RopeSegment),
         typeof(AnimationCurve),
+        typeof(IActiveOverrider),
+        typeof(CullingObserver),
+        typeof(Rect),
         // todo
         typeof(Rigidbody2D), // maybe
         typeof(Transform), // maybe

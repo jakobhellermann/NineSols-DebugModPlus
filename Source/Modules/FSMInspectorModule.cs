@@ -176,7 +176,7 @@ public class FsmInspectorModule {
 
                 if (action.GetComponent<RCGEventSender>() is { } sender) {
                     actionStr +=
-                        $"sending event {sender.eventType.ToString().TrimEndMatches(" (RCGEventType)").ToString()} to {sender.bindReceivers.Count} receivers";
+                        $"sending event {sender.eventType?.ToString().TrimEndMatches(" (RCGEventType)").ToString()} to {sender.bindReceivers?.Count} receivers";
                 }
 
                 if (!action.isActiveAndEnabled) actionStr = $"(disabled) {actionStr}";

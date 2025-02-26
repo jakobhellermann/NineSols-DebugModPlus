@@ -15,6 +15,7 @@ public class Savestate {
     public required string LastTeleportId;
     public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
     public required List<MonsterLoveFsmSnapshot> FsmSnapshots;
+    public required List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
     public required List<ReferenceFixups> ReferenceFixups;
     public required JObject Flags;
 
@@ -46,6 +47,16 @@ public class MonoBehaviourSnapshot {
     public static MonoBehaviourSnapshot Of(Component mb) => new() {
         Path = ObjectUtils.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
+    };
+}
+
+public class GeneralFsmSnapshot {
+    public required string Path;
+    public required string CurrentState;
+
+    public static GeneralFsmSnapshot Of(StateMachineOwner owner) => new() {
+        Path = ObjectUtils.ObjectPath(owner.gameObject),
+        CurrentState = owner.FsmContext.fsm.State.name,
     };
 }
 

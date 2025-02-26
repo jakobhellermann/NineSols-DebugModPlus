@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using DebugModPlus.Modules;
@@ -17,11 +18,14 @@ namespace DebugModPlus.Savestates;
 [Flags]
 public enum SavestateFilter {
     None = 0,
-    Player = 1 << 1,
-    Monsters = 1 << 2,
-    Flags = 1 << 3,
+    Flags = 1 << 1,
+    Player = 1 << 2,
+    Monsters = 1 << 3,
 
-    All = Flags | Player | Monsters,
+    // ReSharper disable once InconsistentNaming
+    FSMs = 1 << 4,
+
+    All = Flags | Player | FSMs | Monsters,
 }
 
 public static class SavestateLogic {
@@ -39,6 +43,7 @@ public static class SavestateLogic {
 
         var sceneBehaviours = new List<MonoBehaviourSnapshot>();
         var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
+        var fsmSnapshots = new List<GeneralFsmSnapshot>();
         var referenceFixups = new List<ReferenceFixups>();
         var flagsJson = new JObject();
 
@@ -50,16 +55,24 @@ public static class SavestateLogic {
 
         var seen = new HashSet<MonoBehaviour>();
         if (filter.HasFlag(SavestateFilter.Player)) {
-            MonobehaviourTracing.TraceReferencedMonobehaviours(player, sceneBehaviours, seen, maxDepth: 4);
+            MonobehaviourTracing.TraceReferencedMonobehaviours(player, sceneBehaviours, seen, maxDepth: null);
             foreach (var (_, state) in FsmInspectorModule.FsmListStates(player.fsm)) {
                 MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
             }
         }
 
+        // sceneBehaviours.Add(MonoBehaviourSnapshot.Of(player.SpriteHolder));
+
         if (filter.HasFlag(SavestateFilter.Monsters)) {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
-                MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen);
+                MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen, maxDepth: null);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
+            }
+        }
+
+        if (filter.HasFlag(SavestateFilter.FSMs)) {
+            foreach (var smo in Object.FindObjectsOfType<StateMachineOwner>()) {
+                fsmSnapshots.Add(GeneralFsmSnapshot.Of(smo));
             }
         }
 
@@ -86,6 +99,7 @@ public static class SavestateLogic {
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
             FsmSnapshots = monsterLoveFsmSnapshots,
+            GeneralFsmSnapshots = fsmSnapshots,
             ReferenceFixups = referenceFixups,
         };
 
@@ -133,13 +147,13 @@ public static class SavestateLogic {
         foreach (var fsm in savestate.FsmSnapshots) {
             var targetGo = ObjectUtils.LookupPath(fsm.Path);
             if (targetGo == null) {
-                Log.Error($"Savestate stored fsm state on {fsm.Path}, which does not exist at load time");
+                Log.Error($"Savestate stored monsterlove fsm state on {fsm.Path}, which does not exist at load time");
                 continue;
             }
 
             var runner = targetGo.GetComponent<FSMStateMachineRunner>();
             if (!runner) {
-                Log.Error($"Savestate stored fsm state on {fsm.Path}, which has no FSMStateMachineRunner");
+                Log.Error($"Savestate stored monsterlove fsm state on {fsm.Path}, which has no FSMStateMachineRunner");
                 continue;
             }
 
@@ -150,9 +164,41 @@ public static class SavestateLogic {
             }
         }
 
+        foreach (var fsm in savestate?.GeneralFsmSnapshots ?? new List<GeneralFsmSnapshot>()) {
+            var targetGo = ObjectUtils.LookupPath(fsm.Path);
+            if (targetGo == null) {
+                Log.Error($"Savestate stored general fsm state on {fsm.Path}, which does not exist at load time");
+                continue;
+            }
+
+            var owner = targetGo.GetComponent<StateMachineOwner>();
+            if (!owner) {
+                Log.Error($"Savestate stored general fsm state on {fsm.Path}, which has no FSMStateMachineRunner");
+                continue;
+            }
+
+            var state = owner.FsmContext.States.FirstOrDefault(state => state.name == fsm.CurrentState);
+            if (!state) {
+                Log.Error($"State {fsm.CurrentState} does not exist on {fsm.Path}");
+                continue;
+            }
+
+            try {
+                owner.FsmContext.ChangeState(state);
+            } catch (Exception e) {
+                Log.Error($"Could not apply fsm state on {owner.FsmContext}/{owner.FsmContext.fsm} {e}");
+            }
+        }
+
         // CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
         // hacks
         Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
+        var votes = Player.i.playerInput.AccessField<List<RuntimeConditionVote>>("conditionVoteList");
+        foreach (var vote in votes) {
+            vote.votes.Clear();
+            vote.ManualUpdate();
+        }
+
         Player.i.UpdateSpriteFacing();
     }
 
