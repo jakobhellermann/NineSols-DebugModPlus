@@ -264,10 +264,20 @@ public class DebugModPlus : BaseUnityPlugin {
     private void OnGUI() {
         try {
             SpeedrunTimerModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in SpeedrunTimerModule: {e}");
+        }
+
+        try {
             fsmInspectorModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in fsm inspector module: {e}");
+        }
+
+        try {
             SavestateModule.OnGui();
         } catch (Exception e) {
-            Log.Error(e);
+            Log.Error($"Error in SavestateModule: {e}");
         }
     }
 

@@ -43,37 +43,40 @@ public class SavestateModule(
 
     #endregion
 
-    public void CreateSavestate(string name, int? slot = null, SavestateFilter? filter = null) {
+    public bool CreateSavestate(string name, int? slot = null, SavestateFilter? filter = null) {
         try {
             var sw = Stopwatch.StartNew();
             var savestate = SavestateLogic.Create(filter ?? currentFilter.Value);
-            savestates.Save(name, savestate);
+            savestates.Save(name, savestate, slot);
             Log.Info($"Created savestate {name} in {sw.ElapsedMilliseconds}ms");
 
             SavestateCreated?.Invoke(this, EventArgs.Empty);
             ToastManager.Toast($"Savestate {name} created");
+            return true;
         } catch (Exception e) {
             ToastManager.Toast(e.Message);
+            return false;
         }
     }
 
-    public async void LoadSavestateAt(string path) {
+    public async Task<bool> LoadSavestateAt(string fullName) {
         var sw = Stopwatch.StartNew();
-        if (!savestates.TryGetValue(path, out var savestate)) {
-            ToastManager.Toast($"Savestate '{path}' not found");
-            return;
+        if (!savestates.TryGetValue(fullName, out var savestate)) {
+            ToastManager.Toast($"Savestate '{fullName}' not found");
+            return false;
         }
 
         Log.Debug($"- Reading state from disk {sw.ElapsedMilliseconds}ms");
         await LoadSavestate(savestate);
-        Log.Info($"Loading savestate {path} in {sw.ElapsedMilliseconds}ms");
+        Log.Info($"Loading savestate {fullName} in {sw.ElapsedMilliseconds}ms");
+        return true;
     }
 
     // Enforces single loading and enters debug save if necessary
-    private async Task LoadSavestate(Savestate savestate) {
+    private async Task<bool> LoadSavestate(Savestate savestate) {
         if (IsLoadingSavestate) {
             Log.Error("Attempted to load savestate while loading savestate");
-            return;
+            return false;
         }
 
         try {
@@ -90,8 +93,10 @@ public class SavestateModule(
 
             await SavestateLogic.Load(savestate);
             SavestateLoaded?.Invoke(this, EventArgs.Empty);
+            return true;
         } catch (Exception e) {
             ToastManager.Toast(e);
+            return false;
         } finally {
             IsLoadingSavestate = false;
         }
