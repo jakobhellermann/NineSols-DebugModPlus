@@ -255,8 +255,8 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private void LateUpdate() {
         try {
-            // GhostModule.LateUpdate();
-            // SpeedrunTimerModule.LateUpdate();
+            GhostModule.LateUpdate();
+            SpeedrunTimerModule.LateUpdate();
         } catch (Exception e) {
             Log.Error(e);
         }
