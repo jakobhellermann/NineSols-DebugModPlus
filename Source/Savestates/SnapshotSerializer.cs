@@ -42,6 +42,7 @@ public static class SnapshotSerializer {
         },
         ContractResolver = new SnapshotStateResolver(),
         Converters = new List<JsonConverter> {
+            new TransformConverter(),
             new Vector2Converter(),
             new Vector3Converter(),
             new Vector4Converter(),
@@ -202,6 +203,49 @@ file class AnimatorConverter : JsonConverter<Animator> {
 
         return existingValue;
     }
+}
+
+file class TransformConverter : JsonConverter<Transform> {
+    public override void WriteJson(JsonWriter writer, Transform? value, JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        writer.WriteStartObject();
+        writer.WritePropertyName("position");
+        serializer.Serialize(writer, value.localPosition);
+        writer.WritePropertyName("rotation");
+        serializer.Serialize(writer, value.localRotation);
+        writer.WritePropertyName("localScale");
+        serializer.Serialize(writer, value.localScale);
+        writer.WriteEndObject();
+    }
+
+    public override Transform? ReadJson(JsonReader reader, Type objectType, Transform? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer) {
+        if (!hasExistingValue) {
+            Log.Error("Cannot deserialize transform without existing instance");
+            return null;
+        }
+
+        if (existingValue == null) {
+            Log.Error("Cannot deserialize transform with null existing value");
+            return null;
+        }
+
+        var iv = serializer.Deserialize<TransformMirror>(reader)!;
+        if (iv == null) throw new Exception("Could not deserialize transform");
+
+        if (existingValue.localPosition != iv.position) existingValue.localPosition = iv.position;
+        if (existingValue.localRotation != iv.rotation) existingValue.rotation = iv.rotation;
+        if (existingValue.localScale != iv.scale) existingValue.localPosition = iv.scale;
+
+        return existingValue;
+    }
+
+    private record TransformMirror(Vector3 position, Quaternion rotation, Vector3 scale);
 }
 
 file class Vector4Converter : JsonConverter<Vector4> {
