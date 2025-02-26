@@ -10,6 +10,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DebugModPlus;
 

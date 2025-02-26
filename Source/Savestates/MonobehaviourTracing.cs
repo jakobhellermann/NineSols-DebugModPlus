@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
+using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Savestates;
@@ -15,6 +16,7 @@ public static class MonobehaviourTracing {
         int maxDepth = 0,
         int minDepth = 0
     ) {
+        if (!origin.gameObject.scene.IsValid()) return;
         if (seen.Contains(origin)) return;
 
         if (depth >= minDepth) {
