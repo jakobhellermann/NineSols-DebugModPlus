@@ -6,7 +6,6 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using NineSolsAPI;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
@@ -176,7 +175,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
     }
 }
 
-file class AnimatorConverter : JsonConverter<Animator> {
+file class AnimatorConverter : NullableJsonConverter<Animator> {
     public override void WriteJson(JsonWriter writer, Animator? value, JsonSerializer serializer) {
         if (value == null) {
             writer.WriteNull();
@@ -206,7 +205,7 @@ file class AnimatorConverter : JsonConverter<Animator> {
     }
 }
 
-file class TransformConverter : JsonConverter<Transform> {
+file class TransformConverter : NullableJsonConverter<Transform> {
     public override void WriteJson(JsonWriter writer, Transform? value, JsonSerializer serializer) {
         if (value == null) {
             writer.WriteNull();
@@ -249,7 +248,7 @@ file class TransformConverter : JsonConverter<Transform> {
     private record TransformMirror(Vector3 position, Quaternion rotation, Vector3 scale);
 }
 
-file class Vector4Converter : JsonConverter<Vector4> {
+file class Vector4Converter : NullableJsonConverter<Vector4> {
     public override void WriteJson(JsonWriter writer, Vector4 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -271,7 +270,7 @@ file class Vector4Converter : JsonConverter<Vector4> {
     }
 }
 
-internal class Vector3Converter : JsonConverter<Vector3> {
+internal class Vector3Converter : NullableJsonConverter<Vector3> {
     public override void WriteJson(JsonWriter writer, Vector3 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -291,7 +290,7 @@ internal class Vector3Converter : JsonConverter<Vector3> {
     }
 }
 
-internal class Vector2Converter : JsonConverter<Vector2> {
+internal class Vector2Converter : NullableJsonConverter<Vector2> {
     public override void WriteJson(JsonWriter writer, Vector2 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -309,7 +308,7 @@ internal class Vector2Converter : JsonConverter<Vector2> {
     }
 }
 
-file class QuatConverter : JsonConverter<Quaternion> {
+file class QuatConverter : NullableJsonConverter<Quaternion> {
     public override void WriteJson(JsonWriter writer, Quaternion value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -329,5 +328,50 @@ file class QuatConverter : JsonConverter<Quaternion> {
         var t = serializer.Deserialize(reader)!;
         var iv = JsonConvert.DeserializeObject<Quaternion>(t.ToString());
         return iv;
+    }
+}
+
+public abstract class NullableJsonConverter<T> : JsonConverter {
+    public override sealed void WriteJson(
+        JsonWriter writer,
+        object? value,
+        JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        WriteJson(writer, (T)value, serializer);
+    }
+
+    public abstract void WriteJson(JsonWriter writer, T? value, JsonSerializer serializer);
+
+    public override sealed object? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        object? existingValue,
+        JsonSerializer serializer) {
+        if (existingValue != null && existingValue is not T) {
+            throw new JsonSerializationException(
+                $"Converter cannot read JSON with the specified existing value. {typeof(T)} is required.");
+        }
+
+        return ReadJson(reader,
+            objectType,
+            existingValue == null ? default : (T)existingValue,
+            existingValue != null,
+            serializer);
+    }
+
+    public abstract T? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        T? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer);
+
+    public override sealed bool CanConvert(Type objectType) {
+        var underlying = Nullable.GetUnderlyingType(objectType) ?? objectType;
+        return typeof(T).IsAssignableFrom(underlying);
     }
 }

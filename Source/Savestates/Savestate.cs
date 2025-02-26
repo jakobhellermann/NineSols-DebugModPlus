@@ -10,14 +10,14 @@ using UnityEngine;
 namespace DebugModPlus;
 
 public class Savestate {
-    public required string Scene;
-    public Vector3 PlayerPosition;
-    public required string LastTeleportId;
-    public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
-    public required List<MonsterLoveFsmSnapshot> FsmSnapshots;
-    public required List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
-    public required List<ReferenceFixups> ReferenceFixups;
-    public required JObject Flags;
+    public string? Scene;
+    public Vector3? PlayerPosition;
+    public string? LastTeleportId;
+    public List<MonoBehaviourSnapshot>? MonobehaviourSnapshots;
+    public List<MonsterLoveFsmSnapshot>? FsmSnapshots;
+    public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
+    public List<ReferenceFixups>? ReferenceFixups;
+    public JObject? Flags;
 
     public void SerializeTo(StreamWriter writer) {
         JsonSerializer.Create(jsonSettings).Serialize(writer, this);

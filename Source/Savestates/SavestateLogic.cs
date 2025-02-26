@@ -116,35 +116,52 @@ public static class SavestateLogic {
 
         // Load flags
         sw.Start();
-        FlagLogic.LoadFlags(savestate.Flags, SaveManager.Instance.allFlags);
-        Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
+        if (savestate.Flags is { } flags) {
+            FlagLogic.LoadFlags(flags, SaveManager.Instance.allFlags);
+            Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
+        }
 
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
-        if (!isCurrentScene || forceReload) {
-            sw.Restart();
-            var task = ChangeSceneAsync(new SceneConnectionPoint.ChangeSceneData {
-                sceneName = savestate.Scene,
-                playerSpawnPosition = () => savestate.PlayerPosition,
-            });
-            if (await Task.WhenAny(task, Task.Delay(5000)) != task) {
-                ToastManager.Toast("Savestate was not loaded after 5s, aborting");
-                return;
-            }
+        if (savestate.Scene != null) {
+            if ((savestate.Scene != null && !isCurrentScene) || forceReload) {
+                if (savestate.PlayerPosition is not { } playerPosition) {
+                    throw new Exception("Savestate with scene must have `playerPosition`");
+                }
 
-            Log.Info($"- Change scene in {sw.ElapsedMilliseconds}ms");
+                sw.Restart();
+                var task = ChangeSceneAsync(new SceneConnectionPoint.ChangeSceneData {
+                    sceneName = savestate.Scene,
+                    playerSpawnPosition = () => playerPosition,
+                });
+                if (await Task.WhenAny(task, Task.Delay(5000)) != task) {
+                    ToastManager.Toast("Savestate was not loaded after 5s, aborting");
+                    return;
+                }
+
+                Log.Info($"- Change scene in {sw.ElapsedMilliseconds}ms");
+            }
+        } else {
+            if (savestate.PlayerPosition is { } playerPosition) {
+                Player.i.transform.position = playerPosition;
+            }
         }
 
         // GameCore.Instance.ResetLevel();
 
         sw.Restart();
-        ApplySnapshots(savestate.MonobehaviourSnapshots);
-        Log.Info($"- Applied snapshots to scene in {sw.ElapsedMilliseconds}ms");
+        if (savestate.MonobehaviourSnapshots != null) {
+            ApplySnapshots(savestate.MonobehaviourSnapshots);
+            Log.Info($"- Applied snapshots to scene in {sw.ElapsedMilliseconds}ms");
+        }
+
         sw.Stop();
 
-        ApplyFixups(savestate.ReferenceFixups);
+        if (savestate.ReferenceFixups != null) {
+            ApplyFixups(savestate.ReferenceFixups);
+        }
 
-        foreach (var fsm in savestate.FsmSnapshots) {
+        foreach (var fsm in savestate.FsmSnapshots ?? new List<MonsterLoveFsmSnapshot>()) {
             var targetGo = ObjectUtils.LookupPath(fsm.Path);
             if (targetGo == null) {
                 Log.Error($"Savestate stored monsterlove fsm state on {fsm.Path}, which does not exist at load time");
