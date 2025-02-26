@@ -43,7 +43,7 @@ public class MonoBehaviourSnapshot {
     public required string Path;
     public required JToken Data;
 
-    public static MonoBehaviourSnapshot Of(MonoBehaviour mb) => new() {
+    public static MonoBehaviourSnapshot Of(Component mb) => new() {
         Path = ObjectUtils.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
     };

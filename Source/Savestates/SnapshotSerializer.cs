@@ -85,6 +85,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(VelocityModifierParam),
         typeof(ParticleSystem),
         typeof(TestRope.RopeSegment),
+        typeof(AnimationCurve),
         // todo
         typeof(Rigidbody2D), // maybe
         typeof(Transform), // maybe

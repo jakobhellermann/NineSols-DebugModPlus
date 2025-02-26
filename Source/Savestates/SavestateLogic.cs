@@ -151,7 +151,9 @@ public static class SavestateLogic {
         }
 
         // CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
+        // hacks
         Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
+        Player.i.UpdateSpriteFacing();
     }
 
     private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
