@@ -149,12 +149,15 @@ public class FsmInspectorModule {
                 } else if (action is GameObjectActivateAction activateAction) {
                     actionStr =
                         $"{activateAction.name.TrimStartMatches("[Action] ").ToString()}";
-                    if (activateAction.enableObj is { Count: > 0 })
+                    if (activateAction.enableObj is { Count: > 0 }) {
                         actionStr +=
                             $", enable object{(activateAction.enableObj.Count > 1 ? "s" : "")} {activateAction.enableObj.Select(x => $"'{x.name}'").Join()}";
-                    if (activateAction.disableObj is { Count: > 0 })
+                    }
+
+                    if (activateAction.disableObj is { Count: > 0 }) {
                         actionStr +=
                             $", disable object{(activateAction.disableObj.Count > 1 ? "s" : "")} {activateAction.disableObj.Select(x => $"'{x.name}'").Join()}";
+                    }
                 } else if (action is StateEventAction stateEventAction) {
                     var hasEnter = UnityEventHasCalls(stateEventAction.OnStateEnterEvent);
                     var hasUpdate = UnityEventHasCalls(stateEventAction.OnStateUpdateEvent);
@@ -165,14 +168,16 @@ public class FsmInspectorModule {
                 } else if (action is SetVariableBoolAction setVarBoolAction) {
                     if (setVarBoolAction.Multiple) {
                         // todo
-                    } else
+                    } else {
                         actionStr =
                             $"set bool {VariableName(setVarBoolAction.targetFlag)} = {setVarBoolAction.TargetValue}";
+                    }
                 }
 
-                if (action.GetComponent<RCGEventSender>() is { } sender)
+                if (action.GetComponent<RCGEventSender>() is { } sender) {
                     actionStr +=
-                        $"sending event {sender.eventType.ToString().TrimEndMatches(" (RCGEventType)").ToString()} to {sender.bindReceivers.Count} receivers";
+                        $"sending event {sender.eventType?.ToString().TrimEndMatches(" (RCGEventType)").ToString()} to {sender.bindReceivers?.Count} receivers";
+                }
 
                 if (!action.isActiveAndEnabled) actionStr = $"(disabled) {actionStr}";
 

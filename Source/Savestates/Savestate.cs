@@ -10,13 +10,14 @@ using UnityEngine;
 namespace DebugModPlus;
 
 public class Savestate {
-    public required string Scene;
-    public Vector3 PlayerPosition;
-    public required string LastTeleportId;
-    public required List<MonoBehaviourSnapshot> MonobehaviourSnapshots;
-    public required List<FsmSnapshot> FsmSnapshots;
-    public required List<ReferenceFixups> ReferenceFixups;
-    public required JObject Flags;
+    public string? Scene;
+    public Vector3? PlayerPosition;
+    public string? LastTeleportId;
+    public List<MonoBehaviourSnapshot>? MonobehaviourSnapshots;
+    public List<MonsterLoveFsmSnapshot>? FsmSnapshots;
+    public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
+    public List<ReferenceFixups>? ReferenceFixups;
+    public JObject? Flags;
 
     public void SerializeTo(StreamWriter writer) {
         JsonSerializer.Create(jsonSettings).Serialize(writer, this);
@@ -28,15 +29,12 @@ public class Savestate {
                throw new Exception("Failed to deserialize savestate");
     }
 
-    public string Serialize() {
-        return JsonConvert.SerializeObject(this, Formatting.Indented);
-    }
+    public string Serialize() => JsonConvert.SerializeObject(this, Formatting.Indented);
 
-    public static Savestate Deserialize(string data) {
-        return JsonConvert.DeserializeObject<Savestate>(data) ?? throw new Exception("Failed to deserialize savestate");
-    }
+    public static Savestate Deserialize(string data) => JsonConvert.DeserializeObject<Savestate>(data) ??
+                                                        throw new Exception("Failed to deserialize savestate");
 
-    private static JsonSerializerSettings jsonSettings = new JsonSerializerSettings {
+    private static JsonSerializerSettings jsonSettings = new() {
         Formatting = Formatting.Indented,
         Converters = [new Vector3Converter()],
     };
@@ -46,17 +44,27 @@ public class MonoBehaviourSnapshot {
     public required string Path;
     public required JToken Data;
 
-    public static MonoBehaviourSnapshot Of(MonoBehaviour mb) => new() {
+    public static MonoBehaviourSnapshot Of(Component mb) => new() {
         Path = ObjectUtils.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
     };
 }
 
-public class FsmSnapshot {
+public class GeneralFsmSnapshot {
+    public required string Path;
+    public required string CurrentState;
+
+    public static GeneralFsmSnapshot Of(StateMachineOwner owner) => new() {
+        Path = ObjectUtils.ObjectPath(owner.gameObject),
+        CurrentState = owner.FsmContext.fsm.State.name,
+    };
+}
+
+public class MonsterLoveFsmSnapshot {
     public required string Path;
     public required object CurrentState;
 
-    public static FsmSnapshot Of(IStateMachine machine) => new() {
+    public static MonsterLoveFsmSnapshot Of(IStateMachine machine) => new() {
         Path = ObjectUtils.ObjectPath(machine.Component.gameObject),
         CurrentState = machine.CurrentStateMap.stateObj,
     };

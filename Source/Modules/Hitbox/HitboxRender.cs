@@ -204,7 +204,7 @@ public class HitboxRender : MonoBehaviour {
 
         var origDepth = GUI.depth;
         GUI.depth = hitboxType.Depth;
-        if (collider2D is BoxCollider2D or EdgeCollider2D or PolygonCollider2D)
+        if (collider2D is BoxCollider2D or EdgeCollider2D or PolygonCollider2D) {
             switch (collider2D) {
                 case BoxCollider2D boxCollider2D:
                     var halfSize = boxCollider2D.size / 2f;
@@ -233,7 +233,7 @@ public class HitboxRender : MonoBehaviour {
 
                     break;
             }
-        else if (collider2D is CircleCollider2D circleCollider2D) {
+        } else if (collider2D is CircleCollider2D circleCollider2D) {
             var center = LocalToScreenPoint(camera, collider2D, Vector2.zero);
             var right = LocalToScreenPoint(camera, collider2D, Vector2.right * circleCollider2D.radius);
             var radius = (int)Math.Round(Vector2.Distance(center, right));

@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -41,6 +41,7 @@ public static class SnapshotSerializer {
         },
         ContractResolver = new SnapshotStateResolver(),
         Converters = new List<JsonConverter> {
+            new TransformConverter(),
             new Vector2Converter(),
             new Vector3Converter(),
             new Vector4Converter(),
@@ -85,6 +86,11 @@ file class SnapshotStateResolver : DefaultContractResolver {
         typeof(VelocityModifierParam),
         typeof(ParticleSystem),
         typeof(TestRope.RopeSegment),
+        typeof(AnimationCurve),
+        typeof(IActiveOverrider),
+        typeof(CullingObserver),
+        typeof(Rect),
+        typeof(Timer.DelayTask),
         // todo
         typeof(Rigidbody2D), // maybe
         typeof(Transform), // maybe
@@ -169,7 +175,7 @@ file class SnapshotStateResolver : DefaultContractResolver {
     }
 }
 
-file class AnimatorConverter : JsonConverter<Animator> {
+file class AnimatorConverter : NullableJsonConverter<Animator> {
     public override void WriteJson(JsonWriter writer, Animator? value, JsonSerializer serializer) {
         if (value == null) {
             writer.WriteNull();
@@ -199,7 +205,50 @@ file class AnimatorConverter : JsonConverter<Animator> {
     }
 }
 
-file class Vector4Converter : JsonConverter<Vector4> {
+file class TransformConverter : NullableJsonConverter<Transform> {
+    public override void WriteJson(JsonWriter writer, Transform? value, JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        writer.WriteStartObject();
+        writer.WritePropertyName("position");
+        serializer.Serialize(writer, value.localPosition);
+        writer.WritePropertyName("rotation");
+        serializer.Serialize(writer, value.localRotation);
+        writer.WritePropertyName("localScale");
+        serializer.Serialize(writer, value.localScale);
+        writer.WriteEndObject();
+    }
+
+    public override Transform? ReadJson(JsonReader reader, Type objectType, Transform? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer) {
+        if (!hasExistingValue) {
+            Log.Error("Cannot deserialize transform without existing instance");
+            return null;
+        }
+
+        if (existingValue == null) {
+            Log.Error("Cannot deserialize transform with null existing value");
+            return null;
+        }
+
+        var iv = serializer.Deserialize<TransformMirror>(reader)!;
+        if (iv == null) throw new Exception("Could not deserialize transform");
+
+        if (existingValue.localPosition != iv.position) existingValue.localPosition = iv.position;
+        if (existingValue.localRotation != iv.rotation) existingValue.rotation = iv.rotation;
+        if (existingValue.localScale != iv.scale) existingValue.localPosition = iv.scale;
+
+        return existingValue;
+    }
+
+    private record TransformMirror(Vector3 position, Quaternion rotation, Vector3 scale);
+}
+
+file class Vector4Converter : NullableJsonConverter<Vector4> {
     public override void WriteJson(JsonWriter writer, Vector4 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -221,7 +270,7 @@ file class Vector4Converter : JsonConverter<Vector4> {
     }
 }
 
-internal class Vector3Converter : JsonConverter<Vector3> {
+internal class Vector3Converter : NullableJsonConverter<Vector3> {
     public override void WriteJson(JsonWriter writer, Vector3 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -241,7 +290,7 @@ internal class Vector3Converter : JsonConverter<Vector3> {
     }
 }
 
-internal class Vector2Converter : JsonConverter<Vector2> {
+internal class Vector2Converter : NullableJsonConverter<Vector2> {
     public override void WriteJson(JsonWriter writer, Vector2 value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -259,7 +308,7 @@ internal class Vector2Converter : JsonConverter<Vector2> {
     }
 }
 
-file class QuatConverter : JsonConverter<Quaternion> {
+file class QuatConverter : NullableJsonConverter<Quaternion> {
     public override void WriteJson(JsonWriter writer, Quaternion value, JsonSerializer serializer) {
         writer.WriteStartObject();
         writer.WritePropertyName("x");
@@ -279,5 +328,50 @@ file class QuatConverter : JsonConverter<Quaternion> {
         var t = serializer.Deserialize(reader)!;
         var iv = JsonConvert.DeserializeObject<Quaternion>(t.ToString());
         return iv;
+    }
+}
+
+public abstract class NullableJsonConverter<T> : JsonConverter {
+    public override sealed void WriteJson(
+        JsonWriter writer,
+        object? value,
+        JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        WriteJson(writer, (T)value, serializer);
+    }
+
+    public abstract void WriteJson(JsonWriter writer, T? value, JsonSerializer serializer);
+
+    public override sealed object? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        object? existingValue,
+        JsonSerializer serializer) {
+        if (existingValue != null && existingValue is not T) {
+            throw new JsonSerializationException(
+                $"Converter cannot read JSON with the specified existing value. {typeof(T)} is required.");
+        }
+
+        return ReadJson(reader,
+            objectType,
+            existingValue == null ? default : (T)existingValue,
+            existingValue != null,
+            serializer);
+    }
+
+    public abstract T? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        T? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer);
+
+    public override sealed bool CanConvert(Type objectType) {
+        var underlying = Nullable.GetUnderlyingType(objectType) ?? objectType;
+        return typeof(T).IsAssignableFrom(underlying);
     }
 }

@@ -7,12 +7,13 @@ namespace DebugModPlus.Modules;
 public static class MapTeleportModule {
     public static void Update() {
         var forceReloadScene = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-        if (Input.GetMouseButtonDown(0) && UIManager.IsAvailable())
+        if (Input.GetMouseButtonDown(0) && UIManager.IsAvailable() && !DebugModPlus.JustGainedFocus) {
             try {
                 TeleportToMap(Input.mousePosition, forceReloadScene);
             } catch (Exception e) {
                 ToastManager.Toast($"Could not teleport: {e}");
             }
+        }
     }
 
     // ReSharper disable Unity.PerformanceAnalysis

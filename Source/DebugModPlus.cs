@@ -10,6 +10,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DebugModPlus;
 
@@ -167,6 +168,12 @@ public class DebugModPlus : BaseUnityPlugin {
         }
     }
 
+    internal static bool JustGainedFocus = false;
+
+    private void OnApplicationFocus(bool hasFocus) {
+        JustGainedFocus |= hasFocus;
+    }
+
     private void Update() {
         FreecamModule.Update();
         MapTeleportModule.Update();
@@ -176,7 +183,7 @@ public class DebugModPlus : BaseUnityPlugin {
         var didCreate = false;
         foreach (var binding in configSavestateShortcutsCreate) {
             if (KeybindManager.CheckShortcutOnly(binding.Key)) {
-                SavestateModule.TryCreateSavestate(binding.Value);
+                SavestateModule.CreateSavestate(binding.Value);
                 didCreate = true;
             }
         }
@@ -184,7 +191,7 @@ public class DebugModPlus : BaseUnityPlugin {
         if (!didCreate) {
             foreach (var binding in configSavestateShortcutsLoad) {
                 if (KeybindManager.CheckShortcutOnly(binding.Key)) {
-                    SavestateModule.TryLoadSavestate(binding.Value);
+                    SavestateModule.LoadSavestateAt(binding.Value);
                 }
             }
         }
@@ -198,6 +205,8 @@ public class DebugModPlus : BaseUnityPlugin {
                 TryPickFsm();
             }
         }
+
+        JustGainedFocus = false;
     }
 
     private void TryPickFsm() {
@@ -246,8 +255,8 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private void LateUpdate() {
         try {
-            // GhostModule.LateUpdate();
-            // SpeedrunTimerModule.LateUpdate();
+            GhostModule.LateUpdate();
+            SpeedrunTimerModule.LateUpdate();
         } catch (Exception e) {
             Log.Error(e);
         }
@@ -256,10 +265,20 @@ public class DebugModPlus : BaseUnityPlugin {
     private void OnGUI() {
         try {
             SpeedrunTimerModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in SpeedrunTimerModule: {e}");
+        }
+
+        try {
             fsmInspectorModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in fsm inspector module: {e}");
+        }
+
+        try {
             SavestateModule.OnGui();
         } catch (Exception e) {
-            Log.Error(e);
+            Log.Error($"Error in SavestateModule: {e}");
         }
     }
 

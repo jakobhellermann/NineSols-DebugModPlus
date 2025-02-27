@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
+using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Savestates;
@@ -12,9 +13,10 @@ public static class MonobehaviourTracing {
         List<MonoBehaviourSnapshot> saved,
         HashSet<MonoBehaviour> seen,
         int depth = 0,
-        int maxDepth = 0,
+        int? maxDepth = 0,
         int minDepth = 0
     ) {
+        if (!origin.gameObject.scene.IsValid()) return;
         if (seen.Contains(origin)) return;
 
         if (depth >= minDepth) {
@@ -23,7 +25,7 @@ public static class MonobehaviourTracing {
 
         seen.Add(origin);
 
-        if (depth >= maxDepth) {
+        if (maxDepth != null && depth >= maxDepth) {
             return;
         }
 
@@ -58,9 +60,12 @@ public static class MonobehaviourTracing {
         typeof(OnEnableHierarchyInvoker),
         typeof(EffectReceiver),
         typeof(SoundEmitter),
+        typeof(SoundEmitter),
     };
 
     private static readonly Type[] FindReferenceIgnoreListBase = new[] {
         typeof(IAbstractEventReceiver),
+        typeof(ILevelResetPrepare),
+        typeof(ILevelResetStart),
     };
 }
