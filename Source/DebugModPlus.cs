@@ -10,7 +10,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace DebugModPlus;
 
@@ -25,7 +25,7 @@ public class DebugModPlus : BaseUnityPlugin {
     private Harmony harmony = null!;
 
     private InfotextModule infotextModule = new();
-    public HitboxModule HitboxModule = new();
+    public HitboxModule HitboxModule = null!;
     public SavestateModule SavestateModule = null!;
 
     public SpeedrunTimerModule SpeedrunTimerModule = null!;
@@ -37,10 +37,23 @@ public class DebugModPlus : BaseUnityPlugin {
     private Dictionary<KeyboardShortcut, string> configSavestateShortcutsCreate = null!;
     private Dictionary<KeyboardShortcut, string> configSavestateShortcutsLoad = null!;
 
+    internal ConfigEntry<HitboxType> HitboxFilter = null!;
+
+    private bool initializedSuccessfully = false;
+
+
+    private void HandleLog(string logString, string stackTrace, LogType type) {
+        // if (type == LogType.Exception) {
+        // Debug.LogError($"Unhandled exception logged: {logString}\n{stackTrace}");
+        // }
+        ToastManager.Toast(logString);
+    }
+
     private void Awake() {
         Instance = this;
         Log.Init(Logger);
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} started loading...");
+        // Application.logMessageReceived += HandleLog;
 
         try {
             harmony = Harmony.CreateAndPatchAll(typeof(DebugModPlus).Assembly);
@@ -77,6 +90,9 @@ public class DebugModPlus : BaseUnityPlugin {
             var configSavestateFilter = Config.Bind("Savestates",
                 "Savestate filter",
                 SavestateFilter.Flags | SavestateFilter.Player);
+
+            HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
+            HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;
 
             configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
                 //{ new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
@@ -122,6 +138,8 @@ public class DebugModPlus : BaseUnityPlugin {
             SavestateModule.SavestateLoaded += (_, _) => SpeedrunTimerModule.OnSavestateLoaded();
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
 
+            HitboxModule = new GameObject().AddComponent<HitboxModule>();
+
             KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
             KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);
             KeybindManager.Add(this, () => SpeedrunTimerModule.CycleTimerMode(), () => changeModeShortcut.Value);
@@ -149,8 +167,10 @@ public class DebugModPlus : BaseUnityPlugin {
             FlagLoggerModule.Awake();
 
             RCGLifeCycle.DontDestroyForever(gameObject);
+            RCGLifeCycle.DontDestroyForever(HitboxModule.gameObject);
 
             Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+            initializedSuccessfully = true;
         } catch (Exception e) {
             Log.Error(e);
         }
@@ -175,6 +195,8 @@ public class DebugModPlus : BaseUnityPlugin {
     }
 
     private void Update() {
+        if (!initializedSuccessfully) return;
+
         FreecamModule.Update();
         MapTeleportModule.Update();
         infotextModule.Update();
@@ -254,6 +276,8 @@ public class DebugModPlus : BaseUnityPlugin {
     }
 
     private void LateUpdate() {
+        if (!initializedSuccessfully) return;
+
         try {
             GhostModule.LateUpdate();
             SpeedrunTimerModule.LateUpdate();
@@ -263,6 +287,8 @@ public class DebugModPlus : BaseUnityPlugin {
     }
 
     private void OnGUI() {
+        if (!initializedSuccessfully) return;
+
         try {
             SpeedrunTimerModule.OnGui();
         } catch (Exception e) {
@@ -284,11 +310,16 @@ public class DebugModPlus : BaseUnityPlugin {
 
 
     private void OnDestroy() {
+        Application.logMessageReceived -= HandleLog;
+
         harmony.UnpatchSelf();
-        HitboxModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();
+
+        if (HitboxModule.gameObject) {
+            Destroy(HitboxModule.gameObject);
+        }
 
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} unloaded\n\n");
     }
