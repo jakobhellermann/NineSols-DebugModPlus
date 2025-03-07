@@ -21,4 +21,11 @@ public class CheatModule {
             foreach (var x in data.MistMapDataEntries) x.BindingFlag.CurrentValue = true;
         }
     }
+
+    [BindableMethod(Name = "Give Ledge Storage")]
+    private static void GiveLedgeStorage() {
+        if (Player.i is not { } player) return;
+
+        player.isOnLedge = true;
+    }
 }
