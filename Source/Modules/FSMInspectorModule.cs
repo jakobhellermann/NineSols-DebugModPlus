@@ -111,7 +111,7 @@ public class FsmInspectorModule {
     private bool UnityEventHasCalls(UnityEvent e) => e.GetPersistentEventCount() > 0 || e.m_Calls.Count > 0;
 
     private string InspectFSM(GameObject gameObject) {
-        if (!gameObject) return "null";
+        if (!gameObject) return "";
 
         // RCGFlagFetcher
         // RCGArgEventBinder
@@ -229,7 +229,7 @@ public class FsmInspectorModule {
             text = "";
             foreach (var obj in Objects.Concat(extra)) {
                 if (!obj) {
-                    text += "null\n";
+                    text += "\n";
                     continue;
                 }
 
