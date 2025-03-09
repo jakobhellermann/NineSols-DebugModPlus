@@ -25,6 +25,8 @@ public class InfotextModule {
         debugTextTransform.pivot = new Vector2(0f, 1f);
         debugTextTransform.anchoredPosition = new Vector2(10, -10);
         debugTextTransform.sizeDelta = new Vector2(800f, 0f);
+
+        RCGLifeCycle.DontDestroyForever(debugText);
     }
 
     [BindableMethod(Name = "Toggle Infotext")]
@@ -40,6 +42,8 @@ public class InfotextModule {
 
         try {
             debugCanvasInfoText.text = GameInfo.GetInfoText();
+
+            debugCanvasInfoText.text += "\n" + GameInfo.GetMonsterInfotext();
         } catch (Exception e) {
             Log.Error(e);
         }
