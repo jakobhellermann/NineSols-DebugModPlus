@@ -41,7 +41,7 @@ public static class GameInfo {
             var inputState = player.playerInput.fsm.State;
             text += $"State: {state} {(inputState == PlayerInputStateType.Action ? "" : inputState.ToString())}\n";
 
-            List<(bool, string)> flags = [
+            (bool, string)[] flags = [
                 (player.isOnWall, "Wall"),
                 (player.isOnLedge, "Ledge"),
                 (player.isOnRope, "Rope"),
@@ -51,15 +51,11 @@ public static class GameInfo {
                 (player.rollCooldownTimer <= 0, "CanDash"),
                 (player.airJumpCount > 0, "AirJumping"),
             ];
-            List<(float, string)> timers = [
+            (float, string)[] timers = [
                 (player.rollCooldownTimer, "DashCD"),
                 (player.jumpGraceTimer, "Coyote"),
             ];
-
-            var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
-            var timersStr = timers.Where(x => x.Item1 > 0).Join(x => $"{x.Item2}({x.Item1:0.000})", " ");
-
-            text += $"{flagsStr}\n{timersStr}\n";
+            text += Flags(flags, timers);
 
             if (player.jumpState != Player.PlayerJumpState.None) {
                 var varJumpTimer = player.currentVarJumpTimer;
@@ -70,8 +66,26 @@ public static class GameInfo {
             } else text += "\n";
 
             text += AnimationText(player.animator, includeRapidlyChanging);
+        }
 
-            text += "\n";
+        var playerNymphState =
+            (PlayerHackDroneControlState)player.fsm.FindMappingState(PlayerStateType.HackDroneControl);
+        var nymph = playerNymphState.hackDrone;
+
+        if (nymph.fsm != null && nymph.fsm.State != HackDrone.DroneStateType.Init) {
+            text += $"\nNymph {nymph.fsm.State}\n";
+            text += $"  Position: {(Vector2)nymph.transform.position}\n";
+            text += $"  Speed: {(Vector2)nymph.droneVel}\n";
+            text += "  " + Flags([
+                    (nymph.AccessField<bool>("isDashCD"), "DashCD"),
+                    (nymph.AccessField<bool>("isOutOfRange"), "OutOfRange"),
+                ],
+                [
+                    (nymph.AccessField<float>("OutOfRangeTimer"), "OutOfRange"),
+                ],
+                " "
+            );
+            text += AnimationText(nymph.animator, includeRapidlyChanging) + "\n";
         }
 
         var currentLevel = core.gameLevel;
@@ -89,6 +103,14 @@ public static class GameInfo {
         return text;
     }
 
+    private static string Flags(IEnumerable<(bool, string)> flags, IEnumerable<(float, string)> timers,
+        string sep = "\n") {
+        var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
+        var timersStr = timers.Where(x => x.Item1 > 0).Join(x => $"{x.Item2}({x.Item1:0.000})", " ");
+
+        return $"{flagsStr}{sep}{timersStr}\n";
+    }
+
     private static string AnimationText(Animator animator, bool includeRapidlyChanging) {
         var animInfo = animator.GetCurrentAnimatorStateInfo(0);
         var animName = animator.ResolveHash(animInfo.m_Name);
@@ -97,7 +119,7 @@ public static class GameInfo {
             text += $" {animInfo.normalizedTime % 1 * 100:00.0}%";
         }
 
-        return text;
+        return $"{text}\n";
     }
 
     public static string GetMonsterInfotext() {
