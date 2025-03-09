@@ -60,6 +60,7 @@ public static class SnapshotSerializer {
             // ignored
             typeof(PoolObject),
             typeof(MonoBehaviour),
+            typeof(Bounds),
             typeof(GameObject),
             typeof(UnityEventBase),
             typeof(Action),
@@ -86,6 +87,7 @@ public static class SnapshotSerializer {
             typeof(Rect),
             typeof(Timer.DelayTask),
             // todo
+            typeof(PrimeTween.Tween),
             typeof(Rigidbody2D), // maybe
             typeof(Transform), // maybe
             typeof(SpriteRenderer), // maybe
@@ -101,5 +103,11 @@ public static class SnapshotSerializer {
             typeof(StatModifier),
             typeof(MapIndexReference.MapTileData), // maybe
         ],
+        FieldDenylist = new Dictionary<Type, string[]> {
+            { typeof(StealthGameMonster), ["boxColliderSizes"] },
+            { typeof(FlyingMonster), ["boxColliderSizes"] },
+        },
     };
+
+    private static readonly JsonSerializer Serializer = JsonSerializer.Create(Settings);
 }
