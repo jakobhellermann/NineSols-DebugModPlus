@@ -286,10 +286,9 @@ public class HitboxModule : MonoBehaviour {
         try {
             if (Event.current?.type != EventType.Repaint || !GameCore.IsAvailable()) return;
             if (GameCore.Instance.gameLevel is not { } level) return;
+            if (level.cameraCore?.theRealSceneCamera is not { } camera) return;
 
             GUI.depth = int.MaxValue;
-            var camera = level.sceneCamera;
-            // var camera = CameraManager.Instance.camera2D.GameCamera;
 
             var lineWidth = LineWidth;
             foreach (var (type, typeColliders) in colliders) {
