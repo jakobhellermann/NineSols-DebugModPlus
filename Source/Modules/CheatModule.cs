@@ -1,7 +1,7 @@
 using HarmonyLib;
 using JetBrains.Annotations;
-using NineSolsAPI;
 using QFSW.QC;
+using UnityEngine;
 
 // ReSharper disable ExplicitCallerInfoArgument
 
@@ -16,6 +16,37 @@ public class CheatModule {
 
         player.isOnLedge = true;
     }
+
+    [UsedImplicitly]
+    [Command("debugmodplus.cheats.nss")]
+    private static void CmdNymphStateStorage() {
+        if (Player.i is not { } player) return;
+
+        var playerNymphState =
+            (PlayerHackDroneControlState)player.fsm.FindMappingState(PlayerStateType.HackDroneControl);
+        var nymph = playerNymphState.hackDrone;
+        nymph.gameObject.SetActive(true);
+        playerNymphState.OnStateEnter();
+        playerNymphState.OnStateExit();
+        nymph.ChangeState(HackDrone.DroneStateType.Normal);
+    }
+
+    [UsedImplicitly]
+    [Command("debugmodplus.cheats.nss.outofrange")]
+    private static void CmdNymphStateStorageFinished() {
+        if (Player.i is not { } player) return;
+
+        var playerNymphState =
+            (PlayerHackDroneControlState)player.fsm.FindMappingState(PlayerStateType.HackDroneControl);
+        var nymph = playerNymphState.hackDrone;
+        nymph.gameObject.SetActive(true);
+        playerNymphState.OnStateEnter();
+        playerNymphState.OnStateExit();
+        nymph.ChangeState(HackDrone.DroneStateType.Normal);
+
+        nymph.transform.position = Vector3.zero;
+    }
+
 
     [UsedImplicitly]
     [Command("debugmodplus.cheats.refill")]
