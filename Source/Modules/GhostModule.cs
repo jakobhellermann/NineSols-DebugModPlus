@@ -126,10 +126,8 @@ public class GhostModule(ConfigEntry<Color> ghostColor) {
             CheckPlayback(playback, i);
         }
 
-        if (Player.i is { } player) {
-            var sprite = player.PlayerSprite.sprite;
-            var name = sprite.name;
-            playerSprites.TryAdd(name, sprite);
+        if (Player.i is { } player && player.PlayerSprite.sprite is { } sprite) {
+            playerSprites.TryAdd(sprite.name, sprite);
         }
     }
 

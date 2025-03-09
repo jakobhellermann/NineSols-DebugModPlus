@@ -1,16 +1,36 @@
 using HarmonyLib;
+using JetBrains.Annotations;
+using NineSolsAPI;
+using QFSW.QC;
+
+// ReSharper disable ExplicitCallerInfoArgument
 
 namespace DebugModPlus.Modules;
 
 [HarmonyPatch]
 public class CheatModule {
+    [UsedImplicitly]
+    [Command("debugmodplus.cheats.ledge_storage")]
+    private static void CmdLedgeStorage() {
+        if (Player.i is not { } player) return;
+
+        player.isOnLedge = true;
+    }
+
+    [UsedImplicitly]
+    [Command("debugmodplus.cheats.refill")]
+    private static void CmdHeal() {
+        RefillAll();
+    }
+
+
     [BindableMethod(Name = "Refill all")]
     private static void RefillAll() {
-        if (Player.i is { } player) {
-            player.health.GainFull();
-            player.ammo.GainFull();
-            player.chiContainer.GainFull();
-        }
+        if (Player.i is not { } player) return;
+
+        player.health.GainFull();
+        player.ammo.GainFull();
+        player.chiContainer.GainFull();
     }
 
     [BindableMethod(Name = "Unlock all maps")]
@@ -20,12 +40,5 @@ public class CheatModule {
             data.Unlocked.CurrentValue = true;
             foreach (var x in data.MistMapDataEntries) x.BindingFlag.CurrentValue = true;
         }
-    }
-
-    [BindableMethod(Name = "Give Ledge Storage")]
-    private static void GiveLedgeStorage() {
-        if (Player.i is not { } player) return;
-
-        player.isOnLedge = true;
     }
 }

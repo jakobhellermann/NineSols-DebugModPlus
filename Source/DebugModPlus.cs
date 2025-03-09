@@ -169,6 +169,8 @@ public class DebugModPlus : BaseUnityPlugin {
             RCGLifeCycle.DontDestroyForever(gameObject);
             RCGLifeCycle.DontDestroyForever(HitboxModule.gameObject);
 
+            QuantumConsoleModule.ReloadCommands();
+
             Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
             initializedSuccessfully = true;
         } catch (Exception e) {
