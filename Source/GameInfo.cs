@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using DebugModPlus;
+using DebugModPlus.Modules;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -186,6 +187,77 @@ public static class GameInfo {
             if (monster.IsEngaging) text += "IsEngaging\n";
         }
 
+        text += "Attack sensors:\n";
+        foreach (var attackSensor in monster.attackSensors) {
+            var name = ReNumPrefix.Replace(attackSensor.name, "");
+
+            if (!attackSensor.gameObject.activeInHierarchy) {
+                continue;
+            }
+
+            if (!attackSensor.isActiveAndEnabled) {
+                continue;
+            }
+
+            text += $"  {name}({attackSensor.BindindAttack})";
+            var typeName = attackSensor.forStateType switch {
+                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic => "EARP",
+                _ => attackSensor.forStateType.ToString(),
+            };
+            text += $" {typeName}:";
+
+
+            var currentState = monster.CurrentState;
+            var stateCheck = attackSensor.forStateType == AttackSensorForStateType.AllValid ||
+                             (!(attackSensor.forStateType ==
+                                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic &&
+                                currentState is not (MonsterBase.States.RunAway or MonsterBase.States.Panic
+                                    or MonsterBase.States.OutOfReach or MonsterBase.States.LookingAround
+                                    or MonsterBase.States.Engaging or MonsterBase.States.PreAttack)) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.EngagingOnly &&
+                                currentState is not MonsterBase.States.Engaging) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.PreAttackOnly &&
+                                currentState is not MonsterBase.States.PreAttack) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.WanderingAndIdleOnly &&
+                                currentState is not (MonsterBase.States.Wandering
+                                    or MonsterBase.States.WanderingIdle)));
+            if (!stateCheck) {
+                // text += " WrongState";
+            } else if (!attackSensor.CanAttack()) {
+                if (!attackSensor.IsPlayerInside) {
+                    text += " PlayerOutside";
+                } else if (attackSensor.CurrentCoolDown > 0) {
+                    text += " OnCooldown";
+                } else if (attackSensor.playerInsideTimer < attackSensor.currentAttackDelay) {
+                    text += " AttackDelay";
+                } else {
+                    text += " !CanAttack";
+                }
+            }
+
+            text += "\n";
+
+            var conditions = attackSensor.AccessField<AbstractConditionComp[]>("_conditions");
+            foreach (var condition in conditions) {
+                var conditionStr = FsmInspectorModule.ConditionStr(condition);
+                text += $"   if: {conditionStr}\n";
+            }
+
+            /*if (attackSensor.QueuedAttacks.Count > 0) {
+                text += "Queue:\n";
+                foreach (var attack in attackSensor.QueuedAttacks) {
+                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
+                }
+            }*/
+
+            // foreach(var bindingAttack in attackSensor.BindingAttacks)
+            // text += attackSensor.AccessField<string>("_failReason");
+        }
+
+        var engaging = monster.fsm.FindMappingState(MonsterBase.States.Engaging);
+        if (engaging is StealthEngaging stealthEngaging) {
+        }
+
         return text;
     }
 
@@ -198,6 +270,8 @@ public static class GameInfo {
 
         return state.ToString();
     }
+
+    private static readonly Regex ReNumPrefix = new(@"\d+_");
 
     private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|^\d+_");
     // private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|\[\d+\] ?|^\d+_");

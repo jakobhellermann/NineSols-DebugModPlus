@@ -88,7 +88,7 @@ public class FsmInspectorModule {
 
     private string StateName(string name) => name.TrimStartMatches("[State] ").ToString();
 
-    private string VariableName(AbstractVariable? variable) {
+    private static string VariableName(AbstractVariable? variable) {
         if (variable == null) return "null";
 
         var name = variable.ToString().TrimStartMatches("[Variable] ")
@@ -106,7 +106,7 @@ public class FsmInspectorModule {
 
     private bool hideAnimationTransitions = true;
     private bool hideDefaultTransitions = true;
-    private bool showFlagIds = true;
+    private static bool showFlagIds = true;
 
     private bool UnityEventHasCalls(UnityEvent e) => e.GetPersistentEventCount() > 0 || e.m_Calls.Count > 0;
 
@@ -200,23 +200,55 @@ public class FsmInspectorModule {
                 text +=
                     $"    {(transition.IsDefaultTransition ? "default" : "")} to {StateName(transition.target.name)} ({transitionName.ToString()})\n";
                 foreach (var condition in stateTransitionConditions.Invoke(transition)) {
-                    var conditionStr = condition.name.TrimStartMatches("[Condition] ").ToString();
-                    if (condition is FlagBoolCondition boolCondition) {
-                        conditionStr =
-                            $"bool flag {VariableName(boolCondition.flagBool)} current {boolCondition.flagBool?.FlagValue}";
-                        if (showFlagIds) conditionStr += $" {boolCondition.flagBool?.boolFlag?.FinalSaveID}";
-                        if (showFlagIds) conditionStr += $" {boolCondition.flagBool}";
-                    }
-
-                    if (condition.FinalResultInverted) conditionStr = $"!{conditionStr}";
-
-
+                    var conditionStr = ConditionStr(condition);
                     text += $"      {conditionStr}\n";
                 }
             }
         }
 
         return text;
+    }
+
+    public static string ConditionStr(AbstractConditionComp condition) {
+        var name = condition.name.TrimStartMatches("[Condition] ").ToString();
+        var conditionStr = "";
+
+        switch (condition) {
+            case FlagBoolCondition boolCondition: {
+                conditionStr =
+                    $"{name} bool flag {VariableName(boolCondition.flagBool)} current {boolCondition.flagBool?.FlagValue}";
+                if (showFlagIds) conditionStr += $" {boolCondition.flagBool?.boolFlag?.FinalSaveID}";
+                if (showFlagIds) conditionStr += $" {boolCondition.flagBool}";
+                break;
+            }
+            case GeneralCondition generalCondition: {
+                if (showFlagIds) conditionStr += $" {generalCondition}";
+                break;
+            }
+            case PlayerMovePredictCondition movePredictCondition: {
+                conditionStr += "Player";
+                if (movePredictCondition.ParryDetect) conditionStr += " Parry";
+                if (movePredictCondition.DodgeDetect) conditionStr += " Dash";
+                if (movePredictCondition.JumpDetect) conditionStr += " Jump";
+                if (movePredictCondition.InAirDetect) conditionStr += " InAir";
+                if (movePredictCondition.AttackDetect) conditionStr += " Attack";
+                if (movePredictCondition.ThirdAttackDetect) conditionStr += " Third";
+                if (movePredictCondition.ChargeAttackDetect) conditionStr += " Charged";
+                if (movePredictCondition.FooDetect) conditionStr += " Foo";
+                if (movePredictCondition.ArrowDetect) conditionStr += " Shoots";
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (movePredictCondition.randomChance != 1.0)
+                    conditionStr += $" at {movePredictCondition.randomChance * 100:0}%";
+                break;
+            }
+            default: {
+                if (showFlagIds) conditionStr += $" {condition.GetType()}";
+                break;
+            }
+        }
+
+        if (condition.FinalResultInverted) conditionStr = $"(inverted) {conditionStr}";
+        return $"({(condition.FinalResult ? "true" : "false")}) {conditionStr}";
     }
 
     public List<GameObject> Objects = [];
