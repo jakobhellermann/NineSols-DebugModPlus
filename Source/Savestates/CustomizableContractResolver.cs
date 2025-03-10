@@ -5,6 +5,7 @@ using System.Reflection;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using NineSolsAPI;
 
 namespace DebugModPlus.Savestates;
 
@@ -29,20 +30,22 @@ public class CustomizableContractResolver : DefaultContractResolver {
     protected override List<MemberInfo> GetSerializableMembers(Type objectType) {
         var list = new List<MemberInfo>();
 
-        if (FieldAllowlist.TryGetValue(objectType, out var allowlist)) {
-            list.AddRange(allowlist
-                .Select(fieldName => {
-                    var field = objectType.GetField(fieldName, FieldBindingFlags);
-                    if (field == null) {
-                        Log.Error($"Field '{fieldName}' in allowlist of '{objectType}' does not exist!");
-                    }
-
-                    return field;
-                }).OfType<FieldInfo>());
-            return list;
-        }
-
         for (var ty = objectType; ty != typeof(object) && ty != null; ty = ty.BaseType) {
+            var x = ty.IsGenericType ? ty.GetGenericTypeDefinition() : ty;
+            if (FieldAllowlist.TryGetValue(x, out var allowlist)) {
+                list.AddRange(allowlist
+                    .Select(fieldName => {
+                        var field = ty.GetField(fieldName, FieldBindingFlags | BindingFlags.DeclaredOnly);
+                        if (field == null) {
+                            Log.Error($"Field '{fieldName}' in allowlist of '{ty}' does not exist!");
+                        }
+
+                        return field;
+                    }).OfType<FieldInfo>());
+                continue;
+            }
+
+
             list.AddRange(ty.GetFields(FieldBindingFlags | BindingFlags.DeclaredOnly));
             list.AddRange(ty
                 .GetProperties(PropertyBindingFlags | BindingFlags.DeclaredOnly)

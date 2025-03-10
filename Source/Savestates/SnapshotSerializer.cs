@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Linq;
 using DebugModPlus.Savestates;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -109,5 +110,20 @@ public static class SnapshotSerializer {
         },
     };
 
-    private static readonly JsonSerializer Serializer = JsonSerializer.Create(Settings);
+    internal static void RemoveNullFields(JToken token, params string[] fields) {
+        if (token is not JContainer container) return;
+
+        var removeList = new List<JToken>();
+        foreach (var el in container.Children()) {
+            if (el is JProperty p && fields.Contains(p.Name) && p.Value.ToObject<object>() == null) {
+                removeList.Add(el);
+            }
+
+            RemoveNullFields(el, fields);
+        }
+
+        foreach (var el in removeList) {
+            el.Remove();
+        }
+    }
 }

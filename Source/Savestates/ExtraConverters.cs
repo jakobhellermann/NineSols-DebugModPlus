@@ -79,3 +79,25 @@ public abstract class NullableJsonConverter : JsonConverter {
         return CanConvertInner(underlying);
     }
 }
+
+public class EnumConverter : NullableJsonConverter {
+    public static string EnumToString(object value) {
+        var typeName = value.GetType().FullName;
+        var name = Enum.GetName(value.GetType(), value);
+        return $"{typeName}.{name}";
+    }
+
+    protected override void WriteJsonInner(JsonWriter writer, object? value, JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        writer.WriteValue(EnumToString(value));
+    }
+
+    protected override object ReadJsonInner(JsonReader reader, Type objectType, object? existingValue,
+        JsonSerializer serializer) => throw new NotImplementedException();
+
+    protected override bool CanConvertInner(Type objectType) => objectType.IsEnum;
+}
