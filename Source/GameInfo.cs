@@ -63,7 +63,7 @@ public static class GameInfo {
                 var groundReference = player.AccessField<float>("GroundJumpRefrenceY");
                 var height = player.transform.position.y - groundReference;
                 text +=
-                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height}\n";
+                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height:0.00}\n";
             } else text += "\n";
 
             text += AnimationText(player.animator, includeRapidlyChanging);
@@ -153,7 +153,10 @@ public static class GameInfo {
 
         if (state is BossGeneralState bgs) {
             if (bgs.attackQueue) {
-                text += "TODO: attackQueue\n";
+                text += "AttackQueue:\n";
+                foreach (var attack in bgs.attackQueue.QueuedAttacks) {
+                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
+                }
             }
 
             text += "Queue:\n";
@@ -184,7 +187,7 @@ public static class GameInfo {
             .GetMethod("MonsterStatCanCriticalHit", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(monster, []);
         if (canCrit) {
-            if (monster.IsEngaging) text += "IsEngaging\n";
+            // if (monster.IsEngaging) text += "IsEngaging\n";
         }
 
         text += "Attack sensors:\n";
