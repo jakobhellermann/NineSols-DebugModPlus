@@ -121,6 +121,9 @@ public static class SavestateLogic {
             Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
         }
 
+        //Close dialogue
+        if(DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
+
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
         if (savestate.Scene != null) {

@@ -299,25 +299,14 @@ public class DebugModPlus : BaseUnityPlugin {
     private void Test()
     {
         var dialoguePlayer = DialoguePlayer.Instance;
-        PropertyInfo propertyInfo = typeof(DialoguePlayer).GetProperty("currentChat", BindingFlags.NonPublic | BindingFlags.Instance);
-
+        FieldInfo fieldinfo = typeof(DialoguePlayer).GetField("autoNextTime", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         try
         {
-            if (dialoguePlayer is not null && propertyInfo is not null)
-            {
-                Chat chat = propertyInfo.GetValue(dialoguePlayer) as Chat;
-                if (chat is not null)
-                {
-                    chat.autoNextTime = 0f;
-                    Log.Info("Chat autoNextTime set to: " + chat.autoNextTime);
-                }
-                else Log.Error("currentChat is null");
-            }
-            else Log.Error("dialoguePlayer or propertyInfo is null");
+            if (dialoguePlayer is not null && fieldinfo is not null) fieldinfo.SetValue(dialoguePlayer, 0.5f);
         }
         catch (Exception ex)
         {
-            Log.Error("Error accessing currentChat: " + ex);
+            Log.Error(ex);
         }
     }
 }

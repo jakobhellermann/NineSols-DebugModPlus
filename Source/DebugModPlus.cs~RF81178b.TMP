@@ -308,7 +308,7 @@ public class DebugModPlus : BaseUnityPlugin {
                 Chat chat = propertyInfo.GetValue(dialoguePlayer) as Chat;
                 if (chat is not null)
                 {
-                    chat.autoNextTime = 0f;
+                    chat.autoNextTime = 20f;
                     Log.Info("Chat autoNextTime set to: " + chat.autoNextTime);
                 }
                 else Log.Error("currentChat is null");
