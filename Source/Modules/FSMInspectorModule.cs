@@ -1,8 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using DebugModPlus.Utils;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -14,7 +14,6 @@ using RCGFSM.Transition;
 using RCGFSM.Variable;
 using UnityEngine;
 using UnityEngine.Events;
-using IStateMachine = MonsterLove.StateMachine.IStateMachine;
 
 namespace DebugModPlus.Modules;
 
@@ -22,31 +21,11 @@ namespace DebugModPlus.Modules;
 public class FsmInspectorModule {
     private static GUIStyle? style;
 
-    private string? text = null;
+    private string? text;
 
-    private static AccessTools.FieldRef<FSMStateMachineRunner, List<IStateMachine>> stateMachineRunnerStateMachineList =
-        AccessTools.FieldRefAccess<FSMStateMachineRunner, List<IStateMachine>>("stateMachineList");
-
-    private static AccessTools.FieldRef<AbstractStateTransition, AbstractConditionComp[]> stateTransitionConditions =
-        AccessTools.FieldRefAccess<AbstractStateTransition, AbstractConditionComp[]>("conditions");
-
-    public static List<IStateMachine> FsmListMachines(FSMStateMachineRunner runner) =>
-        stateMachineRunnerStateMachineList.Invoke(runner);
-
-    public static IEnumerable<(object, MappingState)> FsmListStates(IStateMachine machine) {
-        return machine.AccessField<object?>("_stateMapping")!
-            .AccessProperty<IList>("getAllStates")!
-            .Cast<object>()
-            .Select(stateObj => {
-                var state = stateObj.AccessField<object>("state");
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior");
-                return (state, stateBehaviour);
-            });
-    }
-
-    private string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
+    private static string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
         var text = "";
-        var machines = FsmListMachines(runner);
+        var machines = runner.GetMachines();
 
         var mb = runner.GetComponent<MonsterBase>();
         if (mb) text += $"\nMonster animation state {mb.currentPlayingAnimatorState}\n\n";
@@ -58,7 +37,7 @@ public class FsmInspectorModule {
             var currentState = machine.CurrentStateMap.stateObj;
             text += $"Current state: {currentState}\n";
 
-            foreach (var (state, stateBehaviour) in FsmListStates(machine)) {
+            foreach (var (state, stateBehaviour) in machine.GetStates()) {
                 text += $"  {state} ({stateBehaviour.GetType().Name})\n";
 
                 if (stateBehaviour is MonsterState monsterState) {
@@ -199,7 +178,7 @@ public class FsmInspectorModule {
 
                 text +=
                     $"    {(transition.IsDefaultTransition ? "default" : "")} to {StateName(transition.target.name)} ({transitionName.ToString()})\n";
-                foreach (var condition in stateTransitionConditions.Invoke(transition)) {
+                foreach (var condition in transition.Conditions()) {
                     var conditionStr = ConditionStr(condition);
                     text += $"      {conditionStr}\n";
                 }
