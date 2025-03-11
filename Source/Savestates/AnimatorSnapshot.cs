@@ -51,7 +51,17 @@ public class AnimatorSnapshot {
     public void Restore(Animator animator) {
         if (animator == null) return;
 
+
+        if (animator.name == "Animator") {
+            // HACK: think about this
+            for (var t = animator.transform; t; t = t.parent) {
+                t.gameObject.SetActive(true);
+            }
+        }
+
+
         animator.Play(StateHash, 0, NormalizedTime);
+        animator.Update(0);
         foreach (var param in ParamsFloat) animator.SetFloat(param.Key, param.Value);
         foreach (var param in ParamsInt) animator.SetInteger(param.Key, param.Value);
         foreach (var param in ParamsBool) animator.SetBool(param.Key, param.Value);
