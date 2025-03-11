@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace DebugModPlus.Modules;
 
 public class InfotextModule {
-    private static bool infotextActive = true;
+    private static bool infotextActive = false;
     private TMP_Text debugCanvasInfoText;
 
     public InfotextModule() {
