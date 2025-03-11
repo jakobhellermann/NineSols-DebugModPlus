@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using HarmonyLib;
 using NineSolsAPI;
 using QFSW.QC;
@@ -21,11 +22,27 @@ public class QuantumConsoleModule {
         return false;
     }
 
-    public QuantumConsoleModule() {
-        QuantumConsoleProcessor.GenerateCommandTable(true);
+    // load bearing empty patch
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(QuantumConsole), "OnEnable")]
+    private static void OnEnable() {
+    }
+
+
+    public static void ReloadCommands() {
+        QuantumConsoleProcessor.GenerateCommandTable(true, true);
     }
 
     private bool active = false;
+
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(QuantumConsole), nameof(QuantumConsole.LogToConsole), [typeof(ILog)])]
+    private static void QuantumConsoleLog(ILog log) {
+        if (!GameVersions.IsVersion(GameVersions.SpeedrunPatch)) {
+            ToastManager.Toast(log.Text);
+        }
+    }
 
     public void ToggleConsole() {
         var consoleObject = ApplicationCore.Instance.gameObject.GetComponentInChildren<QuantumConsole>();
@@ -49,12 +66,12 @@ public class QuantumConsoleModule {
     private void QuantumConsoleActivate() {
         if (!GameCore.IsAvailable()) return;
 
-        GameCore.Instance.player.playerInput.VoteForState(PlayerInputStateType.Console, DebugModPlus.Instance);
+        GameCore.Instance.player?.playerInput?.VoteForState(PlayerInputStateType.Console, DebugModPlus.Instance);
     }
 
     private void QuantumConsoleDeactivate() {
         if (!GameCore.IsAvailable()) return;
 
-        GameCore.Instance.player.playerInput.RevokeAllMyVote(DebugModPlus.Instance);
+        GameCore.Instance.player?.playerInput?.RevokeAllMyVote(DebugModPlus.Instance);
     }
 }

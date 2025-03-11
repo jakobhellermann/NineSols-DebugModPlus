@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<AssemblyName>DebugModPlus</AssemblyName>
-		<Description>Advanced Debug Mod for Nine Sols</Description>
-		<TargetFramework>netstandard2.1</TargetFramework>
-		<Version>1.6.1</Version>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<LangVersion>latest</LangVersion>
-		<NoWarn>MSB3277;CS0162</NoWarn>
-		<Nullable>enable</Nullable>
-		<PublishRelease>true</PublishRelease>
+    <PropertyGroup>
+        <AssemblyName>DebugModPlus</AssemblyName>
+        <Description>Advanced Debug Mod for Nine Sols</Description>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Version>1.8.0</Version>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>latest</LangVersion>
+        <NoWarn>MSB3277;CS0162</NoWarn>
+        <Nullable>enable</Nullable>
+        <PublishRelease>true</PublishRelease>
 
 		<!-- todo macOS -->
 		<NineSolsPath Condition="'$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Nine Sols</NineSolsPath>
