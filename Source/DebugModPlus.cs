@@ -314,11 +314,11 @@ public class DebugModPlus : BaseUnityPlugin {
         Application.logMessageReceived -= HandleLog;
 
         harmony?.UnpatchSelf();
-        GhostModule.Unload();
-        SpeedrunTimerModule.Destroy();
-        infotextModule.Destroy();
+        GhostModule?.Unload();
+        SpeedrunTimerModule?.Destroy();
+        infotextModule?.Destroy();
 
-        if (HitboxModule.gameObject) {
+        if (HitboxModule?.gameObject) {
             Destroy(HitboxModule.gameObject);
         }
 
