@@ -222,6 +222,8 @@ public static class SavestateLogic {
         // CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
         // hacks
         Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
+        Tween.StopAll(); // should restore as well
+
         var votes = Player.i.playerInput.AccessField<List<RuntimeConditionVote>>("conditionVoteList");
         foreach (var vote in votes) {
             vote.votes.Clear();
