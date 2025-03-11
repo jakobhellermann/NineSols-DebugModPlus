@@ -1,16 +1,22 @@
 // ReSharper disable once CheckNamespace
 // ReSharper disable UnusedType.Global
 
-namespace System.Runtime.CompilerServices;
+namespace System.Runtime.CompilerServices {
+    // Enable `string property { get; init; }`
+    internal static class IsExternalInit {
+    }
 
-// Enable `string property { get; init; }`
-internal static class IsExternalInit {
+    // Enable `required string x`
+    public class RequiredMemberAttribute : Attribute;
+
+    public class CompilerFeatureRequiredAttribute : Attribute {
+        public CompilerFeatureRequiredAttribute(string name) {
+        }
+    }
 }
 
-// Enable `required string x`
-public class RequiredMemberAttribute : Attribute;
-
-public class CompilerFeatureRequiredAttribute : Attribute {
-    public CompilerFeatureRequiredAttribute(string name) {
+namespace System.Diagnostics.CodeAnalysis {
+    [AttributeUsage(AttributeTargets.Constructor)]
+    public sealed class SetsRequiredMembersAttribute : Attribute {
     }
 }

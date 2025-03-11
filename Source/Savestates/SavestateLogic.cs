@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using DebugModPlus.Modules;
+using DebugModPlus.Utils;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json.Linq;
 using NineSolsAPI;
@@ -56,7 +57,7 @@ public static class SavestateLogic {
         var seen = new HashSet<MonoBehaviour>();
         if (filter.HasFlag(SavestateFilter.Player)) {
             MonobehaviourTracing.TraceReferencedMonobehaviours(player, sceneBehaviours, seen, maxDepth: null);
-            foreach (var (_, state) in FsmInspectorModule.FsmListStates(player.fsm)) {
+            foreach (var (_, state) in player.fsm.GetStates()) {
                 MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
             }
         }
@@ -177,7 +178,7 @@ public static class SavestateLogic {
                 continue;
             }
 
-            foreach (var machine in FsmInspectorModule.FsmListMachines(runner)) {
+            foreach (var machine in runner.GetMachines()) {
                 var stateObj = Enum.ToObject(machine.CurrentStateMap.stateObj.GetType(), fsm.CurrentState);
 
                 EnterStateDirectly(machine, stateObj);

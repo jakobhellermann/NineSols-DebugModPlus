@@ -7,7 +7,9 @@ using Object = UnityEngine.Object;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using DebugModPlus;
 using HarmonyLib;
 using NineSolsAPI.Utils;
 using UnityEngine.UIElements;
@@ -155,17 +157,15 @@ namespace DebugModPlus
 
             playerJumpState = player.jumpState.ToString();
 
-            if (player.jumpState != Player.PlayerJumpState.None) {
-                var varJumpTimer = player.currentVarJumpTimer;
-                playerJumpTimer =
-                     (varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "");
-            }
+        var canCrit = (bool)typeof(MonsterBase)
+            .GetMethod("MonsterStatCanCriticalHit", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(monster, []);
+        if (canCrit) {
+            if (monster.IsEngaging) text += "IsEngaging\n";
+        }
 
-            //need to implement cheats
-            /*
-            debugAutoHeal;
-            debugInvincibility;
-            */
+        return text;
+    }
 
             //need to implement hooks
             /*
@@ -179,7 +179,8 @@ namespace DebugModPlus
             greaterFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Greater Tao Fruit")).ownNum.CurrentValue;
             twinFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Twin Tao Fruit")).ownNum.CurrentValue;
 
-            fruitCount = fruit + greaterFruit + twinFruit;
+    private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|^\d+_");
+    // private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|\[\d+\] ?|^\d+_");
 
             attackDamage = player.normalAttackDealer.FinalValue;
             fooDamage = player.fooEffectDealer.FinalValue;

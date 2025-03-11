@@ -1,8 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using DebugModPlus.Utils;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -14,7 +14,6 @@ using RCGFSM.Transition;
 using RCGFSM.Variable;
 using UnityEngine;
 using UnityEngine.Events;
-using IStateMachine = MonsterLove.StateMachine.IStateMachine;
 
 namespace DebugModPlus.Modules;
 
@@ -22,31 +21,11 @@ namespace DebugModPlus.Modules;
 public class FsmInspectorModule {
     private static GUIStyle? style;
 
-    private string? text = null;
+    private string? text;
 
-    private static AccessTools.FieldRef<FSMStateMachineRunner, List<IStateMachine>> stateMachineRunnerStateMachineList =
-        AccessTools.FieldRefAccess<FSMStateMachineRunner, List<IStateMachine>>("stateMachineList");
-
-    private static AccessTools.FieldRef<AbstractStateTransition, AbstractConditionComp[]> stateTransitionConditions =
-        AccessTools.FieldRefAccess<AbstractStateTransition, AbstractConditionComp[]>("conditions");
-
-    public static List<IStateMachine> FsmListMachines(FSMStateMachineRunner runner) =>
-        stateMachineRunnerStateMachineList.Invoke(runner);
-
-    public static IEnumerable<(object, MappingState)> FsmListStates(IStateMachine machine) {
-        return machine.AccessField<object?>("_stateMapping")!
-            .AccessProperty<IList>("getAllStates")!
-            .Cast<object>()
-            .Select(stateObj => {
-                var state = stateObj.AccessField<object>("state");
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior");
-                return (state, stateBehaviour);
-            });
-    }
-
-    private string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
+    private static string InspectFsmMonsterLove(FSMStateMachineRunner runner) {
         var text = "";
-        var machines = FsmListMachines(runner);
+        var machines = runner.GetMachines();
 
         var mb = runner.GetComponent<MonsterBase>();
         if (mb) text += $"\nMonster animation state {mb.currentPlayingAnimatorState}\n\n";
@@ -58,7 +37,7 @@ public class FsmInspectorModule {
             var currentState = machine.CurrentStateMap.stateObj;
             text += $"Current state: {currentState}\n";
 
-            foreach (var (state, stateBehaviour) in FsmListStates(machine)) {
+            foreach (var (state, stateBehaviour) in machine.GetStates()) {
                 text += $"  {state} ({stateBehaviour.GetType().Name})\n";
 
                 if (stateBehaviour is MonsterState monsterState) {
@@ -88,7 +67,7 @@ public class FsmInspectorModule {
 
     private string StateName(string name) => name.TrimStartMatches("[State] ").ToString();
 
-    private string VariableName(AbstractVariable? variable) {
+    private static string VariableName(AbstractVariable? variable) {
         if (variable == null) return "null";
 
         var name = variable.ToString().TrimStartMatches("[Variable] ")
@@ -106,7 +85,7 @@ public class FsmInspectorModule {
 
     private bool hideAnimationTransitions = true;
     private bool hideDefaultTransitions = true;
-    private bool showFlagIds = true;
+    private static bool showFlagIds = true;
 
     private bool UnityEventHasCalls(UnityEvent e) => e.GetPersistentEventCount() > 0 || e.m_Calls.Count > 0;
 
@@ -199,24 +178,56 @@ public class FsmInspectorModule {
 
                 text +=
                     $"    {(transition.IsDefaultTransition ? "default" : "")} to {StateName(transition.target.name)} ({transitionName.ToString()})\n";
-                foreach (var condition in stateTransitionConditions.Invoke(transition)) {
-                    var conditionStr = condition.name.TrimStartMatches("[Condition] ").ToString();
-                    if (condition is FlagBoolCondition boolCondition) {
-                        conditionStr =
-                            $"bool flag {VariableName(boolCondition.flagBool)} current {boolCondition.flagBool?.FlagValue}";
-                        if (showFlagIds) conditionStr += $" {boolCondition.flagBool?.boolFlag?.FinalSaveID}";
-                        if (showFlagIds) conditionStr += $" {boolCondition.flagBool}";
-                    }
-
-                    if (condition.FinalResultInverted) conditionStr = $"!{conditionStr}";
-
-
+                foreach (var condition in transition.Conditions()) {
+                    var conditionStr = ConditionStr(condition);
                     text += $"      {conditionStr}\n";
                 }
             }
         }
 
         return text;
+    }
+
+    public static string ConditionStr(AbstractConditionComp condition) {
+        var name = condition.name.TrimStartMatches("[Condition] ").ToString();
+        var conditionStr = "";
+
+        switch (condition) {
+            case FlagBoolCondition boolCondition: {
+                conditionStr =
+                    $"{name} bool flag {VariableName(boolCondition.flagBool)} current {boolCondition.flagBool?.FlagValue}";
+                if (showFlagIds) conditionStr += $" {boolCondition.flagBool?.boolFlag?.FinalSaveID}";
+                if (showFlagIds) conditionStr += $" {boolCondition.flagBool}";
+                break;
+            }
+            case GeneralCondition generalCondition: {
+                if (showFlagIds) conditionStr += $" {generalCondition}";
+                break;
+            }
+            case PlayerMovePredictCondition movePredictCondition: {
+                conditionStr += "Player";
+                if (movePredictCondition.ParryDetect) conditionStr += " Parry";
+                if (movePredictCondition.DodgeDetect) conditionStr += " Dash";
+                if (movePredictCondition.JumpDetect) conditionStr += " Jump";
+                if (movePredictCondition.InAirDetect) conditionStr += " InAir";
+                if (movePredictCondition.AttackDetect) conditionStr += " Attack";
+                if (movePredictCondition.ThirdAttackDetect) conditionStr += " Third";
+                if (movePredictCondition.ChargeAttackDetect) conditionStr += " Charged";
+                if (movePredictCondition.FooDetect) conditionStr += " Foo";
+                if (movePredictCondition.ArrowDetect) conditionStr += " Shoots";
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (movePredictCondition.randomChance != 1.0)
+                    conditionStr += $" at {movePredictCondition.randomChance * 100:0}%";
+                break;
+            }
+            default: {
+                if (showFlagIds) conditionStr += $" {condition.GetType()}";
+                break;
+            }
+        }
+
+        if (condition.FinalResultInverted) conditionStr = $"(inverted) {conditionStr}";
+        return $"({(condition.FinalResult ? "true" : "false")}) {conditionStr}";
     }
 
     public List<GameObject> Objects = [];

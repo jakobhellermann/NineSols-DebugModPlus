@@ -142,7 +142,7 @@ file class FlagFieldConverter<TContainer, T> : JsonConverter<TContainer> where T
         throw new NotImplementedException();
 }
 
-file class FuncConverter<T, TU>(Func<T, TU> func) : JsonConverter<T> {
+public class FuncConverter<T, TU>(Func<T, TU> func) : JsonConverter<T> {
     public override void WriteJson(JsonWriter writer, T? value, JsonSerializer serializer) {
         serializer.Serialize(writer, value == null ? "null" : func(value));
     }
