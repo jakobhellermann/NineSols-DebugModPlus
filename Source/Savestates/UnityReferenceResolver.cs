@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using DebugModPlus.Utils;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using NineSolsAPI.Utils;
 using UnityEngine;
@@ -9,6 +11,8 @@ using UnityEngine;
 namespace DebugModPlus.Savestates;
 
 public class UnityReferenceResolver : IReferenceResolver {
+    public string? RelativeTo = null;
+
     public Type[] InlineReferences = [];
 
     public Type[] InlineReferencesBase = [];
@@ -19,7 +23,7 @@ public class UnityReferenceResolver : IReferenceResolver {
 
     public string GetReference(object context, object value) {
         if (value is Component component) {
-            return ObjectUtils.ObjectComponentPath(component);
+            return PostprocessId(component);
         }
 
         return null!;
@@ -49,5 +53,48 @@ public class UnityReferenceResolver : IReferenceResolver {
 
     public void AddReference(object context, string reference, object value) {
         throw new NotImplementedException();
+    }
+
+    private string PostprocessId(Component component) {
+        var path = ObjectUtils.ObjectPath(component.gameObject);
+        var componentName = component.name;
+
+        /*if (path.SplitOnce("/LogicRoot/---Boss---") is var (_, after)) {
+            path = after;
+        }*/
+        if (RelativeTo != null) {
+            path = path.TrimStartMatches(RelativeTo).ToString();
+        }
+
+        return $"{path}@{componentName}";
+    }
+
+    public static void Postprocess(JToken token) {
+        if (token is not JContainer container) return;
+
+        var removeList = new List<JToken>();
+        var addList = new List<(JProperty, JProperty)>();
+
+        foreach (var el in container.Children()) {
+            if (el is JProperty { Name: "$id" } p) {
+                if (p.Value.ToObject<object>() == null) {
+                    removeList.Add(el);
+                } else {
+                    var id = p.Value.Value<string>()!;
+                    var (_, component) = id.SplitOnce('@')!.Value;
+                    addList.Add((p, new JProperty("$component", component)));
+                }
+            }
+
+            Postprocess(el);
+        }
+
+        foreach (var el in removeList) {
+            el.Remove();
+        }
+
+        foreach (var (after, add) in addList) {
+            after.AddAfterSelf(add);
+        }
     }
 }

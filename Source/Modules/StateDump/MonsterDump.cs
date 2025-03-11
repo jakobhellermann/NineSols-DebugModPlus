@@ -31,6 +31,8 @@ internal record MonsterBaseData {
 }
 
 public static class MonsterDump {
+    private const string DumpDir = "C:/Users/Jakob/Documents/dev/nine-sols/StateDump";
+
     private static HashSet<MonsterStat> seenNames = [];
 
     public static void DumpAllMonsters() {
@@ -49,6 +51,8 @@ public static class MonsterDump {
             singleMonsterNameInScene = monsterName;
         }
 
+
+        ToastManager.Toast(seenNames.Count);
         foreach (var monster in MonsterManager.Instance.monsterDict.Values) {
             var monsterName = monster.monsterStat.monsterName.ToString();
             var fullName = monster.name.TrimStartMatches("StealthGameMonster_").TrimStartMatches("TrapMonster_")
@@ -76,8 +80,9 @@ public static class MonsterDump {
     }
 
     private static void DumpMonster(string fileName, MonsterBase monster) {
+        ToastManager.Toast($"Dumping {fileName}");
         var level = monster.monsterStat.monsterLevel;
-        var dumpDir = Path.Combine(Path.GetTempPath(), "bossdump", "Attacks", level.ToString(), fileName);
+        var dumpDir = Path.Combine(DumpDir, "Attacks", level.ToString(), fileName);
         Directory.CreateDirectory(dumpDir);
 
         // var statesDir = Path.Combine(dumpDir, "states");
@@ -113,8 +118,9 @@ public static class MonsterDump {
             TeleportBinding = monster.monsterCore.teleportBinding,
         };
 
+        referenceResolver.RelativeTo = ObjectUtils.ObjectPath(monster.gameObject);
         var snapshot = JToken.FromObject(data, testSerializer);
-        SnapshotSerializer.RemoveNullFields(snapshot, "$id");
+        UnityReferenceResolver.Postprocess(snapshot);
         var text = snapshot.ToString(Formatting.Indented);
 
         File.WriteAllText(Path.Combine(dumpDir, "data.json"), text);
@@ -124,6 +130,8 @@ public static class MonsterDump {
     private static UnityReferenceResolver referenceResolver = new() {
         InlineReferences = [
             typeof(LinkNextMoveStateWeight),
+            typeof(LinkMoveGroupingNode),
+            typeof(MonsterStateQueue),
             typeof(MonsterStateSequenceWeight),
             typeof(MonsterStateGroupSequence),
             typeof(MonsterStateGroup),
@@ -189,6 +197,7 @@ public static class MonsterDump {
                     typeof(TeleportBinding),
                     ["teleportScheme", "offsetCandidates", "offset", "offsetYFromGround", "PhysicsDetect"]
                 },
+                { typeof(MonsterStateQueue), ["linkNextMoveStateWeights"] },
             },
             FieldDenylist = new Dictionary<Type, string[]> {
                 { typeof(LinkNextMoveStateWeight), ["MustUseEnqueued"] }, {
