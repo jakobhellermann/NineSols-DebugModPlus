@@ -221,10 +221,10 @@ public class DebugModPlus : BaseUnityPlugin {
 
 
         var canUseFsmPicker = Player.i?.playerInput.fsm.State is not PlayerInputStateType.UI;
-
-        if (canUseFsmPicker && configShortcutFsmPickerModifier.Value.IsPressed()) {
-            Cursor.visible = true;
-            if (Input.GetMouseButtonDown(0)) {
+        if (configShortcutFsmPickerModifier.Value.IsPressed() && Input.GetMouseButtonDown(0)) {
+            fsmInspectorModule.Objects.Clear();
+            if (canUseFsmPicker) {
+                Cursor.visible = true;
                 TryPickFsm();
             }
         }
