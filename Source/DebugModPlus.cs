@@ -26,7 +26,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private Harmony harmony = null!;
 
-    private InfotextModule infotextModule = new();
+    private InfotextModule InfotextModule = null!;
     public HitboxModule HitboxModule = new();
     public SavestateModule SavestateModule = null!;
 
@@ -80,6 +80,11 @@ public class DebugModPlus : BaseUnityPlugin {
                 "Savestate filter",
                 SavestateFilter.Flags | SavestateFilter.Player);
 
+            var configInfoTextFilter = Config.Bind("Info Text Panel", "Show Info", 
+                InfotextModule.InfotextFilter.GameInfo | InfotextModule.InfotextFilter.DamageInfo | InfotextModule.InfotextFilter.BasicPlayerInfo |
+                InfotextModule.InfotextFilter.EnemyInfo | InfotextModule.InfotextFilter.AdvancedPlayerInfo | InfotextModule.InfotextFilter.InteractableInfo |
+                InfotextModule.InfotextFilter.RespawnInfo);
+
             configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
                 //{ new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
                 //{ new KeyboardShortcut(KeyCode.Keypad2, KeyCode.LeftControl), "2" },
@@ -92,7 +97,8 @@ public class DebugModPlus : BaseUnityPlugin {
             };
 
             // module initialization
-
+            //TODO: make info text filters update at run time
+            InfotextModule = new InfotextModule(configInfoTextFilter);
             SavestateModule = new SavestateModule(
                 configSavestateFilter,
                 Config.Bind("Savestates",
@@ -134,8 +140,6 @@ public class DebugModPlus : BaseUnityPlugin {
             KeybindManager.Add(this,
                 () => SpeedrunTimerModule.ClearCheckpoints(),
                 () => clearCheckpointsShortcut.Value);
-            //debugging
-            KeybindManager.Add(this, () => Test(), KeyCode.P);
             // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
             // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
             // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
@@ -180,7 +184,7 @@ public class DebugModPlus : BaseUnityPlugin {
     private void Update() {
         FreecamModule.Update();
         MapTeleportModule.Update();
-        infotextModule.Update();
+        InfotextModule.Update();
         SavestateModule.Update();
 
         var didCreate = false;
@@ -283,6 +287,12 @@ public class DebugModPlus : BaseUnityPlugin {
         } catch (Exception e) {
             Log.Error($"Error in SavestateModule: {e}");
         }
+
+        try {
+            InfotextModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in infotextModule: {e}");
+        }
     }
 
 
@@ -291,33 +301,8 @@ public class DebugModPlus : BaseUnityPlugin {
         HitboxModule.Unload();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
-        infotextModule.Destroy();
+        InfotextModule.Destroy();
 
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} unloaded\n\n");
-    }
-
-    private void Test()
-    {
-        var dialoguePlayer = DialoguePlayer.Instance;
-        PropertyInfo propertyInfo = typeof(DialoguePlayer).GetProperty("currentChat", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        try
-        {
-            if (dialoguePlayer is not null && propertyInfo is not null)
-            {
-                Chat chat = propertyInfo.GetValue(dialoguePlayer) as Chat;
-                if (chat is not null)
-                {
-                    chat.autoNextTime = 0f;
-                    Log.Info("Chat autoNextTime set to: " + chat.autoNextTime);
-                }
-                else Log.Error("currentChat is null");
-            }
-            else Log.Error("dialoguePlayer or propertyInfo is null");
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Error accessing currentChat: " + ex);
-        }
     }
 }
