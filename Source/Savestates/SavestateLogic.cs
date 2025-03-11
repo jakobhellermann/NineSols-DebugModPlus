@@ -126,6 +126,8 @@ public static class SavestateLogic {
         if (savestate.Flags is { } flags) {
             FlagLogic.LoadFlags(flags, SaveManager.Instance.allFlags);
             Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
+
+            SaveManager.Instance.allFlags.AllFlagInitStartAndEquip();
         }
 
         // Change scene
