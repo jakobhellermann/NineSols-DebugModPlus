@@ -43,11 +43,11 @@ public class SavestateModule(
 
     #endregion
 
-    public bool CreateSavestate(string name, int? slot = null, SavestateFilter? filter = null) {
+    public bool CreateSavestate(string name, int? slot = null, string? layer = null, SavestateFilter? filter = null) {
         try {
             var sw = Stopwatch.StartNew();
             var savestate = SavestateLogic.Create(filter ?? currentFilter.Value);
-            savestates.Save(name, savestate, slot);
+            savestates.Save(name, savestate, slot, layer);
             Log.Info($"Created savestate {name} in {sw.ElapsedMilliseconds}ms");
 
             SavestateCreated?.Invoke(this, EventArgs.Empty);
@@ -107,11 +107,11 @@ public class SavestateModule(
     private void UiSaveToSlot(int slot) {
         var scene = GameCore.Instance.gameLevel.SceneName;
         var defaultName = $"{scene} {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
-        CreateSavestate(defaultName, slot);
+        CreateSavestate(defaultName, slot, savestateLayer);
     }
 
     private async void UiLoadFromSlot(int slot) {
-        var bySlot = savestates.List(slot).ToList();
+        var bySlot = savestates.List(slot, savestateLayer).ToList();
         switch (bySlot.Count) {
             case 0:
                 ToastManager.Toast($"Savestate '{slot}' not found");
@@ -141,6 +141,9 @@ public class SavestateModule(
         Delete,
     }
 
+
+    private string? savestateLayer = null;
+
     private SavestateUIState uiState = SavestateUIState.Off;
 
     private SavestateUIState UiState {
@@ -161,21 +164,38 @@ public class SavestateModule(
 
     private void LoadInfos() {
         infos.Clear();
-        foreach (var info in savestates.List()) {
+        foreach (var info in savestates.List(layer: savestateLayer)) {
             if (info.index is not { } index) continue;
 
             infos.TryAdd(index, info);
         }
     }
 
+    private static string? SavestateLayerFromModifiers() =>
+        Input.GetKey(KeyCode.LeftControl) | Input.GetKey(KeyCode.LeftControl)
+            ? "Secondary"
+            : null;
+
+    private void UpdateLayer() {
+        var newLayer = SavestateLayerFromModifiers();
+        if (newLayer != savestateLayer) {
+            currentPage = 0;
+        }
+
+        savestateLayer = newLayer;
+    }
+
     public void Update() {
         try {
             if (KeybindManager.CheckShortcutOnly(openLoad.Value)) {
                 UiState = UiState == SavestateUIState.Load ? SavestateUIState.Off : SavestateUIState.Load;
+                UpdateLayer();
             } else if (KeybindManager.CheckShortcutOnly(openSave.Value)) {
                 UiState = UiState == SavestateUIState.Save ? SavestateUIState.Off : SavestateUIState.Save;
+                UpdateLayer();
             } else if (KeybindManager.CheckShortcutOnly(openDelete.Value)) {
                 UiState = UiState == SavestateUIState.Delete ? SavestateUIState.Off : SavestateUIState.Delete;
+                UpdateLayer();
             } else if (KeybindManager.CheckShortcutOnly(tabNext.Value)) {
                 currentPage++;
             } else if (KeybindManager.CheckShortcutOnly(tabPrev.Value)) {
@@ -202,7 +222,7 @@ public class SavestateModule(
                         UiLoadFromSlot(saveIndex);
                         UiState = SavestateUIState.Off;
                     } else if (UiState == SavestateUIState.Delete) {
-                        savestates.Delete(saveIndex);
+                        savestates.Delete(saveIndex, savestateLayer);
                         UiState = SavestateUIState.Off;
                     }
                 }
@@ -224,7 +244,8 @@ public class SavestateModule(
             var totalPages = Math.Max(Mathf.CeilToInt((float)maxSlotIndex / ItemsPerPage), currentPage + 1);
 
             const int itemHeight = 27;
-            var visibleItems = Mathf.Max(ItemsPerPage, infos.Count);
+            // var visibleItems = Mathf.Min(ItemsPerPage, infos.Count);
+            var visibleItems = ItemsPerPage;
             var boxHeight = (visibleItems + 2) * itemHeight;
 
             const int boxWidth = 450;
@@ -233,7 +254,8 @@ public class SavestateModule(
             const int boxY = 50;
 
             var boxRect = new Rect(boxX, boxY, boxWidth, boxHeight);
-            GUI.Box(boxRect, $"Page {currentPage + 1}/{totalPages} ({UiState})", styleBox);
+            var layer = savestateLayer != null ? $" {savestateLayer}" : "";
+            GUI.Box(boxRect, $"Page {currentPage + 1}/{totalPages}{layer} ({UiState})", styleBox);
 
             // Display Items Dynamically
             GUILayout.BeginArea(new Rect(boxX + boxInset, boxY + 25, boxWidth - boxInset * 2, boxHeight));

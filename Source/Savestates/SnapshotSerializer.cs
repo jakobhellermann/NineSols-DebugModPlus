@@ -83,6 +83,7 @@ public static class SnapshotSerializer {
             typeof(ParticleSystem),
             typeof(TestRope.RopeSegment),
             typeof(AnimationCurve),
+            typeof(AnimationClip),
             typeof(IActiveOverrider),
             typeof(CullingObserver),
             typeof(Rect),

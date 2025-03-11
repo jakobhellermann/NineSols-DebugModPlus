@@ -313,7 +313,7 @@ public class DebugModPlus : BaseUnityPlugin {
     private void OnDestroy() {
         Application.logMessageReceived -= HandleLog;
 
-        harmony.UnpatchSelf();
+        harmony?.UnpatchSelf();
         GhostModule.Unload();
         SpeedrunTimerModule.Destroy();
         infotextModule.Destroy();
