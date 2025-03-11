@@ -113,6 +113,12 @@ public static class SavestateLogic {
             throw new Exception("Attempted to load savestate outside of scene");
         }
 
+        if (savestate.LastTeleportId != null) {
+            var tp = GameFlagManager.Instance.GetTeleportPointWithPath(savestate.LastTeleportId);
+            ApplicationCore.Instance.lastSaveTeleportPoint = tp;
+        }
+
+
         var sw = Stopwatch.StartNew();
 
         // Load flags
