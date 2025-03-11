@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -6,8 +8,8 @@ using DebugModPlus;
 using DebugModPlus.Modules;
 using HarmonyLib;
 using MonsterLove.StateMachine;
-using NineSolsAPI;
 using NineSolsAPI.Utils;
+using PrimeTween;
 using UnityEngine;
 
 namespace TAS;
@@ -15,8 +17,27 @@ namespace TAS;
 public static class GameInfo {
     private const bool ShowClipInfo = true;
 
-    public static string GetInfoText(bool includeRapidlyChanging = false) {
+    [Flags]
+    public enum InfotextFilter {
+        Base = 0,
+        RapidlyChanging = 1 << 0,
+        Tweens = 1 << 1,
+    }
+
+    public static string GetInfoText(InfotextFilter filter = InfotextFilter.Base) {
         var text = "";
+
+        if ((filter & InfotextFilter.Tweens) != 0) {
+            text += "Tweens:\n";
+            var ty = typeof(Tween).Assembly.GetType("PrimeTween.PrimeTweenManager");
+            var instance = ty.GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+            var tweens = instance.AccessField<IList>("tweens");
+            foreach (var tween in tweens) {
+                text += $"- {tween}\n";
+            }
+        }
+
+        text += "\n";
 
         if (!ApplicationCore.IsAvailable()) return "Loading";
 
@@ -66,7 +87,7 @@ public static class GameInfo {
                     $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height:0.00}\n";
             } else text += "\n";
 
-            text += AnimationText(player.animator, includeRapidlyChanging);
+            text += AnimationText(player.animator, filter.HasFlag(InfotextFilter.RapidlyChanging));
         }
 
         var playerNymphState =
@@ -86,13 +107,13 @@ public static class GameInfo {
                 ],
                 " "
             );
-            text += AnimationText(nymph.animator, includeRapidlyChanging) + "\n";
+            text += AnimationText(nymph.animator, filter.HasFlag(InfotextFilter.RapidlyChanging)) + "\n";
         }
 
         var currentLevel = core.gameLevel;
         if (currentLevel) {
             text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})";
-            if (includeRapidlyChanging) {
+            if (filter.HasFlag(InfotextFilter.RapidlyChanging)) {
                 text += $" dt={Time.deltaTime:0.00000000}\n";
             }
 
@@ -138,10 +159,20 @@ public static class GameInfo {
         var text = "";
         text += MonsterName(monster) + "\n";
 
+        text += $"Pos: {(Vector2)monster.transform.position}\n";
+        text += $"Speed: {(Vector2)monster.Velocity} + {(Vector2)monster.AnimationVelocity}\n";
+        text += $"HP: {monster.health.currentValue:0.00}\n";
+
+
         var core = monster.monsterCore;
 
         if (core.attackSequenceMoodule.getCurrentSequence() is not null) {
             text += "TODO: attack sequence\n";
+        }
+
+        if (monster.fsm == null) {
+            text += $"FSM is null?\n";
+            return text;
         }
 
         var state = monster.fsm.FindMappingState(monster.fsm.State);
