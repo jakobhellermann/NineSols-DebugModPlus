@@ -223,6 +223,9 @@ public static class SavestateLogic {
         // hacks
         Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
         Tween.StopAll(); // should restore as well
+        foreach (var bossArea in Object.FindObjectsOfType<BossArea>()) {
+            bossArea.ForceShowHP();
+        }
 
         var votes = Player.i.playerInput.AccessField<List<RuntimeConditionVote>>("conditionVoteList");
         foreach (var vote in votes) {
