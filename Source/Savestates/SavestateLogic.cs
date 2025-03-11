@@ -5,12 +5,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using DebugModPlus.Modules;
 using DebugModPlus.Utils;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json.Linq;
 using NineSolsAPI;
 using NineSolsAPI.Utils;
+using PrimeTween;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -68,6 +68,9 @@ public static class SavestateLogic {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
                 MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen, maxDepth: null);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
+                foreach (var (_, state) in monster.fsm.GetStates()) {
+                    MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
+                }
             }
         }
 
