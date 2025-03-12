@@ -28,8 +28,11 @@ public class QuantumConsoleModule {
     private static void OnEnable() {
     }
 
+    public static void Initialize() {
+        if (QuantumConsole.Instance != null) {
+            QuantumConsole.Instance.KeyConfig.ToggleConsoleVisibilityKey = new ModifierKeyCombo();
+        }
 
-    public static void ReloadCommands() {
         QuantumConsoleProcessor.GenerateCommandTable(true, true);
     }
 
