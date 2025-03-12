@@ -68,6 +68,8 @@ public class CheatModule {
     private static void UnlockMaps() {
         foreach (var areaCollection in GameCore.Instance.allAreas.allCollections)
         foreach (var data in areaCollection.levelMapDatas) {
+            if (!data) continue;
+
             data.Unlocked.CurrentValue = true;
             foreach (var x in data.MistMapDataEntries) x.BindingFlag.CurrentValue = true;
         }

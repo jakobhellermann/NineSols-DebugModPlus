@@ -115,6 +115,7 @@ public class DebugModPlus : BaseUnityPlugin {
             InfotextModule = new InfotextModule(configInfoTextFilter);
             SavestateModule = new SavestateModule(
                 configSavestateFilter,
+                configSavestateLoadMode,
                 Config.Bind("Savestates",
                     "Save",
                     new KeyboardShortcut(KeyCode.KeypadPlus)
@@ -227,10 +228,10 @@ public class DebugModPlus : BaseUnityPlugin {
 
 
         var canUseFsmPicker = Player.i?.playerInput.fsm.State is not PlayerInputStateType.UI;
-
-        if (canUseFsmPicker && configShortcutFsmPickerModifier.Value.IsPressed()) {
-            Cursor.visible = true;
-            if (Input.GetMouseButtonDown(0)) {
+        if (configShortcutFsmPickerModifier.Value.IsPressed() && Input.GetMouseButtonDown(0)) {
+            fsmInspectorModule.Objects.Clear();
+            if (canUseFsmPicker) {
+                Cursor.visible = true;
                 TryPickFsm();
             }
         }
@@ -330,7 +331,7 @@ public class DebugModPlus : BaseUnityPlugin {
         SpeedrunTimerModule.Destroy();
         InfotextModule.Destroy();
 
-        if (HitboxModule.gameObject) {
+        if (HitboxModule?.gameObject) {
             Destroy(HitboxModule.gameObject);
         }
 

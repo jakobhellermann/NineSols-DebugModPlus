@@ -3,7 +3,7 @@
     <option name="SCRIPT_TEXT" value="" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="false" />
     <option name="SCRIPT_PATH" value="$PROJECT_DIR$/../../../../../../Program Files (x86)/Steam/steamapps/common/Nine Sols/NineSols.exe" />
-    <option name="SCRIPT_OPTIONS" value="--doorstop-enable true --doorstop-target &quot;C:\Users\Jakob\AppData\Roaming\r2modmanPlus-local\NineSols\profiles\Default\BepInEx\core\BepInEx.Preloader.dll&quot;" />
+    <option name="SCRIPT_OPTIONS" value="--doorstop-enabled true --doorstop-target-assembly &quot;C:\Users\Jakob\AppData\Roaming\r2modmanPlus-local\NineSols\profiles\Default\BepInEx\core\BepInEx.Preloader.dll&quot; --doorstop-mono-debug-enabled true --doorstop-mono-debug-address 127.0.0.1:55555" />
     <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
     <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />

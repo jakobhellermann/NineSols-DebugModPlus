@@ -17,13 +17,22 @@ public record SavestateInfo(
 
 internal class SavestateStore {
     private string? backingDir;
-    private string BackingDir => backingDir ??= ModDirs.DataDir(DebugModPlus.Instance, "Savestates");
 
-    private string SavestatePath(string slot) => Path.Join(BackingDir, $"{slot}.json");
+    private string BackingDir =>
+        backingDir ??= ModDirs.DataDir(DebugModPlus.Instance, "Savestates");
 
-    public IEnumerable<SavestateInfo> List(int? slot = null) {
+    private string LayerDir(string? layer) => Path.Join(BackingDir, layer);
+
+    private string SavestatePath(string slot, string? layer) => Path.Join(LayerDir(layer), $"{slot}.json");
+
+    public IEnumerable<SavestateInfo> List(int? slot = null, string? layer = null) {
         var pattern = slot != null ? $"{slot}-*.json" : "*.json";
-        return Directory.GetFiles(BackingDir, pattern)
+        var dir = LayerDir(layer);
+        if (!Directory.Exists(dir)) {
+            return [];
+        }
+
+        return Directory.GetFiles(dir, pattern)
             .Select(path => {
                 if (SplitOnce(Path.GetFileNameWithoutExtension(path), '-') is not var (ord, name)) {
                     return new SavestateInfo(path, null, "");
@@ -37,17 +46,18 @@ internal class SavestateStore {
             });
     }
 
-    public void Delete(int slot) {
-        foreach (var info in List(slot)) {
+    public void Delete(int slot, string? layer) {
+        foreach (var info in List(slot, layer)) {
             File.Delete(info.path);
         }
     }
 
-    public void Save(string name, Savestate savestate, int? slot = null) {
-        if (slot is { } i) Delete(i);
+    public void Save(string name, Savestate savestate, int? slot = null, string? layer = null) {
+        if (slot is { } i) Delete(i, layer);
         var fullName = slot != null ? $"{slot}-{name}" : name;
 
-        var path = SavestatePath(fullName);
+        Directory.CreateDirectory(LayerDir(layer));
+        var path = SavestatePath(fullName, layer);
         try {
             using var file = File.CreateText(path);
             savestate.SerializeTo(file);
@@ -60,8 +70,8 @@ internal class SavestateStore {
     public static bool TryGetValue(SavestateInfo info, [NotNullWhen(true)] out Savestate? savestate) =>
         TryGetValueInner(info.path, out savestate);
 
-    public bool TryGetValue(string fullName, [NotNullWhen(true)] out Savestate? savestate) {
-        var path = SavestatePath(fullName);
+    public bool TryGetValue(string fullName, [NotNullWhen(true)] out Savestate? savestate, string? layer = null) {
+        var path = SavestatePath(fullName, layer);
         return TryGetValueInner(path, out savestate);
     }
 

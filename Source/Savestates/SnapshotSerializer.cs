@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using DebugModPlus.Savestates;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -48,6 +49,7 @@ public static class SnapshotSerializer {
             new ColorConverter(),
             new Color32Converter(),
             new AnimatorConverter(),
+            new StringEnumConverter(),
         },
     };
 
@@ -83,6 +85,7 @@ public static class SnapshotSerializer {
             typeof(ParticleSystem),
             typeof(TestRope.RopeSegment),
             typeof(AnimationCurve),
+            typeof(AnimationClip),
             typeof(IActiveOverrider),
             typeof(CullingObserver),
             typeof(Rect),

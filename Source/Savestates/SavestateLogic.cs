@@ -5,12 +5,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using DebugModPlus.Modules;
 using DebugModPlus.Utils;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json.Linq;
 using NineSolsAPI;
 using NineSolsAPI.Utils;
+using PrimeTween;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -27,6 +27,13 @@ public enum SavestateFilter {
     FSMs = 1 << 4,
 
     All = Flags | Player | FSMs | Monsters,
+}
+
+[Flags]
+public enum SavestateLoadMode {
+    None = 0,
+    ResetScene = 1 << 0,
+    ReloadScene = 1 << 1,
 }
 
 public static class SavestateLogic {
@@ -68,6 +75,9 @@ public static class SavestateLogic {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
                 MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen, maxDepth: null);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
+                foreach (var (_, state) in monster.fsm.GetStates()) {
+                    MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
+                }
             }
         }
 
@@ -108,10 +118,16 @@ public static class SavestateLogic {
     }
 
 
-    public static async Task Load(Savestate savestate, bool forceReload = false) {
+    public static async Task Load(Savestate savestate, SavestateLoadMode loadMode) {
         if (!GameCore.IsAvailable()) {
             throw new Exception("Attempted to load savestate outside of scene");
         }
+
+        if (savestate.LastTeleportId != null) {
+            var tp = GameFlagManager.Instance.GetTeleportPointWithPath(savestate.LastTeleportId);
+            ApplicationCore.Instance.lastSaveTeleportPoint = tp;
+        }
+
 
         var sw = Stopwatch.StartNew();
 
@@ -120,6 +136,8 @@ public static class SavestateLogic {
         if (savestate.Flags is { } flags) {
             FlagLogic.LoadFlags(flags, SaveManager.Instance.allFlags);
             Log.Debug($"- Applied flags in {sw.ElapsedMilliseconds}ms");
+
+            SaveManager.Instance.allFlags.AllFlagInitStartAndEquip();
         }
 
         //Close dialogue
@@ -128,7 +146,7 @@ public static class SavestateLogic {
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
         if (savestate.Scene != null) {
-            if ((savestate.Scene != null && !isCurrentScene) || forceReload) {
+            if ((savestate.Scene != null && !isCurrentScene) || loadMode.HasFlag(SavestateLoadMode.ReloadScene)) {
                 if (savestate.PlayerPosition is not { } playerPosition) {
                     throw new Exception("Savestate with scene must have `playerPosition`");
                 }
@@ -151,7 +169,9 @@ public static class SavestateLogic {
             }
         }
 
-        GameCore.Instance.ResetLevel();
+        if (loadMode.HasFlag(SavestateLoadMode.ResetScene)) {
+            GameCore.Instance.ResetLevel();
+        }
 
         sw.Restart();
         if (savestate.MonobehaviourSnapshots != null) {
@@ -214,6 +234,11 @@ public static class SavestateLogic {
         // CameraManager.Instance.camera2D.MoveCameraInstantlyToPosition(Player.i.transform.position);
         // hacks
         Player.i.playerInput.RevokeAllMyVote(Player.i.PlayerDeadState);
+        Tween.StopAll(); // should restore as well
+        foreach (var bossArea in Object.FindObjectsOfType<BossArea>()) {
+            bossArea.ForceShowHP();
+        }
+
         var votes = Player.i.playerInput.AccessField<List<RuntimeConditionVote>>("conditionVoteList");
         foreach (var vote in votes) {
             vote.votes.Clear();
