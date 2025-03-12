@@ -112,7 +112,7 @@ public static class MonsterDump {
             OtherStates = monster.fsm._stateMapping.getAllStates
                 .Where(x => x.stateBehavior is not BossGeneralState)
                 .ToDictionary(x => EnumConverter.EnumToString(x.state), x => x.stateBehavior),
-            AttackSensors = monster.attackSensors,
+            AttackSensors = monster.attackSensors.ToArray(),
             InitState = monster.initState,
             HurtInterrupt = monster.HurtInterrupt,
             TeleportBinding = monster.monsterCore.teleportBinding,
