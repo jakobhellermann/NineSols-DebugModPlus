@@ -1,22 +1,43 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using DebugModPlus;
+using DebugModPlus.Modules;
 using HarmonyLib;
 using MonsterLove.StateMachine;
-using NineSolsAPI;
 using NineSolsAPI.Utils;
+using PrimeTween;
 using UnityEngine;
 
 namespace TAS;
 
-public class DebugInfo {
+public static class DebugInfo {
     private const bool ShowClipInfo = true;
 
-    public static string GetInfoText(bool includeRapidlyChanging = false) {
+    [Flags]
+    public enum DebugFilter {
+        Base = 0,
+        RapidlyChanging = 1 << 0,
+        Tweens = 1 << 1,
+    }
+
+    public static string GetInfoText(DebugFilter filter = DebugFilter.Base) {
         var text = "";
+
+        if ((filter & DebugFilter.Tweens) != 0) {
+            text += "Tweens:\n";
+            var ty = typeof(Tween).Assembly.GetType("PrimeTween.PrimeTweenManager");
+            var instance = ty.GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
+            var tweens = instance.AccessField<IList>("tweens");
+            foreach (var tween in tweens) {
+                text += $"- {tween}\n";
+            }
+        }
+
+        text += "\n";
 
         if (!ApplicationCore.IsAvailable()) return "Loading";
 
@@ -63,10 +84,10 @@ public class DebugInfo {
                 var groundReference = player.AccessField<float>("GroundJumpRefrenceY");
                 var height = player.transform.position.y - groundReference;
                 text +=
-                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height}\n";
+                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height:0.00}\n";
             } else text += "\n";
 
-            text += AnimationText(player.animator, includeRapidlyChanging);
+            text += AnimationText(player.animator, filter.HasFlag(DebugFilter.RapidlyChanging));
         }
 
         var playerNymphState =
@@ -86,13 +107,13 @@ public class DebugInfo {
                 ],
                 " "
             );
-            text += AnimationText(nymph.animator, includeRapidlyChanging) + "\n";
+            text += AnimationText(nymph.animator, filter.HasFlag(DebugFilter.RapidlyChanging)) + "\n";
         }
 
         var currentLevel = core.gameLevel;
         if (currentLevel) {
             text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})";
-            if (includeRapidlyChanging) {
+            if (filter.HasFlag(DebugFilter.RapidlyChanging)) {
                 text += $" dt={Time.deltaTime:0.00000000}\n";
             }
 
@@ -138,10 +159,20 @@ public class DebugInfo {
         var text = "";
         text += MonsterName(monster) + "\n";
 
+        text += $"Pos: {(Vector2)monster.transform.position}\n";
+        text += $"Speed: {monster.Velocity} + {(Vector2)monster.AnimationVelocity}\n";
+        text += $"HP: {monster.health.currentValue:0.00}\n";
+
+
         var core = monster.monsterCore;
 
         if (core.attackSequenceMoodule.getCurrentSequence() is not null) {
             text += "TODO: attack sequence\n";
+        }
+
+        if (monster.fsm == null) {
+            text += "FSM is null?\n";
+            return text;
         }
 
         var state = monster.fsm.FindMappingState(monster.fsm.State);
@@ -153,7 +184,10 @@ public class DebugInfo {
 
         if (state is BossGeneralState bgs) {
             if (bgs.attackQueue) {
-                text += "TODO: attackQueue\n";
+                text += "AttackQueue:\n";
+                foreach (var attack in bgs.attackQueue.QueuedAttacks) {
+                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
+                }
             }
 
             text += "Queue:\n";
@@ -184,7 +218,78 @@ public class DebugInfo {
             .GetMethod("MonsterStatCanCriticalHit", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(monster, []);
         if (canCrit) {
-            if (monster.IsEngaging) text += "IsEngaging\n";
+            // if (monster.IsEngaging) text += "IsEngaging\n";
+        }
+
+        text += "Attack sensors:\n";
+        foreach (var attackSensor in monster.attackSensors) {
+            var name = ReNumPrefix.Replace(attackSensor.name, "");
+
+            if (!attackSensor.gameObject.activeInHierarchy) {
+                continue;
+            }
+
+            if (!attackSensor.isActiveAndEnabled) {
+                continue;
+            }
+
+            text += $"  {name}({attackSensor.BindindAttack})";
+            var typeName = attackSensor.forStateType switch {
+                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic => "EARP",
+                _ => attackSensor.forStateType.ToString(),
+            };
+            text += $" {typeName}:";
+
+
+            var currentState = monster.CurrentState;
+            var stateCheck = attackSensor.forStateType == AttackSensorForStateType.AllValid ||
+                             (!(attackSensor.forStateType ==
+                                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic &&
+                                currentState is not (MonsterBase.States.RunAway or MonsterBase.States.Panic
+                                    or MonsterBase.States.OutOfReach or MonsterBase.States.LookingAround
+                                    or MonsterBase.States.Engaging or MonsterBase.States.PreAttack)) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.EngagingOnly &&
+                                currentState is not MonsterBase.States.Engaging) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.PreAttackOnly &&
+                                currentState is not MonsterBase.States.PreAttack) &&
+                              !(attackSensor.forStateType == AttackSensorForStateType.WanderingAndIdleOnly &&
+                                currentState is not (MonsterBase.States.Wandering
+                                    or MonsterBase.States.WanderingIdle)));
+            if (!stateCheck) {
+                // text += " WrongState";
+            } else if (!attackSensor.CanAttack()) {
+                if (!attackSensor.IsPlayerInside) {
+                    text += " PlayerOutside";
+                } else if (attackSensor.CurrentCoolDown > 0) {
+                    text += " OnCooldown";
+                } else if (attackSensor.playerInsideTimer < attackSensor.currentAttackDelay) {
+                    text += " AttackDelay";
+                } else {
+                    text += " !CanAttack";
+                }
+            }
+
+            text += "\n";
+
+            var conditions = attackSensor.AccessField<AbstractConditionComp[]>("_conditions");
+            foreach (var condition in conditions) {
+                var conditionStr = FsmInspectorModule.ConditionStr(condition);
+                text += $"   if: {conditionStr}\n";
+            }
+
+            /*if (attackSensor.QueuedAttacks.Count > 0) {
+                text += "Queue:\n";
+                foreach (var attack in attackSensor.QueuedAttacks) {
+                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
+                }
+            }*/
+
+            // foreach(var bindingAttack in attackSensor.BindingAttacks)
+            // text += attackSensor.AccessField<string>("_failReason");
+        }
+
+        var engaging = monster.fsm.FindMappingState(MonsterBase.States.Engaging);
+        if (engaging is StealthEngaging stealthEngaging) {
         }
 
         return text;
@@ -199,6 +304,8 @@ public class DebugInfo {
 
         return state.ToString();
     }
+
+    private static readonly Regex ReNumPrefix = new(@"\d+_");
 
     private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|^\d+_");
     // private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|\[\d+\] ?|^\d+_");
