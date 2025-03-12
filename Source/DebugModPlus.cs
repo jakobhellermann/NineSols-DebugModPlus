@@ -228,7 +228,7 @@ public class DebugModPlus : BaseUnityPlugin {
         if (!didCreate) {
             foreach (var binding in configSavestateShortcutsLoad) {
                 if (KeybindManager.CheckShortcutOnly(binding.Key)) {
-                    SavestateModule.LoadSavestateAt(binding.Value);
+                    _ = SavestateModule.LoadSavestateAt(binding.Value);
                 }
             }
         }
@@ -339,7 +339,7 @@ public class DebugModPlus : BaseUnityPlugin {
         InfotextModule?.Destroy();
 
         if (HitboxModule?.gameObject) {
-            Destroy(HitboxModule.gameObject);
+            Destroy(HitboxModule!.gameObject);
         }
 
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} unloaded\n\n");

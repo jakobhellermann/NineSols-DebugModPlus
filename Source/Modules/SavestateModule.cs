@@ -39,7 +39,7 @@ public class SavestateModule(
 
     [BindableMethod(Name = "Load Quicksave")]
     private static void LoadSavestateMethodNoReload() {
-        DebugModPlus.Instance.SavestateModule.LoadSavestateAt(QuicksaveSlot);
+        _ = DebugModPlus.Instance.SavestateModule.LoadSavestateAt(QuicksaveSlot);
     }
 
     #endregion
