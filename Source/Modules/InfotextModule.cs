@@ -2,9 +2,7 @@ using System;
 using TAS;
 using UnityEngine;
 using System.Reflection;
-using System.Linq;
 using BepInEx.Configuration;
-using NineSolsAPI.Utils;
 
 namespace DebugModPlus.Modules;
 
@@ -22,7 +20,8 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
         InteractableInfo = 1 << 7,
         DebugInfo = 1 << 8,
 
-        All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | /*EnemyInfo | */
+        All = 0x10000000 | GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo |
+              DamageInfo | /*EnemyInfo | */
               InteractableInfo,
     }
 
@@ -91,40 +90,41 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
          */
         var text = "";
         try {
-            text = "[DEBUG+] (v" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ")";
-            const string spacer = "\n----------------------------------------------";
+            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+            text = $"DebugModPlus (v{version})";
+            const string spacer = "\n----------------------------------------------\n";
 
             var infoData = new GameInfo();
             if (infoData.ErrorText is not null) text += "\n" + infoData.ErrorText;
-            text += spacer;
 
             if (filter.Value.HasFlag(InfotextFilter.GameInfo)) {
-                text += "\n" + infoData.GameLevel;
+                text += spacer;
+                text += infoData.GameLevel;
                 text += "\n" + "Game State: " + infoData.CoreState;
                 text += "\n" + "Cutscene: " + infoData.Cutscene;
-                text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.BasicPlayerInfo)) {
-                text += "\n" + "HP: " + infoData.PlayerHp + "/" + infoData.PlayerMaxHp + " (" + infoData.PlayerLostHp +
+                text += spacer;
+                text += "HP: " + infoData.PlayerHp + "/" + infoData.PlayerMaxHp + " (" + infoData.PlayerLostHp +
                         ")";
                 text += "\n" + "Int Dmg: " + infoData.PlayerIntDmg + " (" + infoData.PlayerIntNewDmg + ")";
                 text += "\n";
                 text += "\n" + "Position: " + infoData.PlayerPos;
                 text += "\n" + "Speed: " + infoData.PlayerSpeed;
                 text += "\n" + "Avg Speed: " + infoData.PlayerAvgSpeed;
-                text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.RespawnInfo)) {
-                text += "\n" + "Spawn Pos: " + infoData.PlayerRespawn;
+                text += spacer;
+                text += "Spawn Pos: " + infoData.PlayerRespawn;
                 text += "\n" + "Safe Pos: " + infoData.PlayerSafePos;
                 text += "\n" + "Scene Pos: " + infoData.SceneRespawn;
-                text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.AdvancedPlayerInfo)) {
-                text += "\n" + "Player State: " + infoData.playerState;
+                text += spacer;
+                text += "Player State: " + infoData.playerState;
                 text += "\n" + "Player Rope: " + infoData.PlayerRope;
                 if (infoData.PlayerRope) text += " (x: " + infoData.PlayerRopeX + ")";
 
@@ -134,36 +134,35 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
                 text += "\n";
                 text += "\n" + "Jump State: " + infoData.PlayerJumpState;
                 text += "\n" + "Jump Timer: " + infoData.PlayerJumpTimer;
-                text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.DamageInfo)) {
-                text += "\n" + "Tao Fruits: " + infoData.FruitCount;
-                text += "\n" + "Attack: " + infoData.AttackDamage + " | Tali: " + infoData.FooDamage;
                 text += spacer;
+                text += "Tao Fruits: " + infoData.FruitCount;
+                text += "\n" + "Attack: " + infoData.AttackDamage + " | Tali: " + infoData.FooDamage;
             }
 
             //if (showEnemyInfo) {
+            //    text += spacer;
             //    text += "Enemy HP: " + infoData.enemyHP + "/" + infoData.enemyMaxHP + "\n";
             //    text += "Total HP DMG: " + infoData.totalHPDamage + "\n";
             //    text += "Total INT DMG: " + infoData.totalINTDamage + "\n";
-            //    text += spacer;
             //}
 
             if (filter.Value.HasFlag(InfotextFilter.InteractableInfo)) {
-                text += "\n" + "Interactables: ";
+                text += spacer;
+                text += "Interactables: ";
                 if (infoData.Interactables.Count == 0) text += "None";
                 else {
                     foreach (var interactable in infoData.Interactables) {
                         if (interactable is not "") text += "\n" + "  " + interactable;
                     }
                 }
-
-                text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.DebugInfo)) {
-                text += "\n" + DebugInfo.GetInfoText();
+                text += spacer;
+                text += DebugInfo.GetInfoText();
             }
         } catch (Exception e) {
             Log.Error(e);

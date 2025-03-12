@@ -102,7 +102,7 @@ public class DebugModPlus : BaseUnityPlugin {
                 InfotextFilter.BasicPlayerInfo |
                 /*InfotextFilter.EnemyInfo |*/ InfotextFilter.AdvancedPlayerInfo |
                 InfotextFilter.InteractableInfo |
-                InfotextFilter.RespawnInfo | InfotextFilter.DebugInfo);
+                InfotextFilter.RespawnInfo);
 
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
             HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;

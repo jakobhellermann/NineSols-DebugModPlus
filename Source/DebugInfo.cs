@@ -35,9 +35,9 @@ public static class DebugInfo {
             foreach (var tween in tweens) {
                 text += $"- {tween}\n";
             }
-        }
 
-        text += "\n";
+            text += "\n";
+        }
 
         if (!ApplicationCore.IsAvailable()) return "Loading";
 
