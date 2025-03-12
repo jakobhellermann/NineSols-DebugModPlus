@@ -17,11 +17,13 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
         AdvancedPlayerInfo = 1 << 3,
         RespawnInfo = 1 << 4,
         DamageInfo = 1 << 5,
-        EnemyInfo = 1 << 6,
+
+        // EnemyInfo = 1 << 6,
         InteractableInfo = 1 << 7,
         DebugInfo = 1 << 8,
 
-        All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | EnemyInfo | InteractableInfo,
+        All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | /*EnemyInfo | */
+              InteractableInfo,
     }
 
     private static bool infotextActive = true;

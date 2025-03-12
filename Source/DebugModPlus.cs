@@ -98,8 +98,10 @@ public class DebugModPlus : BaseUnityPlugin {
 
             var configInfoTextFilter = Config.Bind("Info Text Panel",
                 "Show Info",
-                InfotextFilter.GameInfo | InfotextFilter.DamageInfo | InfotextFilter.BasicPlayerInfo |
-                InfotextFilter.EnemyInfo | InfotextFilter.AdvancedPlayerInfo | InfotextFilter.InteractableInfo |
+                InfotextFilter.GameInfo | InfotextFilter.DamageInfo |
+                InfotextFilter.BasicPlayerInfo |
+                /*InfotextFilter.EnemyInfo |*/ InfotextFilter.AdvancedPlayerInfo |
+                InfotextFilter.InteractableInfo |
                 InfotextFilter.RespawnInfo | InfotextFilter.DebugInfo);
 
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
