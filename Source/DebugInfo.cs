@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using DebugModPlus;
 using DebugModPlus.Modules;
+using DebugModPlus.Utils;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI.Utils;
@@ -222,7 +223,8 @@ public static class DebugInfo {
         }
 
         text += "Attack sensors:\n";
-        foreach (var attackSensor in monster.attackSensors) {
+
+        foreach (var attackSensor in monster.AttackSensorsCompat()) {
             var name = ReNumPrefix.Replace(attackSensor.name, "");
 
             if (!attackSensor.gameObject.activeInHierarchy) {
