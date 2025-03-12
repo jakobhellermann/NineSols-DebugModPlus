@@ -91,6 +91,9 @@ public class DebugModPlus : BaseUnityPlugin {
             var configSavestateFilter = Config.Bind("Savestates",
                 "Savestate filter",
                 SavestateFilter.Flags | SavestateFilter.Player);
+            var configSavestateLoadMode = Config.Bind("Savestates",
+                "Savestate load mode",
+                SavestateLoadMode.None);
 
             var configInfoTextFilter = Config.Bind("Info Text Panel", "Show Info",
                 InfotextModule.InfotextFilter.GameInfo | InfotextModule.InfotextFilter.DamageInfo | InfotextModule.InfotextFilter.BasicPlayerInfo |
