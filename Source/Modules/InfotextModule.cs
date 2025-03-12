@@ -176,8 +176,7 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
     public void OnGui() {
         if (!infotextActive) return;
 
-        style ??= new GUIStyle(GUI.skin.label) { fontSize = 20, wordWrap = false };
-        styleBox ??= new GUIStyle(GUI.skin.box) {
+        style ??= new GUIStyle(GUI.skin.box) {
             fontSize = 20,
             wordWrap = false,
             alignment = TextAnchor.UpperLeft,
@@ -185,18 +184,11 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
             // normal = { background = TextureUtils.GetColorTexture(new Color(0, 0, 0, 0)) },
         };
 
-        const int itemHeight = 24;
-        var visibleLines = debugCanvasInfoText.Count(c => c == '\n');
-        var boxHeight = (visibleLines + 1) * itemHeight;
-
-        const int boxWidth = 330;
-        var boxRect = new Rect(10, 10, boxWidth, boxHeight);
-
-        GUI.Box(boxRect, debugCanvasInfoText, styleBox);
+        var textSize = style.CalcSize(new GUIContent(debugCanvasInfoText));
+        GUI.Box(new Rect(10, 10, textSize.x, textSize.y), debugCanvasInfoText, style);
     }
 
     private GUIStyle? style;
-    private GUIStyle? styleBox;
 
     public void Destroy() {
         // UnityEngine.Object.Destroy(debugCanvasInfoText.gameObject);
