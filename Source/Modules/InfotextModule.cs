@@ -1,18 +1,10 @@
 using System;
-using NineSolsAPI;
 using TAS;
-using TMPro;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using System.Reflection;
-using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
 using HarmonyLib;
-using NineSolsAPI.Utils;
-using UnityEngine.UIElements;
 using BepInEx.Configuration;
-using DebugModPlus.Savestates;
 
 namespace DebugModPlus.Modules;
 
@@ -29,10 +21,9 @@ public class InfotextModule {
         InteractableInfo = 1 << 7,
         DebugInfo = 1 << 8,
 
-        All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | EnemyInfo | InteractableInfo
+        All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | EnemyInfo | InteractableInfo,
     }
 
-    private static InfotextFilter defaultFilter = InfotextFilter.All;
     private static bool infotextActive = false;
     private static ConfigEntry<InfotextFilter> filter;
     private string debugCanvasInfoText = "";
@@ -43,6 +34,7 @@ public class InfotextModule {
     public InfotextModule(ConfigEntry<InfotextFilter> currentFilter) {
         filter = currentFilter;
     }
+
     [BindableMethod(Name = "Toggle Infotext")]
     private static void ToggleInfoText() {
         infotextActive = !infotextActive;
@@ -56,19 +48,15 @@ public class InfotextModule {
             if (!SingletonBehaviour<GameCore>.IsAvailable()) {
                 text += "\nMainMenu";
                 text += PlayerInputBinder.Instance.currentStateType.ToString();
-            }
-
-            else if ((RCGTime.timeScale > 0) || UIManager.Instance.PausePanelUI.isActiveAndEnabled) {
+            } else if (RCGTime.timeScale > 0 || UIManager.Instance.PausePanelUI.isActiveAndEnabled) {
                 text = UpdateInfoText();
-            }
-
-            else return;
+            } else return;
         }
+
         debugCanvasInfoText = text;
     }
 
-    
-        
+
     private string UpdateInfoText() {
         /* [Debug v0.0.0]
          * -------------------------------
@@ -78,7 +66,7 @@ public class InfotextModule {
          * -------------------------------
          * HP:         80/120 (10)
          * Int DMG:    30 (10)
-         * 
+         *
          * Position:  (1232.32, 12424.12)
          * Speed: (120, 0) Avg: (120, 40)
          * -------------------------------
@@ -91,7 +79,7 @@ public class InfotextModule {
          * Player Ledge:  True
          * Player Wall:   True
          * Player Kicked: True
-         * 
+         *
          * Jump State: Jumping
          * Jump Timer: 1.24s
          * -------------------------------
@@ -105,7 +93,7 @@ public class InfotextModule {
          * Interactables:
          *    Door
          *    Chest
-         * 
+         *
          */
         var text = "";
         try {
@@ -113,50 +101,51 @@ public class InfotextModule {
             const string spacer = "\n----------------------------------------------";
 
             var infoData = new GameInfo();
-            if (infoData.errorText is not null) text += "\n" + infoData.errorText;
+            if (infoData.ErrorText is not null) text += "\n" + infoData.ErrorText;
             text += spacer;
 
             if (filter.Value.HasFlag(InfotextFilter.GameInfo)) {
-                text += "\n" + infoData.gameLevel;
-                text += "\n" + "Game State: " + infoData.coreState;
-                text += "\n" + "Cutscene: " + infoData.cutscene;
+                text += "\n" + infoData.GameLevel;
+                text += "\n" + "Game State: " + infoData.CoreState;
+                text += "\n" + "Cutscene: " + infoData.Cutscene;
                 text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.BasicPlayerInfo)) {
-                text += "\n" + "HP: " + infoData.playerHP + "/" + infoData.playerMaxHP + " (" + infoData.playerLostHP + ")";
-                text += "\n" + "Int Dmg: " + infoData.playerIntDmg + " (" + infoData.playerIntNewDmg + ")";
+                text += "\n" + "HP: " + infoData.PlayerHp + "/" + infoData.PlayerMaxHp + " (" + infoData.PlayerLostHp +
+                        ")";
+                text += "\n" + "Int Dmg: " + infoData.PlayerIntDmg + " (" + infoData.PlayerIntNewDmg + ")";
                 text += "\n";
-                text += "\n" + "Position: " + infoData.playerPos;
-                text += "\n" + "Speed: " + infoData.playerSpeed;
-                text += "\n" + "Avg Speed: " + infoData.playerAvgSpeed;
+                text += "\n" + "Position: " + infoData.PlayerPos;
+                text += "\n" + "Speed: " + infoData.PlayerSpeed;
+                text += "\n" + "Avg Speed: " + infoData.PlayerAvgSpeed;
                 text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.RespawnInfo)) {
-                text += "\n" + "Spawn Pos: " + infoData.playerRespawn;
-                text += "\n" + "Safe Pos: " + infoData.playerSafePos;
-                text += "\n" + "Scene Pos: " + infoData.sceneRespawn;
+                text += "\n" + "Spawn Pos: " + infoData.PlayerRespawn;
+                text += "\n" + "Safe Pos: " + infoData.PlayerSafePos;
+                text += "\n" + "Scene Pos: " + infoData.SceneRespawn;
                 text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.AdvancedPlayerInfo)) {
                 text += "\n" + "Player State: " + infoData.playerState;
-                text += "\n" + "Player Rope: " + infoData.playerRope;
-                if (infoData.playerRope) text += " (x: " + infoData.playerRopeX + ")";
+                text += "\n" + "Player Rope: " + infoData.PlayerRope;
+                if (infoData.PlayerRope) text += " (x: " + infoData.PlayerRopeX + ")";
 
-                text += "\n" + "Player Ledge: " + infoData.playerLedge;
-                text += "\n" + "Player Wall: " + infoData.playerWall;
-                text += "\n" + "Player Kicked: " + infoData.playerKicked;
+                text += "\n" + "Player Ledge: " + infoData.PlayerLedge;
+                text += "\n" + "Player Wall: " + infoData.PlayerWall;
+                text += "\n" + "Player Kicked: " + infoData.PlayerKicked;
                 text += "\n";
-                text += "\n" + "Jump State: " + infoData.playerJumpState;
-                text += "\n" + "Jump Timer: " + infoData.playerJumpTimer;
+                text += "\n" + "Jump State: " + infoData.PlayerJumpState;
+                text += "\n" + "Jump Timer: " + infoData.PlayerJumpTimer;
                 text += spacer;
             }
 
             if (filter.Value.HasFlag(InfotextFilter.DamageInfo)) {
-                text += "\n" + "Tao Fruits: " + infoData.fruitCount;
-                text += "\n" + "Attack: " + infoData.attackDamage + " | Tali: " + infoData.fooDamage;
+                text += "\n" + "Tao Fruits: " + infoData.FruitCount;
+                text += "\n" + "Attack: " + infoData.AttackDamage + " | Tali: " + infoData.FooDamage;
                 text += spacer;
             }
 
@@ -169,22 +158,22 @@ public class InfotextModule {
 
             if (filter.Value.HasFlag(InfotextFilter.InteractableInfo)) {
                 text += "\n" + "Interactables: ";
-                if (infoData.interactables.Count == 0) text += "None";
+                if (infoData.Interactables.Count == 0) text += "None";
                 else {
-                    foreach (string interactable in infoData.interactables) {
+                    foreach (var interactable in infoData.Interactables) {
                         if (interactable is not "") text += "\n" + "  " + interactable;
                     }
                 }
+
                 text += spacer;
             }
-            
+
             if (filter.Value.HasFlag(InfotextFilter.DebugInfo)) {
                 text += "\n" + DebugInfo.GetInfoText();
             }
-            
+        } catch (Exception e) {
+            Log.Error(e);
         }
-
-        catch (Exception e) {Log.Error(e); }
 
         return text;
     }
@@ -205,8 +194,8 @@ public class InfotextModule {
 
             var boxRect = new Rect(10, 10, boxWidth, boxHeight);
 
-            Color oldColor = GUI.contentColor;
-            bool oldWrap = GUI.skin.box.wordWrap;
+            var oldColor = GUI.contentColor;
+            var oldWrap = GUI.skin.box.wordWrap;
             GUI.contentColor = Color.white;
             GUI.skin.box.wordWrap = false;
             GUI.skin.box.fontSize = 20;

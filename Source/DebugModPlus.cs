@@ -12,6 +12,7 @@ using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
 using UnityEngine;
+using static DebugModPlus.Modules.InfotextModule;
 
 namespace DebugModPlus;
 
@@ -95,10 +96,11 @@ public class DebugModPlus : BaseUnityPlugin {
                 "Savestate load mode",
                 SavestateLoadMode.None);
 
-            var configInfoTextFilter = Config.Bind("Info Text Panel", "Show Info",
-                InfotextModule.InfotextFilter.GameInfo | InfotextModule.InfotextFilter.DamageInfo | InfotextModule.InfotextFilter.BasicPlayerInfo |
-                InfotextModule.InfotextFilter.EnemyInfo | InfotextModule.InfotextFilter.AdvancedPlayerInfo | InfotextModule.InfotextFilter.InteractableInfo |
-                InfotextModule.InfotextFilter.RespawnInfo | InfotextModule.InfotextFilter.DebugInfo);
+            var configInfoTextFilter = Config.Bind("Info Text Panel",
+                "Show Info",
+                InfotextFilter.GameInfo | InfotextFilter.DamageInfo | InfotextFilter.BasicPlayerInfo |
+                InfotextFilter.EnemyInfo | InfotextFilter.AdvancedPlayerInfo | InfotextFilter.InteractableInfo |
+                InfotextFilter.RespawnInfo | InfotextFilter.DebugInfo);
 
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
             HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;

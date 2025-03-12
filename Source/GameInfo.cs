@@ -1,204 +1,197 @@
 using System;
-using NineSolsAPI;
-using TAS;
-using TMPro;
 using UnityEngine;
-using Object = UnityEngine.Object;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using DebugModPlus;
-using HarmonyLib;
-using NineSolsAPI.Utils;
-using UnityEngine.UIElements;
-using BepInEx.Configuration;
-using DebugModPlus.Savestates;
 
-namespace DebugModPlus
-{
-    public class GameInfo {
-        private static float statsLastHP = 0;
-        private static float statsLastIntDmg = 0;
-        private static Vector2 statsLastPos = Vector2.zero;
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
-        private static MovingAverage averagePlayerX = new MovingAverage();
-        private static MovingAverage averagePlayerY = new MovingAverage();
+namespace DebugModPlus;
 
-        private float playerLastHP = statsLastHP;
-        private float playerLastIntDmg = statsLastIntDmg;
+public class GameInfo {
+    private static float statsLastHP = 0;
+    private static float statsLastIntDmg = 0;
+    private static Vector2 statsLastPos = Vector2.zero;
 
-        public string? errorText = null;
+    private static MovingAverage averagePlayerX = new();
+    private static MovingAverage averagePlayerY = new();
 
-        public string gameLevel = "";
-        public string coreState = "";
-        public string cutscene = "";
+    private float playerLastHP = statsLastHP;
+    private float playerLastIntDmg = statsLastIntDmg;
 
-        public float playerHP;
-        public float playerLostHP;
-        public float playerMaxHP;
+    public string? ErrorText = null;
 
-        public float playerIntNewDmg;
-        public float playerIntDmg;
+    public string GameLevel = "";
+    public string CoreState = "";
+    public string Cutscene = "";
 
-        public Vector2 playerPos;
+    public float PlayerHp;
+    public float PlayerLostHp;
+    public float PlayerMaxHp;
 
-        public Vector2 playerSafePos;
-        public Vector2 sceneRespawn;
+    public float PlayerIntNewDmg;
+    public float PlayerIntDmg;
 
-        public Vector2 playerRespawn;
+    public Vector2 PlayerPos;
 
-        public Vector2 playerSpeed;
-        public Vector2 playerAvgSpeed;
+    public Vector2 PlayerSafePos;
+    public Vector2 SceneRespawn;
 
-        public string playerState = "";
+    public Vector2 PlayerRespawn;
 
-        public string playerJumpState = "";
-        public string playerJumpTimer = "";
+    public Vector2 PlayerSpeed;
+    public Vector2 PlayerAvgSpeed;
 
-        public bool playerRope;
-        public float playerRopeX;
-        public bool playerWall;
-        public bool playerLedge;
-        public bool playerKicked;
+    public string playerState = "";
 
-        public bool debugAutoHeal;
-        public bool debugInvincibility;
+    public string PlayerJumpState = "";
+    public string PlayerJumpTimer = "";
 
-        public float EnemyHP;
+    public bool PlayerRope;
+    public float PlayerRopeX;
+    public bool PlayerWall;
+    public bool PlayerLedge;
+    public bool PlayerKicked;
 
-        public float CummHPDmg;
-        public float CummIntDmg;
+    public bool DebugAutoHeal;
+    public bool DebugInvincibility;
 
-        public int fruitCount;
+    public float EnemyHP;
 
-        public int fruit;
-        public int greaterFruit;
-        public int twinFruit;
+    public float CummHPDmg;
+    public float CummIntDmg;
 
-        //add other damage here
-        public float attackDamage;
-        public float fooDamage;
+    public int FruitCount;
 
-        public List<string> interactables = new List<string>();
+    public int Fruit;
+    public int GreaterFruit;
+    public int TwinFruit;
 
-          public GameInfo() {
-            try {
-                if (!SingletonBehaviour<GameCore>.IsAvailable()) {
-                    return;
+    //add other damage here
+    public float AttackDamage;
+    public float FooDamage;
+
+    public List<string> Interactables = new();
+
+    public GameInfo() {
+        try {
+            if (!SingletonBehaviour<GameCore>.IsAvailable()) {
+                return;
+            }
+
+            var core = SingletonBehaviour<GameCore>.Instance;
+            var player = core.player;
+
+            if (player is null) {
+                Log.Error("Error during InfoText collection: player or core is null");
+                return;
+            }
+
+            GameLevel = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            CoreState = core.currentCoreState.ToString();
+            if (core.currentCutScene) Cutscene = core.currentCutScene.name;
+
+            var playerHealth = (PlayerHealth)player.GetHealth;
+            if (playerHealth is not null) {
+                PlayerMaxHp = playerHealth.maxHealth.Value;
+                PlayerHp = playerHealth.CurrentHealthValue;
+
+                if (PlayerHp != statsLastHP) {
+                    PlayerLostHp = PlayerHp - statsLastHP;
+                    statsLastHP = PlayerHp;
                 }
 
-                var core = SingletonBehaviour<GameCore>.Instance;
-                var player = core.player;
+                PlayerIntDmg = playerHealth.CurrentInternalInjury;
 
-                if (player is null || core is null) {
-                    Log.Error("Error during InfoText collection: player or core is null");
-                    return;
+                if (PlayerIntDmg != playerLastIntDmg) {
+                    PlayerIntNewDmg = PlayerIntDmg - playerLastIntDmg;
                 }
-                gameLevel = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                coreState = core.currentCoreState.ToString();
-                if (core.currentCutScene) cutscene = core.currentCutScene.name;
+            }
 
-                PlayerHealth playerHealth = (PlayerHealth)player.GetHealth;
-                if (playerHealth is not null) {
-                    playerMaxHP = playerHealth.maxHealth.Value;
-                    playerHP = playerHealth.CurrentHealthValue;
+            if (core.gameLevel) {
+                var nearestSpawnPoint = SingletonBehaviour<GameCore>.Instance.gameLevel.GetNearestSpawnPoint();
+                var spawnType = nearestSpawnPoint.Item1;
 
-                    if (playerHP != statsLastHP) {
-                        playerLostHP = playerHP - statsLastHP;
-                        statsLastHP = playerHP;
-                    }
+                PlayerPos = player.transform.position;
+                PlayerSafePos = player.lastSafeGroundPosition;
 
-                    playerIntDmg = playerHealth.CurrentInternalInjury;
-
-                    if (playerIntDmg != playerLastIntDmg) {
-                        playerIntNewDmg = playerIntDmg - playerLastIntDmg;
-                    }
-                }
-                if (core.gameLevel) {
-                    ValueTuple<PlayerSpawnPointManager.SpawnType, Vector3> nearestSpawnPoint = SingletonBehaviour<GameCore>.Instance.gameLevel.GetNearestSpawnPoint();
-                    PlayerSpawnPointManager.SpawnType spawnType = nearestSpawnPoint.Item1;
-
-                    playerPos = player.transform.position;
-                    playerSafePos = player.lastSafeGroundPosition;
-
-                    //the ingame logic for this lol, its hidden in a state, not sure if theres another way to do this more clearly
-                    playerRespawn = sceneRespawn = nearestSpawnPoint.Item2;
-                    if (spawnType == PlayerSpawnPointManager.SpawnType.None) {
-                        playerRespawn = playerSafePos;
-                    }
-                    else if (player.SafeGroundRecorder.LastSafeGroundPositionList.Count > 0 && (spawnType == PlayerSpawnPointManager.SpawnType.LastConnectionPoint || spawnType == PlayerSpawnPointManager.SpawnType.SavePoint)) {
-                        playerRespawn = playerSafePos;
-                    }
-                    else {
-                        Vector3 position2 = SingletonBehaviour<CameraManager>.Instance.cameraCore.theRealSceneCamera.transform.position;
-                        float num = Vector2.Distance(position2, sceneRespawn);
-                        if (Vector2.Distance(position2, playerSafePos) < num) {
-                            playerRespawn = playerSafePos;
-                        }
-                    }
-                }
-                playerSpeed = player.FinalVelocity;
-
-                //this is how kreon did it 
-                averagePlayerX.Sample((long)playerSpeed.x);
-                averagePlayerY.Sample((long)playerSpeed.y);
-                playerAvgSpeed = new Vector2(averagePlayerX.GetAverageFloat, averagePlayerY.GetAverageFloat);
-
-                playerState = player.CurrentState.name;
-
-                //touching rope because of rope storage, climbing rope only works while the player is on it
-                playerRope = player.touchingRope;
-                if (playerRope) playerRopeX = player.touchingRope.transform.position.x;
-                playerWall = player.isOnWall;
-                playerLedge = player.isOnLedge;
-                playerKicked = player.kicked;
-
-                playerJumpState = player.jumpState.ToString();
-
-                if (player.jumpState != Player.PlayerJumpState.None) {
-                    var varJumpTimer = player.currentVarJumpTimer;
-                    playerJumpTimer =
-                         (varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "");
-                }
-
-                //need to implement cheats
-                /*
-                debugAutoHeal;
-                debugInvincibility;
-                */
-
-                //need to implement hooks
-                /*
-                EnemyHP; 
-
-                CummHPDmg;       //hidden
-                CummIntDmg;      //hidden
-                */
-
-                fruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Tao Fruit")).ownNum.CurrentValue;
-                greaterFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Greater Tao Fruit")).ownNum.CurrentValue;
-                twinFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Twin Tao Fruit")).ownNum.CurrentValue;
-
-                fruitCount = fruit + greaterFruit + twinFruit;
-
-                attackDamage = player.normalAttackDealer.FinalValue;
-                fooDamage = player.fooEffectDealer.FinalValue;
-                //parry reflect
-                //charge parry
-
-                if (player.interactableFinder.CurrentInteractableArea is { } current) {
-                    foreach (var interaction in current.ValidInteractions) {
-                        interactables.Add(interaction.transform.parent.transform.parent.name);
+                //the ingame logic for this lol, its hidden in a state, not sure if theres another way to do this more clearly
+                PlayerRespawn = SceneRespawn = nearestSpawnPoint.Item2;
+                if (spawnType == PlayerSpawnPointManager.SpawnType.None) {
+                    PlayerRespawn = PlayerSafePos;
+                } else if (player.SafeGroundRecorder.LastSafeGroundPositionList.Count > 0 &&
+                           (spawnType == PlayerSpawnPointManager.SpawnType.LastConnectionPoint ||
+                            spawnType == PlayerSpawnPointManager.SpawnType.SavePoint)) {
+                    PlayerRespawn = PlayerSafePos;
+                } else {
+                    var position2 = SingletonBehaviour<CameraManager>.Instance.cameraCore.theRealSceneCamera.transform
+                        .position;
+                    var num = Vector2.Distance(position2, SceneRespawn);
+                    if (Vector2.Distance(position2, PlayerSafePos) < num) {
+                        PlayerRespawn = PlayerSafePos;
                     }
                 }
             }
 
-            catch (Exception ex) {
-                errorText = ex.ToString();
-                Log.Error(errorText);
+            PlayerSpeed = player.FinalVelocity;
+
+            //this is how kreon did it 
+            averagePlayerX.Sample((long)PlayerSpeed.x);
+            averagePlayerY.Sample((long)PlayerSpeed.y);
+            PlayerAvgSpeed = new Vector2(averagePlayerX.GetAverageFloat, averagePlayerY.GetAverageFloat);
+
+            playerState = player.CurrentState.name;
+
+            //touching rope because of rope storage, climbing rope only works while the player is on it
+            PlayerRope = player.touchingRope;
+            if (PlayerRope) PlayerRopeX = player.touchingRope.transform.position.x;
+            PlayerWall = player.isOnWall;
+            PlayerLedge = player.isOnLedge;
+            PlayerKicked = player.kicked;
+
+            PlayerJumpState = player.jumpState.ToString();
+
+            if (player.jumpState != Player.PlayerJumpState.None) {
+                var varJumpTimer = player.currentVarJumpTimer;
+                PlayerJumpTimer =
+                    varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "";
             }
+
+            //need to implement cheats
+            /*
+            debugAutoHeal;
+            debugInvincibility;
+            */
+
+            //need to implement hooks
+            /*
+            EnemyHP;
+
+            CummHPDmg;       //hidden
+            CummIntDmg;      //hidden
+            */
+
+            Fruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item =>
+                item is ItemData data && data.Title == "Tao Fruit")).ownNum.CurrentValue;
+            GreaterFruit =
+                ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item =>
+                    item is ItemData data && data.Title == "Greater Tao Fruit")).ownNum.CurrentValue;
+            TwinFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item =>
+                item is ItemData data && data.Title == "Twin Tao Fruit")).ownNum.CurrentValue;
+
+            FruitCount = Fruit + GreaterFruit + TwinFruit;
+
+            AttackDamage = player.normalAttackDealer.FinalValue;
+            FooDamage = player.fooEffectDealer.FinalValue;
+            //parry reflect
+            //charge parry
+
+            if (player.interactableFinder.CurrentInteractableArea is { } current) {
+                foreach (var interaction in current.ValidInteractions) {
+                    Interactables.Add(interaction.transform.parent.transform.parent.name);
+                }
+            }
+        } catch (Exception ex) {
+            ErrorText = ex.ToString();
+            Log.Error(ErrorText);
         }
     }
 }
