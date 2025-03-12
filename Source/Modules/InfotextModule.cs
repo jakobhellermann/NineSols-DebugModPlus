@@ -3,12 +3,12 @@ using TAS;
 using UnityEngine;
 using System.Reflection;
 using System.Linq;
-using HarmonyLib;
 using BepInEx.Configuration;
+using NineSolsAPI.Utils;
 
 namespace DebugModPlus.Modules;
 
-public class InfotextModule {
+public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
     [Flags]
     public enum InfotextFilter {
         None = 0,
@@ -24,16 +24,8 @@ public class InfotextModule {
         All = GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo | DamageInfo | EnemyInfo | InteractableInfo,
     }
 
-    private static bool infotextActive = false;
-    private static ConfigEntry<InfotextFilter> filter;
+    private static bool infotextActive = true;
     private string debugCanvasInfoText = "";
-
-    private AccessTools.FieldRef<Player, float> groundJumpReferenceY =
-        AccessTools.FieldRefAccess<Player, float>("GroundJumpRefrenceY");
-
-    public InfotextModule(ConfigEntry<InfotextFilter> currentFilter) {
-        filter = currentFilter;
-    }
 
     [BindableMethod(Name = "Toggle Infotext")]
     private static void ToggleInfoText() {
@@ -180,37 +172,31 @@ public class InfotextModule {
 
 
     public void OnGui() {
-        if (infotextActive) {
-            Log.Info("info text is drawing");
-            style ??= new GUIStyle(GUI.skin.label) { fontSize = 20, wordWrap = false };
-            styleBox ??= new GUIStyle(GUI.skin.box) { fontSize = 20 };
+        if (!infotextActive) return;
 
-            const int itemHeight = 24;
-            var visibleLines = debugCanvasInfoText.Count(c => c == '\n');
-            var boxHeight = (visibleLines + 1) * itemHeight;
+        style ??= new GUIStyle(GUI.skin.label) { fontSize = 20, wordWrap = false };
+        styleBox ??= new GUIStyle(GUI.skin.box) {
+            fontSize = 20,
+            wordWrap = false,
+            alignment = TextAnchor.UpperLeft,
+            fontStyle = FontStyle.Bold,
+            // normal = { background = TextureUtils.GetColorTexture(new Color(0, 0, 0, 0)) },
+        };
 
-            const int boxWidth = 330;
-            const int boxInset = 10;
+        const int itemHeight = 24;
+        var visibleLines = debugCanvasInfoText.Count(c => c == '\n');
+        var boxHeight = (visibleLines + 1) * itemHeight;
 
-            var boxRect = new Rect(10, 10, boxWidth, boxHeight);
+        const int boxWidth = 330;
+        var boxRect = new Rect(10, 10, boxWidth, boxHeight);
 
-            var oldColor = GUI.contentColor;
-            var oldWrap = GUI.skin.box.wordWrap;
-            GUI.contentColor = Color.white;
-            GUI.skin.box.wordWrap = false;
-            GUI.skin.box.fontSize = 20;
-            GUI.skin.box.fontStyle = FontStyle.Bold;
-            GUI.skin.box.alignment = TextAnchor.UpperLeft;
-            GUI.Box(boxRect, debugCanvasInfoText);
-            GUI.contentColor = oldColor;
-            GUI.skin.box.wordWrap = oldWrap;
-        }
+        GUI.Box(boxRect, debugCanvasInfoText, styleBox);
     }
 
     private GUIStyle? style;
     private GUIStyle? styleBox;
 
     public void Destroy() {
-        //UnityEngine.Object.Destroy(debugCanvasInfoText.gameObject);
+        // UnityEngine.Object.Destroy(debugCanvasInfoText.gameObject);
     }
 }
