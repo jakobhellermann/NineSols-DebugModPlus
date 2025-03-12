@@ -73,11 +73,11 @@ public class GameInfo {
 
     public GameInfo() {
         try {
-            if (!SingletonBehaviour<GameCore>.IsAvailable()) {
+            if (!GameCore.IsAvailable()) {
                 return;
             }
 
-            var core = SingletonBehaviour<GameCore>.Instance;
+            var core = GameCore.Instance;
             var player = core.player;
 
             if (player is null) {
