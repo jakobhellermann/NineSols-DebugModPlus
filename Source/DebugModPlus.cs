@@ -89,6 +89,9 @@ public class DebugModPlus : BaseUnityPlugin {
             var configSavestateFilter = Config.Bind("Savestates",
                 "Savestate filter",
                 SavestateFilter.Flags | SavestateFilter.Player);
+            var configSavestateLoadMode = Config.Bind("Savestates",
+                "Savestate load mode",
+                SavestateLoadMode.None);
 
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
             HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;
@@ -108,6 +111,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
             SavestateModule = new SavestateModule(
                 configSavestateFilter,
+                configSavestateLoadMode,
                 Config.Bind("Savestates",
                     "Save",
                     new KeyboardShortcut(KeyCode.KeypadPlus)

@@ -29,6 +29,13 @@ public enum SavestateFilter {
     All = Flags | Player | FSMs | Monsters,
 }
 
+[Flags]
+public enum SavestateLoadMode {
+    None = 0,
+    ResetScene = 1 << 0,
+    ReloadScene = 1 << 1,
+}
+
 public static class SavestateLogic {
     public static Savestate Create(SavestateFilter filter) {
         if (!GameCore.IsAvailable()) {
@@ -111,7 +118,7 @@ public static class SavestateLogic {
     }
 
 
-    public static async Task Load(Savestate savestate, bool forceReload = false) {
+    public static async Task Load(Savestate savestate, SavestateLoadMode loadMode) {
         if (!GameCore.IsAvailable()) {
             throw new Exception("Attempted to load savestate outside of scene");
         }
@@ -136,7 +143,7 @@ public static class SavestateLogic {
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
         if (savestate.Scene != null) {
-            if ((savestate.Scene != null && !isCurrentScene) || forceReload) {
+            if ((savestate.Scene != null && !isCurrentScene) || loadMode.HasFlag(SavestateLoadMode.ReloadScene)) {
                 if (savestate.PlayerPosition is not { } playerPosition) {
                     throw new Exception("Savestate with scene must have `playerPosition`");
                 }
@@ -159,7 +166,9 @@ public static class SavestateLogic {
             }
         }
 
-        GameCore.Instance.ResetLevel();
+        if (loadMode.HasFlag(SavestateLoadMode.ResetScene)) {
+            GameCore.Instance.ResetLevel();
+        }
 
         sw.Restart();
         if (savestate.MonobehaviourSnapshots != null) {

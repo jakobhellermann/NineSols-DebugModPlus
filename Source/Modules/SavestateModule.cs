@@ -13,6 +13,7 @@ namespace DebugModPlus.Modules;
 
 public class SavestateModule(
     ConfigEntry<SavestateFilter> currentFilter,
+    ConfigEntry<SavestateLoadMode> loadMode,
     ConfigEntry<KeyboardShortcut> openSave,
     ConfigEntry<KeyboardShortcut> openLoad,
     ConfigEntry<KeyboardShortcut> openDelete,
@@ -91,7 +92,7 @@ public class SavestateModule(
                 await UniTask.DelayFrame(10);
             }
 
-            await SavestateLogic.Load(savestate);
+            await SavestateLogic.Load(savestate, loadMode.Value);
             SavestateLoaded?.Invoke(this, EventArgs.Empty);
             return true;
         } catch (Exception e) {
