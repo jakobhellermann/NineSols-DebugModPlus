@@ -19,6 +19,7 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
         // EnemyInfo = 1 << 6,
         InteractableInfo = 1 << 7,
         DebugInfo = 1 << 8,
+        DebugInfoEnemies = 1 << 9,
 
         All = 0x10000000 | GameInfo | BasicPlayerInfo | AdvancedPlayerInfo | RespawnInfo |
               DamageInfo | /*EnemyInfo | */
@@ -39,7 +40,7 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
         var text = "";
         if (infotextActive) {
             if (!SingletonBehaviour<GameCore>.IsAvailable()) {
-                text += "\nMainMenu";
+                text += "MainMenu ";
                 text += PlayerInputBinder.Instance.currentStateType.ToString();
             } else if (RCGTime.timeScale > 0 || UIManager.Instance.PausePanelUI.isActiveAndEnabled) {
                 text = UpdateInfoText();
@@ -163,6 +164,11 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
             if (filter.Value.HasFlag(InfotextFilter.DebugInfo)) {
                 text += spacer;
                 text += DebugInfo.GetInfoText();
+            }
+
+            if (filter.Value.HasFlag(InfotextFilter.DebugInfoEnemies)) {
+                text += spacer;
+                text += DebugInfo.GetMonsterInfotext();
             }
         } catch (Exception e) {
             Log.Error(e);
