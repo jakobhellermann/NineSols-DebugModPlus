@@ -4,3 +4,4 @@
 /thunderstore/build
 obj
 bin
+*.TMP

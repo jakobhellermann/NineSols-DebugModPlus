@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using DebugModPlus.Modules;
 using DebugModPlus.Modules.Hitbox;
 using DebugModPlus.Savestates;
+using Dialogue;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -23,7 +25,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
     private Harmony harmony = null!;
 
-    private InfotextModule infotextModule = new();
+    private InfotextModule InfotextModule = null!;
     public HitboxModule HitboxModule = null!;
     public SavestateModule SavestateModule = null!;
 
@@ -93,6 +95,11 @@ public class DebugModPlus : BaseUnityPlugin {
                 "Savestate load mode",
                 SavestateLoadMode.None);
 
+            var configInfoTextFilter = Config.Bind("Info Text Panel", "Show Info",
+                InfotextModule.InfotextFilter.GameInfo | InfotextModule.InfotextFilter.DamageInfo | InfotextModule.InfotextFilter.BasicPlayerInfo |
+                InfotextModule.InfotextFilter.EnemyInfo | InfotextModule.InfotextFilter.AdvancedPlayerInfo | InfotextModule.InfotextFilter.InteractableInfo |
+                InfotextModule.InfotextFilter.RespawnInfo | InfotextModule.InfotextFilter.DebugInfo);
+
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
             HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;
 
@@ -108,7 +115,7 @@ public class DebugModPlus : BaseUnityPlugin {
             };
 
             // module initialization
-
+            InfotextModule = new InfotextModule(configInfoTextFilter);
             SavestateModule = new SavestateModule(
                 configSavestateFilter,
                 configSavestateLoadMode,
@@ -153,7 +160,6 @@ public class DebugModPlus : BaseUnityPlugin {
             KeybindManager.Add(this,
                 () => SpeedrunTimerModule.ClearCheckpoints(),
                 () => clearCheckpointsShortcut.Value);
-
             // var recordGhost = Config.Bind("SpeedrunTimer", "Record Ghost", false);
             // KeybindManager.Add(this, () => GhostModule.ToggleRecording(), KeyCode.P);
             // KeybindManager.Add(this, () => GhostModule.Playback(GhostModule.CurrentRecording), KeyCode.O);
@@ -204,7 +210,7 @@ public class DebugModPlus : BaseUnityPlugin {
 
         FreecamModule.Update();
         MapTeleportModule.Update();
-        infotextModule.Update();
+        InfotextModule.Update();
         SavestateModule.Update();
 
         var didCreate = false;
@@ -311,6 +317,12 @@ public class DebugModPlus : BaseUnityPlugin {
         } catch (Exception e) {
             Log.Error($"Error in SavestateModule: {e}");
         }
+
+        try {
+            InfotextModule.OnGui();
+        } catch (Exception e) {
+            Log.Error($"Error in InfotextModule: {e}");
+        }
     }
 
 
@@ -320,7 +332,7 @@ public class DebugModPlus : BaseUnityPlugin {
         harmony?.UnpatchSelf();
         GhostModule?.Unload();
         SpeedrunTimerModule?.Destroy();
-        infotextModule?.Destroy();
+        InfotextModule?.Destroy();
 
         if (HitboxModule?.gameObject) {
             Destroy(HitboxModule.gameObject);

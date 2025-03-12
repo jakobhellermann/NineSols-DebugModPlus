@@ -140,6 +140,9 @@ public static class SavestateLogic {
             SaveManager.Instance.allFlags.AllFlagInitStartAndEquip();
         }
 
+        //Close dialogue
+        if(DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
+
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
         if (savestate.Scene != null) {

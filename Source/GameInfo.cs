@@ -1,324 +1,204 @@
-﻿using System;
-using System.Collections;
+using System;
+using NineSolsAPI;
+using TAS;
+using TMPro;
+using UnityEngine;
+using Object = UnityEngine.Object;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using DebugModPlus;
-using DebugModPlus.Modules;
 using HarmonyLib;
-using MonsterLove.StateMachine;
 using NineSolsAPI.Utils;
-using PrimeTween;
-using UnityEngine;
+using UnityEngine.UIElements;
+using BepInEx.Configuration;
+using DebugModPlus.Savestates;
 
-namespace TAS;
+namespace DebugModPlus
+{
+    public class GameInfo {
+        private static float statsLastHP = 0;
+        private static float statsLastIntDmg = 0;
+        private static Vector2 statsLastPos = Vector2.zero;
 
-public static class GameInfo {
-    private const bool ShowClipInfo = true;
+        private static MovingAverage averagePlayerX = new MovingAverage();
+        private static MovingAverage averagePlayerY = new MovingAverage();
 
-    [Flags]
-    public enum InfotextFilter {
-        Base = 0,
-        RapidlyChanging = 1 << 0,
-        Tweens = 1 << 1,
-    }
+        private float playerLastHP = statsLastHP;
+        private float playerLastIntDmg = statsLastIntDmg;
 
-    public static string GetInfoText(InfotextFilter filter = InfotextFilter.Base) {
-        var text = "";
+        public string? errorText = null;
 
-        if ((filter & InfotextFilter.Tweens) != 0) {
-            text += "Tweens:\n";
-            var ty = typeof(Tween).Assembly.GetType("PrimeTween.PrimeTweenManager");
-            var instance = ty.GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-            var tweens = instance.AccessField<IList>("tweens");
-            foreach (var tween in tweens) {
-                text += $"- {tween}\n";
-            }
-        }
+        public string gameLevel = "";
+        public string coreState = "";
+        public string cutscene = "";
 
-        text += "\n";
+        public float playerHP;
+        public float playerLostHP;
+        public float playerMaxHP;
 
-        if (!ApplicationCore.IsAvailable()) return "Loading";
+        public float playerIntNewDmg;
+        public float playerIntDmg;
 
-        if (!GameCore.IsAvailable()) {
-            text += "MainMenu\n";
-            text += PlayerInputBinder.Instance.currentStateType.ToString();
-            return text;
-        }
+        public Vector2 playerPos;
 
-        var core = GameCore.Instance;
+        public Vector2 playerSafePos;
+        public Vector2 sceneRespawn;
 
-        if (core.currentCoreState != GameCore.GameCoreState.Playing) {
-            var coreState = typeof(GameCore.GameCoreState).GetEnumName(core.currentCoreState);
-            text += $"{coreState}\n";
-        }
+        public Vector2 playerRespawn;
 
-        var player = core.player;
-        if (player) {
-            text += $"Pos: {(Vector2)player.transform.position}\n";
-            text += $"Speed: {player.FinalVelocity}\n";
-            text += $"HP: {player.health.CurrentHealthValue:0.00} (+{player.health.CurrentInternalInjury:0.00})\n";
-            var state = typeof(PlayerStateType).GetEnumName(player.fsm.State);
-            var inputState = player.playerInput.fsm.State;
-            text += $"State: {state} {(inputState == PlayerInputStateType.Action ? "" : inputState.ToString())}\n";
+        public Vector2 playerSpeed;
+        public Vector2 playerAvgSpeed;
 
-            (bool, string)[] flags = [
-                (player.isOnWall, "Wall"),
-                (player.isOnLedge, "Ledge"),
-                (player.isOnRope, "Rope"),
-                (player.kicked, "Kicked"),
-                (player.onGround, "OnGround"),
-                (player.interactableFinder.CurrentInteractableArea, "CanInteract"),
-                (player.rollCooldownTimer <= 0, "CanDash"),
-                (player.airJumpCount > 0, "AirJumping"),
-            ];
-            (float, string)[] timers = [
-                (player.rollCooldownTimer, "DashCD"),
-                (player.jumpGraceTimer, "Coyote"),
-            ];
-            text += Flags(flags, timers);
+        public string playerState = "";
 
-            if (player.jumpState != Player.PlayerJumpState.None) {
-                var varJumpTimer = player.currentVarJumpTimer;
-                var groundReference = player.AccessField<float>("GroundJumpRefrenceY");
-                var height = player.transform.position.y - groundReference;
-                text +=
-                    $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height:0.00}\n";
-            } else text += "\n";
+        public string playerJumpState = "";
+        public string playerJumpTimer = "";
 
-            text += AnimationText(player.animator, filter.HasFlag(InfotextFilter.RapidlyChanging));
-        }
+        public bool playerRope;
+        public float playerRopeX;
+        public bool playerWall;
+        public bool playerLedge;
+        public bool playerKicked;
 
-        var playerNymphState =
-            (PlayerHackDroneControlState)player.fsm.FindMappingState(PlayerStateType.HackDroneControl);
-        var nymph = playerNymphState.hackDrone;
+        public bool debugAutoHeal;
+        public bool debugInvincibility;
 
-        if (nymph.fsm != null && nymph.fsm.State != HackDrone.DroneStateType.Init) {
-            text += $"\nNymph {nymph.fsm.State}\n";
-            text += $"  Position: {(Vector2)nymph.transform.position}\n";
-            text += $"  Speed: {(Vector2)nymph.droneVel}\n";
-            text += "  " + Flags([
-                    (nymph.AccessField<bool>("isDashCD"), "DashCD"),
-                    (nymph.AccessField<bool>("isOutOfRange"), "OutOfRange"),
-                ],
-                [
-                    (nymph.AccessField<float>("OutOfRangeTimer"), "OutOfRange"),
-                ],
-                " "
-            );
-            text += AnimationText(nymph.animator, filter.HasFlag(InfotextFilter.RapidlyChanging)) + "\n";
-        }
+        public float EnemyHP;
 
-        var currentLevel = core.gameLevel;
-        if (currentLevel) {
-            text += $"[{currentLevel.SceneName}] ({currentLevel.BlockCountX}x{currentLevel.BlockCountY})";
-            if (filter.HasFlag(InfotextFilter.RapidlyChanging)) {
-                text += $" dt={Time.deltaTime:0.00000000}\n";
-            }
+        public float CummHPDmg;
+        public float CummIntDmg;
 
-            text += "\n";
-        }
+        public int fruitCount;
 
-        if (core.currentCutScene) text += $"{core.currentCutScene}";
+        public int fruit;
+        public int greaterFruit;
+        public int twinFruit;
 
-        return text;
-    }
+        //add other damage here
+        public float attackDamage;
+        public float fooDamage;
 
-    private static string Flags(IEnumerable<(bool, string)> flags, IEnumerable<(float, string)> timers,
-        string sep = "\n") {
-        var flagsStr = flags.Where(x => x.Item1).Join(x => x.Item2, " ");
-        var timersStr = timers.Where(x => x.Item1 > 0).Join(x => $"{x.Item2}({x.Item1:0.000})", " ");
+        public List<string> interactables = new List<string>();
 
-        return $"{flagsStr}{sep}{timersStr}\n";
-    }
+          public GameInfo() {
+            try {
+                if (!SingletonBehaviour<GameCore>.IsAvailable()) {
+                    return;
+                }
 
-    private static string AnimationText(Animator animator, bool includeRapidlyChanging) {
-        var animInfo = animator.GetCurrentAnimatorStateInfo(0);
-        var animName = animator.ResolveHash(animInfo.m_Name);
-        var text = $"Animation {animName}";
-        if (includeRapidlyChanging) {
-            text += $" {animInfo.normalizedTime % 1 * 100:00.0}%";
-        }
+                var core = SingletonBehaviour<GameCore>.Instance;
+                var player = core.player;
 
-        return $"{text}\n";
-    }
+                if (player is null || core is null) {
+                    Log.Error("Error during InfoText collection: player or core is null");
+                    return;
+                }
+                gameLevel = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                coreState = core.currentCoreState.ToString();
+                if (core.currentCutScene) cutscene = core.currentCutScene.name;
 
-    public static string GetMonsterInfotext() {
-        var text = "";
-        foreach (var monster in MonsterManager.Instance.monsterDict.Values) {
-            if (!monster.isActiveAndEnabled) continue;
+                PlayerHealth playerHealth = (PlayerHealth)player.GetHealth;
+                if (playerHealth is not null) {
+                    playerMaxHP = playerHealth.maxHealth.Value;
+                    playerHP = playerHealth.CurrentHealthValue;
 
-            text += GetMonsterInfotext(monster) + "\n";
-        }
+                    if (playerHP != statsLastHP) {
+                        playerLostHP = playerHP - statsLastHP;
+                        statsLastHP = playerHP;
+                    }
 
-        return text;
-    }
+                    playerIntDmg = playerHealth.CurrentInternalInjury;
 
-    public static string GetMonsterInfotext(MonsterBase monster) {
-        var text = "";
-        text += MonsterName(monster) + "\n";
+                    if (playerIntDmg != playerLastIntDmg) {
+                        playerIntNewDmg = playerIntDmg - playerLastIntDmg;
+                    }
+                }
+                if (core.gameLevel) {
+                    ValueTuple<PlayerSpawnPointManager.SpawnType, Vector3> nearestSpawnPoint = SingletonBehaviour<GameCore>.Instance.gameLevel.GetNearestSpawnPoint();
+                    PlayerSpawnPointManager.SpawnType spawnType = nearestSpawnPoint.Item1;
 
-        text += $"Pos: {(Vector2)monster.transform.position}\n";
-        text += $"Speed: {(Vector2)monster.Velocity} + {(Vector2)monster.AnimationVelocity}\n";
-        text += $"HP: {monster.health.currentValue:0.00}\n";
+                    playerPos = player.transform.position;
+                    playerSafePos = player.lastSafeGroundPosition;
 
+                    //the ingame logic for this lol, its hidden in a state, not sure if theres another way to do this more clearly
+                    playerRespawn = sceneRespawn = nearestSpawnPoint.Item2;
+                    if (spawnType == PlayerSpawnPointManager.SpawnType.None) {
+                        playerRespawn = playerSafePos;
+                    }
+                    else if (player.SafeGroundRecorder.LastSafeGroundPositionList.Count > 0 && (spawnType == PlayerSpawnPointManager.SpawnType.LastConnectionPoint || spawnType == PlayerSpawnPointManager.SpawnType.SavePoint)) {
+                        playerRespawn = playerSafePos;
+                    }
+                    else {
+                        Vector3 position2 = SingletonBehaviour<CameraManager>.Instance.cameraCore.theRealSceneCamera.transform.position;
+                        float num = Vector2.Distance(position2, sceneRespawn);
+                        if (Vector2.Distance(position2, playerSafePos) < num) {
+                            playerRespawn = playerSafePos;
+                        }
+                    }
+                }
+                playerSpeed = player.FinalVelocity;
 
-        var core = monster.monsterCore;
+                //this is how kreon did it 
+                averagePlayerX.Sample((long)playerSpeed.x);
+                averagePlayerY.Sample((long)playerSpeed.y);
+                playerAvgSpeed = new Vector2(averagePlayerX.GetAverageFloat, averagePlayerY.GetAverageFloat);
 
-        if (core.attackSequenceMoodule.getCurrentSequence() is not null) {
-            text += "TODO: attack sequence\n";
-        }
+                playerState = player.CurrentState.name;
 
-        if (monster.fsm == null) {
-            text += $"FSM is null?\n";
-            return text;
-        }
+                //touching rope because of rope storage, climbing rope only works while the player is on it
+                playerRope = player.touchingRope;
+                if (playerRope) playerRopeX = player.touchingRope.transform.position.x;
+                playerWall = player.isOnWall;
+                playerLedge = player.isOnLedge;
+                playerKicked = player.kicked;
 
-        var state = monster.fsm.FindMappingState(monster.fsm.State);
+                playerJumpState = player.jumpState.ToString();
 
-        var animInfo = monster.animator.GetCurrentAnimatorStateInfo(0);
-        text += $"State: {FsmStateName(state)}";
-        text += $" {animInfo.normalizedTime % 1 * 100:00}%";
-        text += "\n";
+                if (player.jumpState != Player.PlayerJumpState.None) {
+                    var varJumpTimer = player.currentVarJumpTimer;
+                    playerJumpTimer =
+                         (varJumpTimer > 0 ? varJumpTimer.ToString("0.00") : "");
+                }
 
-        if (state is BossGeneralState bgs) {
-            if (bgs.attackQueue) {
-                text += "AttackQueue:\n";
-                foreach (var attack in bgs.attackQueue.QueuedAttacks) {
-                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
+                //need to implement cheats
+                /*
+                debugAutoHeal;
+                debugInvincibility;
+                */
+
+                //need to implement hooks
+                /*
+                EnemyHP; 
+
+                CummHPDmg;       //hidden
+                CummIntDmg;      //hidden
+                */
+
+                fruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Tao Fruit")).ownNum.CurrentValue;
+                greaterFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Greater Tao Fruit")).ownNum.CurrentValue;
+                twinFruit = ((ItemData)GameConfig.Instance.allGameFlags.Flags.Find(item => item is ItemData data && data.Title == "Twin Tao Fruit")).ownNum.CurrentValue;
+
+                fruitCount = fruit + greaterFruit + twinFruit;
+
+                attackDamage = player.normalAttackDealer.FinalValue;
+                fooDamage = player.fooEffectDealer.FinalValue;
+                //parry reflect
+                //charge parry
+
+                if (player.interactableFinder.CurrentInteractableArea is { } current) {
+                    foreach (var interaction in current.ValidInteractions) {
+                        interactables.Add(interaction.transform.parent.transform.parent.name);
+                    }
                 }
             }
 
-            text += "Queue:\n";
-            foreach (var attack in bgs.QueuedAttacks) {
-                text += $"- {FsmStateName(monster.fsm, attack)}\n";
-            }
-
-            if (bgs.clip != null && ShowClipInfo) {
-                text += "Clip:\n";
-                text += $"- {animInfo.normalizedTime:0.00}\n";
-                foreach (var clip in bgs.clip.events) {
-                    var e = (AnimationEvents.AnimationEvent)clip.intParameter;
-                    text += $"- {clip.time:0.00}: {e}\n";
-                }
+            catch (Exception ex) {
+                errorText = ex.ToString();
+                Log.Error(errorText);
             }
         }
-
-        var hurtInterrupt = monster.HurtInterrupt;
-        if (hurtInterrupt.isActiveAndEnabled) {
-            var th = hurtInterrupt.AccessField<float>("AccumulateDamageTh");
-            if (th > 0) {
-                text +=
-                    $"Hurt Interrupt: {hurtInterrupt.currentAccumulateDamage / monster.postureSystem.FullPostureValue:0.00} > {th}\n";
-            }
-        }
-
-        var canCrit = (bool)typeof(MonsterBase)
-            .GetMethod("MonsterStatCanCriticalHit", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(monster, []);
-        if (canCrit) {
-            // if (monster.IsEngaging) text += "IsEngaging\n";
-        }
-
-        text += "Attack sensors:\n";
-        foreach (var attackSensor in monster.attackSensors) {
-            var name = ReNumPrefix.Replace(attackSensor.name, "");
-
-            if (!attackSensor.gameObject.activeInHierarchy) {
-                continue;
-            }
-
-            if (!attackSensor.isActiveAndEnabled) {
-                continue;
-            }
-
-            text += $"  {name}({attackSensor.BindindAttack})";
-            var typeName = attackSensor.forStateType switch {
-                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic => "EARP",
-                _ => attackSensor.forStateType.ToString(),
-            };
-            text += $" {typeName}:";
-
-
-            var currentState = monster.CurrentState;
-            var stateCheck = attackSensor.forStateType == AttackSensorForStateType.AllValid ||
-                             (!(attackSensor.forStateType ==
-                                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic &&
-                                currentState is not (MonsterBase.States.RunAway or MonsterBase.States.Panic
-                                    or MonsterBase.States.OutOfReach or MonsterBase.States.LookingAround
-                                    or MonsterBase.States.Engaging or MonsterBase.States.PreAttack)) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.EngagingOnly &&
-                                currentState is not MonsterBase.States.Engaging) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.PreAttackOnly &&
-                                currentState is not MonsterBase.States.PreAttack) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.WanderingAndIdleOnly &&
-                                currentState is not (MonsterBase.States.Wandering
-                                    or MonsterBase.States.WanderingIdle)));
-            if (!stateCheck) {
-                // text += " WrongState";
-            } else if (!attackSensor.CanAttack()) {
-                if (!attackSensor.IsPlayerInside) {
-                    text += " PlayerOutside";
-                } else if (attackSensor.CurrentCoolDown > 0) {
-                    text += " OnCooldown";
-                } else if (attackSensor.playerInsideTimer < attackSensor.currentAttackDelay) {
-                    text += " AttackDelay";
-                } else {
-                    text += " !CanAttack";
-                }
-            }
-
-            text += "\n";
-
-            var conditions = attackSensor.AccessField<AbstractConditionComp[]>("_conditions");
-            foreach (var condition in conditions) {
-                var conditionStr = FsmInspectorModule.ConditionStr(condition);
-                text += $"   if: {conditionStr}\n";
-            }
-
-            /*if (attackSensor.QueuedAttacks.Count > 0) {
-                text += "Queue:\n";
-                foreach (var attack in attackSensor.QueuedAttacks) {
-                    text += $"- {FsmStateName(monster.fsm, attack)}\n";
-                }
-            }*/
-
-            // foreach(var bindingAttack in attackSensor.BindingAttacks)
-            // text += attackSensor.AccessField<string>("_failReason");
-        }
-
-        var engaging = monster.fsm.FindMappingState(MonsterBase.States.Engaging);
-        if (engaging is StealthEngaging stealthEngaging) {
-        }
-
-        return text;
-    }
-
-    private static string FsmStateName(MappingState mappingState) => ReCjk.Replace(mappingState.name, "").Trim();
-
-    private static string FsmStateName(StateMachine<MonsterBase.States> monster, MonsterBase.States state) {
-        if (monster.FindMappingState(state) is { } mappingState) {
-            return FsmStateName(mappingState);
-        }
-
-        return state.ToString();
-    }
-
-    private static readonly Regex ReNumPrefix = new(@"\d+_");
-
-    private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|^\d+_");
-    // private static readonly Regex ReCjk = new(@"_?\p{IsCJKUnifiedIdeographs}+|\[\d+\] ?|^\d+_");
-
-    private static string MonsterName(MonsterBase monster) {
-        var field = typeof(MonsterBase).GetField("_monsterStat") ?? typeof(MonsterBase).GetField("monsterStat");
-        var stat = (MonsterStat)field.GetValue(monster);
-        var monsterName = stat.monsterName.ToString();
-
-        if (monsterName != "") return monsterName;
-
-        return monster.name.TrimStartMatches("StealthGameMonster_").TrimStartMatches("TrapMonster_")
-            .TrimEndMatches("(Clone)")
-            .ToString();
     }
 }
