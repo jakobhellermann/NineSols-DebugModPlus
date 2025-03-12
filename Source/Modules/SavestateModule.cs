@@ -25,7 +25,7 @@ public class SavestateModule(
     public event EventHandler? SavestateLoaded;
     public event EventHandler? SavestateCreated;
 
-    private SavestateStore savestates = new();
+    internal SavestateStore Savestates = new();
 
     #region Entrypoints
 
@@ -48,7 +48,7 @@ public class SavestateModule(
         try {
             var sw = Stopwatch.StartNew();
             var savestate = SavestateLogic.Create(filter ?? currentFilter.Value);
-            savestates.Save(name, savestate, slot, layer);
+            Savestates.Save(name, savestate, slot, layer);
             Log.Info($"Created savestate {name} in {sw.ElapsedMilliseconds}ms");
 
             SavestateCreated?.Invoke(this, EventArgs.Empty);
@@ -62,7 +62,7 @@ public class SavestateModule(
 
     public async Task<bool> LoadSavestateAt(string fullName) {
         var sw = Stopwatch.StartNew();
-        if (!savestates.TryGetValue(fullName, out var savestate)) {
+        if (!Savestates.TryGetValue(fullName, out var savestate)) {
             ToastManager.Toast($"Savestate '{fullName}' not found");
             return false;
         }
@@ -112,7 +112,7 @@ public class SavestateModule(
     }
 
     private async void UiLoadFromSlot(int slot) {
-        var bySlot = savestates.List(slot, savestateLayer).ToList();
+        var bySlot = Savestates.List(slot, savestateLayer).ToList();
         switch (bySlot.Count) {
             case 0:
                 ToastManager.Toast($"Savestate '{slot}' not found");
@@ -165,7 +165,7 @@ public class SavestateModule(
 
     private void LoadInfos() {
         infos.Clear();
-        foreach (var info in savestates.List(layer: savestateLayer)) {
+        foreach (var info in Savestates.List(layer: savestateLayer)) {
             if (info.index is not { } index) continue;
 
             infos.TryAdd(index, info);
@@ -223,7 +223,7 @@ public class SavestateModule(
                         UiLoadFromSlot(saveIndex);
                         UiState = SavestateUIState.Off;
                     } else if (UiState == SavestateUIState.Delete) {
-                        savestates.Delete(saveIndex, savestateLayer);
+                        Savestates.Delete(saveIndex, savestateLayer);
                         UiState = SavestateUIState.Off;
                     }
                 }

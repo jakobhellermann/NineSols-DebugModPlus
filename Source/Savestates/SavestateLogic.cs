@@ -28,6 +28,7 @@ public enum SavestateFilter {
 
     All = Flags | Player | FSMs | Monsters,
 }
+// when updating, also update DebugModPlusInteropGlue in TAS Tools
 
 [Flags]
 public enum SavestateLoadMode {
