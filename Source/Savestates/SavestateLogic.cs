@@ -81,6 +81,11 @@ public static class SavestateLogic {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
                 sceneBehaviours.Add(ComponentSnapshot.Of(monster.transform));
                 SnapshotSerializer.SnapshotRecursive(monster, sceneBehaviours, seen);
+                if (monster.fsm == null) {
+                    Log.Warning($"{monster} fsm was null, skipping");
+                    continue;
+                }
+
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
 
                 foreach (var attackSensor in monster.AttackSensorsCompat()) {
@@ -163,7 +168,7 @@ public static class SavestateLogic {
             SaveManager.Instance.allFlags.AllFlagInitStartAndEquip();
         }
 
-        //Close dialogue
+        // Close dialogue
         if (DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
 
         // Change scene
@@ -267,6 +272,10 @@ public static class SavestateLogic {
         Tween.StopAll(); // should restore as well
         foreach (var bossArea in Object.FindObjectsOfType<BossArea>()) {
             bossArea.ForceShowHP();
+        }
+
+        foreach (var monster in MonsterManager.Instance.monsterDict.Values) {
+            monster.postureSystem.ShowHpViewCheck();
         }
 
         var votes = Player.i.playerInput.GetFieldValue<List<RuntimeConditionVote>>("conditionVoteList")!;
