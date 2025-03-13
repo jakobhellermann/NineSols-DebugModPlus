@@ -11,6 +11,7 @@ using Dialogue;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using static DebugModPlus.Modules.InfotextModule;
 

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Savestates;
@@ -180,6 +183,8 @@ public class TransformConverter : NullableJsonConverter<Transform> {
 
 public class AnimatorConverter : NullableJsonConverter<Animator> {
     protected override void WriteJson(JsonWriter writer, Animator? value, JsonSerializer serializer) {
+        throw new NotImplementedException();
+
         if (value == null) {
             writer.WriteNull();
             return;
@@ -191,6 +196,18 @@ public class AnimatorConverter : NullableJsonConverter<Animator> {
 
     protected override Animator? ReadJson(JsonReader reader, Type objectType, Animator? existingValue,
         bool hasExistingValue, JsonSerializer serializer) {
+        var snapshot = serializer.Deserialize<object>(reader);
+        if (snapshot is not Animator) {
+            throw new NotImplementedException("Animator");
+        }
+
+        throw new NotImplementedException($"{reader.Path} {new StackTrace()}");
+        // ToastManager.Toast(existingValue);
+        // ToastManager.Toast(objectType);
+        // ToastManager.Toast(JToken.ReadFrom(reader).ToString());
+        /*var snapshot = serializer.Deserialize<AnimatorSnapshot?>(reader);
+        if (snapshot == null) return null;
+
         if (!hasExistingValue) {
             Log.Error($"Cannot deserialize animator without existing instance at {reader.Path}");
             return null;
@@ -201,9 +218,8 @@ public class AnimatorConverter : NullableJsonConverter<Animator> {
             return null;
         }
 
-        var snapshot = serializer.Deserialize<AnimatorSnapshot>(reader)!;
         snapshot.Restore(existingValue);
 
-        return existingValue;
+        return existingValue;*/
     }
 }

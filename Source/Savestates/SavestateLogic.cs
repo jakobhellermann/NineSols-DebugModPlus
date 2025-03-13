@@ -66,10 +66,24 @@ public static class SavestateLogic {
 
         if (filter.HasFlag(SavestateFilter.Player)) {
             sceneBehaviours.Add(ComponentSnapshot.Of(player.transform));
-            SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen);
+            SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen, null);
+            /*SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen, maxDepth: null);
             foreach (var (_, state) in player.fsm.GetStates()) {
                 SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
+            }*/
+
+            var start = Stopwatch.StartNew();
+            SnapshotSerializer.stopwatch.Reset();
+            SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen, 0);
+            foreach (var (_, state) in player.fsm.GetStates()) {
+                SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen);
+                // ToastManager.Toast(start.ElapsedMilliseconds);
             }
+
+            ToastManager.Toast(SnapshotSerializer.unityReferenceResolver.stopwatch.ElapsedMilliseconds);
+            SnapshotSerializer.unityReferenceResolver.stopwatch.Reset();
+            ToastManager.Toast($"jtoken: {SnapshotSerializer.stopwatch.ElapsedMilliseconds}");
+            ToastManager.Toast($"total: {start.ElapsedMilliseconds}");
         }
 
         if (filter.HasFlag(SavestateFilter.Monsters)) {
@@ -90,12 +104,12 @@ public static class SavestateLogic {
         }
 
         if (filter.HasFlag(SavestateFilter.Player)) {
-            monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(player.fsm));
+            /*monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(player.fsm));
             referenceFixups.Add(ReferenceFixups.Of(Player.i,
             [
                 new ReferenceFixupField(nameof(Player.i.touchingRope),
                     ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
-            ]));
+            ]));*/
         }
 
         if (filter.HasFlag(SavestateFilter.Flags)) {

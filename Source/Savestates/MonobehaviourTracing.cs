@@ -33,6 +33,7 @@ internal static class MonobehaviourTracing {
             if (
                 FindReferenceIgnoreList.Contains(field.FieldType)
                 || Array.Exists(FindReferenceIgnoreListBase, x => x.IsAssignableFrom(field.FieldType))
+                || field.GetType().Name == "Disc"
             ) {
                 continue;
             }
