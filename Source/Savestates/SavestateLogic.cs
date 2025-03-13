@@ -240,7 +240,7 @@ public static class SavestateLogic {
             bossArea.ForceShowHP();
         }
 
-        var votes = Player.i.playerInput.AccessField<List<RuntimeConditionVote>>("conditionVoteList");
+        var votes = Player.i.playerInput.GetFieldValue<List<RuntimeConditionVote>>("conditionVoteList")!;
         foreach (var vote in votes) {
             vote.votes.Clear();
             vote.ManualUpdate();
@@ -292,21 +292,22 @@ public static class SavestateLogic {
     private static void EnterStateDirectly(IStateMachine sm, object stateObj) {
         // TODO: handle transitions
 
-        var engine = sm.AccessField<FSMStateMachineRunner>("engine");
-        var stateLookup = sm.AccessField<IDictionary>("stateLookup");
+        var engine = sm.GetFieldValue<FSMStateMachineRunner>("engine")!;
+        var stateLookup = sm.GetFieldValue<IDictionary>("stateLookup")!;
         if (!stateLookup.Contains(stateObj)) {
             throw new Exception($"state {stateObj} not found in fsm");
         }
 
         var newStateMapping = stateLookup[stateObj];
 
-        var queuedChangeField = sm.AccessFieldInfo("queuedChange");
-        var currentTransitionField = sm.AccessFieldInfo("currentTransition");
-        var exitRoutineField = sm.AccessFieldInfo("exitRoutine");
-        var enterRoutineField = sm.AccessFieldInfo("enterRoutine");
-        var lastStateField = sm.AccessFieldInfo("lastState");
-        var currentStateField = sm.AccessFieldInfo("currentState");
-        var isInTransitionField = sm.AccessFieldInfo("isInTransition");
+        var ty = sm.GetType();
+        var queuedChangeField = ty.GetFieldInfo("queuedChange")!;
+        var currentTransitionField = ty.GetFieldInfo("currentTransition")!;
+        var exitRoutineField = ty.GetFieldInfo("exitRoutine")!;
+        var enterRoutineField = ty.GetFieldInfo("enterRoutine")!;
+        var lastStateField = ty.GetFieldInfo("lastState")!;
+        var currentStateField = ty.GetFieldInfo("currentState")!;
+        var isInTransitionField = ty.GetFieldInfo("isInTransition")!;
 
         if (queuedChangeField.GetValue(sm) is IEnumerator queuedChange) {
             engine.StopCoroutine(queuedChange);

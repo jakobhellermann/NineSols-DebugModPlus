@@ -1,17 +1,17 @@
-﻿using System;
+﻿using Febucci.UI.Core;
+using HarmonyLib;
+using MonsterLove.StateMachine;
+using NineSolsAPI;
+using NineSolsAPI.Utils;
+using System;
 using System.Collections;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using DebugModPlus;
-using DebugModPlus.Modules;
-using DebugModPlus.Utils;
-using HarmonyLib;
-using MonsterLove.StateMachine;
-using NineSolsAPI.Utils;
-using PrimeTween;
-using UnityEngine;
+
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 namespace TAS;
 
@@ -28,17 +28,18 @@ public static class DebugInfo {
     public static string GetInfoText(DebugFilter filter = DebugFilter.Base) {
         var text = "";
 
-        if ((filter & DebugFilter.Tweens) != 0) {
+        if (filter.HasFlag(DebugFilter.Tweens) && typeof(Tween).Assembly.GetType("PrimeTween.PrimeTweenManager") is
+                { } ty) {
             text += "Tweens:\n";
-            var ty = typeof(Tween).Assembly.GetType("PrimeTween.PrimeTweenManager");
             var instance = ty.GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
-            var tweens = instance.AccessField<IList>("tweens");
+            var tweens = instance.GetFieldValue<IList>("tweens")!;
             foreach (var tween in tweens) {
                 text += $"- {tween}\n";
             }
 
             text += "\n";
         }
+
 
         if (!ApplicationCore.IsAvailable()) return "Loading";
 
@@ -64,25 +65,50 @@ public static class DebugInfo {
             var inputState = player.playerInput.fsm.State;
             text += $"State: {state} {(inputState == PlayerInputStateType.Action ? "" : inputState.ToString())}\n";
 
-            (bool, string)[] flags = [
+            var playerState = player.fsm.FindMappingState(player.fsm.State);
+
+            List<(bool, string)> flags = [
                 (player.isOnWall, "Wall"),
                 (player.isOnLedge, "Ledge"),
                 (player.isOnRope, "Rope"),
                 (player.kicked, "Kicked"),
                 (player.onGround, "OnGround"),
+                (player.lockMoving, "Locked"),
                 (player.interactableFinder.CurrentInteractableArea, "CanInteract"),
                 (player.rollCooldownTimer <= 0, "CanDash"),
                 (player.airJumpCount > 0, "AirJumping"),
             ];
+
+
             (float, string)[] timers = [
-                (player.rollCooldownTimer, "DashCD"),
+                (player.rollCooldownTimer, "RollCD"),
+                (player.dashCooldownTimer, "DashCD"),
+                (player.meleeAttackCooldownTimer, "AttackCD"),
+                (player.parryCoolDownTimer, "ParryCD"),
+                (player.gadgetCooldownTimer, "GadgetCD"),
+                (player.grabHookCooldownTimer, "GrabHookCD"),
+                (player.spinMoveCooldownTimer, "SpinMoveCD"),
+
                 (player.jumpGraceTimer, "Coyote"),
             ];
             text += Flags(flags, timers);
 
+            if (playerState is PlayerAttackState attackState) {
+                var candomove = attackState.GetFieldValue<bool>("CanDoMove") ? "" : "!";
+                var isAir = attackState.GetFieldValue<bool>("isAir") ? "" : "!";
+                /*if (candomove) {
+                    flags.Add((candomove,"CanDoMove"));
+                } else {
+                    flags.Add((true,"!CanDoMove"));
+                }*/
+                text += $"Attack: {candomove}CanDoMove {isAir}IsAir {attackState.GetFieldValue<int>("count")}\n";
+            } else {
+                text += "\n";
+            }
+
             if (player.jumpState != Player.PlayerJumpState.None) {
                 var varJumpTimer = player.currentVarJumpTimer;
-                var groundReference = player.AccessField<float>("GroundJumpRefrenceY");
+                var groundReference = player.GetFieldValue<float>("GroundJumpRefrenceY");
                 var height = player.transform.position.y - groundReference;
                 text +=
                     $"JumpState {player.jumpState} {(varJumpTimer > 0 ? varJumpTimer.ToString("0.00") + " " : "")}h={height:0.00}\n";
@@ -100,11 +126,11 @@ public static class DebugInfo {
             text += $"  Position: {(Vector2)nymph.transform.position}\n";
             text += $"  Speed: {(Vector2)nymph.droneVel}\n";
             text += "  " + Flags([
-                    (nymph.AccessField<bool>("isDashCD"), "DashCD"),
-                    (nymph.AccessField<bool>("isOutOfRange"), "OutOfRange"),
+                    (nymph.GetFieldValue<bool>("isDashCD"), "DashCD"),
+                    (nymph.GetFieldValue<bool>("isOutOfRange"), "OutOfRange"),
                 ],
                 [
-                    (nymph.AccessField<float>("OutOfRangeTimer"), "OutOfRange"),
+                    (nymph.GetFieldValue<float>("OutOfRangeTimer"), "OutOfRange"),
                 ],
                 " "
             );
@@ -208,7 +234,7 @@ public static class DebugInfo {
 
         var hurtInterrupt = monster.HurtInterrupt;
         if (hurtInterrupt.isActiveAndEnabled) {
-            var th = hurtInterrupt.AccessField<float>("AccumulateDamageTh");
+            var th = hurtInterrupt.GetFieldValue<float>("AccumulateDamageTh");
             if (th > 0) {
                 text +=
                     $"Hurt Interrupt: {hurtInterrupt.currentAccumulateDamage / monster.postureSystem.FullPostureValue:0.00} > {th}\n";
@@ -227,55 +253,55 @@ public static class DebugInfo {
         foreach (var attackSensor in monster.AttackSensorsCompat()) {
             var name = ReNumPrefix.Replace(attackSensor.name, "");
 
-            if (!attackSensor.gameObject.activeInHierarchy) {
-                continue;
-            }
+            //     if (!attackSensor.gameObject.activeInHierarchy) {
+            //         continue;
+            //     }
 
-            if (!attackSensor.isActiveAndEnabled) {
-                continue;
-            }
+            //     if (!attackSensor.isActiveAndEnabled) {
+            //         continue;
+            //     }
 
-            text += $"  {name}({attackSensor.BindindAttack})";
-            var typeName = attackSensor.forStateType switch {
-                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic => "EARP",
-                _ => attackSensor.forStateType.ToString(),
-            };
-            text += $" {typeName}:";
+            //     text += $"  {name}({attackSensor.BindindAttack})";
+            //     var typeName = attackSensor.forStateType switch {
+            //         AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic => "EARP",
+            //         _ => attackSensor.forStateType.ToString(),
+            //     };
+            //     text += $" {typeName}:";
 
 
-            var currentState = monster.CurrentState;
-            var stateCheck = attackSensor.forStateType == AttackSensorForStateType.AllValid ||
-                             (!(attackSensor.forStateType ==
-                                AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic &&
-                                currentState is not (MonsterBase.States.RunAway or MonsterBase.States.Panic
-                                    or MonsterBase.States.OutOfReach or MonsterBase.States.LookingAround
-                                    or MonsterBase.States.Engaging or MonsterBase.States.PreAttack)) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.EngagingOnly &&
-                                currentState is not MonsterBase.States.Engaging) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.PreAttackOnly &&
-                                currentState is not MonsterBase.States.PreAttack) &&
-                              !(attackSensor.forStateType == AttackSensorForStateType.WanderingAndIdleOnly &&
-                                currentState is not (MonsterBase.States.Wandering
-                                    or MonsterBase.States.WanderingIdle)));
-            if (!stateCheck) {
-                // text += " WrongState";
-            } else if (!attackSensor.CanAttack()) {
-                if (!attackSensor.IsPlayerInside) {
-                    text += " PlayerOutside";
-                } else if (attackSensor.CurrentCoolDown > 0) {
-                    text += " OnCooldown";
-                } else if (attackSensor.playerInsideTimer < attackSensor.currentAttackDelay) {
-                    text += " AttackDelay";
-                } else {
-                    text += " !CanAttack";
-                }
-            }
+            //     var currentState = monster.CurrentState;
+            //     var stateCheck = attackSensor.forStateType == AttackSensorForStateType.AllValid ||
+            //                      (!(attackSensor.forStateType ==
+            //                         AttackSensorForStateType.EngagingAndPreAttackOrOutOfReachAndPanic &&
+            //                         currentState is not (MonsterBase.States.RunAway or MonsterBase.States.Panic
+            //                             or MonsterBase.States.OutOfReach or MonsterBase.States.LookingAround
+            //                             or MonsterBase.States.Engaging or MonsterBase.States.PreAttack)) &&
+            //                       !(attackSensor.forStateType == AttackSensorForStateType.EngagingOnly &&
+            //                         currentState is not MonsterBase.States.Engaging) &&
+            //                       !(attackSensor.forStateType == AttackSensorForStateType.PreAttackOnly &&
+            //                         currentState is not MonsterBase.States.PreAttack) &&
+            //                       !(attackSensor.forStateType == AttackSensorForStateType.WanderingAndIdleOnly &&
+            //                         currentState is not (MonsterBase.States.Wandering
+            //                             or MonsterBase.States.WanderingIdle)));
+            //     if (!stateCheck) {
+            //         // text += " WrongState";
+            //     } else if (!attackSensor.CanAttack()) {
+            //         if (!attackSensor.IsPlayerInside) {
+            //             text += " PlayerOutside";
+            //         } else if (attackSensor.CurrentCoolDown > 0) {
+            //             text += " OnCooldown";
+            //         } else if (attackSensor.playerInsideTimer < attackSensor.currentAttackDelay) {
+            //             text += " AttackDelay";
+            //         } else {
+            //             text += " !CanAttack";
+            //         }
+            //     }
 
-            text += "\n";
+            //     text += "\n";
 
-            var conditions = attackSensor.AccessField<AbstractConditionComp[]>("_conditions");
-            foreach (var condition in conditions) {
-                var conditionStr = FsmInspectorModule.ConditionStr(condition);
+            var conditions = attackSensor.GetFieldValue<AbstractConditionComp[]>("_conditions");
+            foreach (var condition in conditions ?? []) {
+                var conditionStr = FormatCondition(condition);
                 text += $"   if: {conditionStr}\n";
             }
 
@@ -322,5 +348,56 @@ public static class DebugInfo {
         return monster.name.TrimStartMatches("StealthGameMonster_").TrimStartMatches("TrapMonster_")
             .TrimEndMatches("(Clone)")
             .ToString();
+    }
+
+    private static string FormatCondition(AbstractConditionComp condition) {
+        var name = condition.name.TrimStartMatches("[Condition] ").ToString();
+        var conditionStr = "";
+
+        switch (condition) {
+            case FlagBoolCondition boolCondition: {
+                conditionStr =
+                    $"{name} bool flag {FormatVariable(boolCondition.flagBool)} current {boolCondition.flagBool?.FlagValue}";
+                conditionStr += $" {boolCondition.flagBool?.boolFlag?.FinalSaveID}";
+                conditionStr += $" {boolCondition.flagBool}";
+                break;
+            }
+            case GeneralCondition generalCondition: {
+                conditionStr += $" {generalCondition}";
+                break;
+            }
+            case PlayerMovePredictCondition movePredictCondition: {
+                conditionStr += "Player";
+                if (movePredictCondition.ParryDetect) conditionStr += " Parry";
+                if (movePredictCondition.DodgeDetect) conditionStr += " Dash";
+                if (movePredictCondition.JumpDetect) conditionStr += " Jump";
+                if (movePredictCondition.InAirDetect) conditionStr += " InAir";
+                if (movePredictCondition.AttackDetect) conditionStr += " Attack";
+                if (movePredictCondition.ThirdAttackDetect) conditionStr += " Third";
+                if (movePredictCondition.ChargeAttackDetect) conditionStr += " Charged";
+                if (movePredictCondition.FooDetect) conditionStr += " Foo";
+                if (movePredictCondition.ArrowDetect) conditionStr += " Shoots";
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (movePredictCondition.randomChance != 1.0)
+                    conditionStr += $" at {movePredictCondition.randomChance * 100:0}%";
+                break;
+            }
+            default: {
+                conditionStr += $" {condition.GetType()}";
+                break;
+            }
+        }
+
+        if (condition.FinalResultInverted) conditionStr = $"(inverted) {conditionStr}";
+        return $"({(condition.FinalResult ? "true" : "false")}) {conditionStr}";
+    }
+
+    private static string FormatVariable(AbstractVariable? variable) {
+        if (variable == null) return "null";
+
+        var name = variable.ToString().TrimStartMatches("[Variable] ")
+            .TrimEndMatches(" (VariableBool)").ToString();
+
+        return $"{name} {variable.FinalData?.GetSaveID}";
     }
 }
