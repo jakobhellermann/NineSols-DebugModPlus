@@ -41,7 +41,7 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
         if (infotextActive) {
             if (!SingletonBehaviour<GameCore>.IsAvailable()) {
                 text += "MainMenu ";
-                text += PlayerInputBinder.Instance.currentStateType.ToString();
+                text += PlayerInputBinder.IsAvailable() ? PlayerInputBinder.Instance.currentStateType.ToString() : "";
             } else if (RCGTime.timeScale > 0 || UIManager.Instance.PausePanelUI.isActiveAndEnabled) {
                 text = UpdateInfoText();
             } else return;

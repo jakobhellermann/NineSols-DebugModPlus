@@ -190,6 +190,9 @@ public static class DebugInfo {
         text += $"Speed: {monster.Velocity} + {(Vector2)monster.AnimationVelocity}\n";
         text += $"HP: {monster.health.currentValue:0.00}\n";
 
+        text +=
+            $"PS: {monster.postureSystem.CurrentHealthValue:0.00} (+{monster.postureSystem.CurrentInternalInjury:0.00})\n";
+
 
         var core = monster.monsterCore;
 

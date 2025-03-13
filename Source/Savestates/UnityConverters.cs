@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
+using NineSolsAPI;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using Random = UnityEngine.Random;
 

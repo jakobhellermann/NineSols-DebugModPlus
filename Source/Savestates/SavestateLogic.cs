@@ -54,7 +54,6 @@ public static class SavestateLogic {
         var sceneBehaviours = new List<ComponentSnapshot>();
         var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
         var fsmSnapshots = new List<GeneralFsmSnapshot>();
-        var referenceFixups = new List<ReferenceFixups>();
         var flagsJson = new JObject();
 
         // TODO:
@@ -79,26 +78,33 @@ public static class SavestateLogic {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
                 sceneBehaviours.Add(ComponentSnapshot.Of(monster.transform));
                 SnapshotSerializer.SnapshotRecursive(monster, sceneBehaviours, seen);
+                if (monster.fsm == null) {
+                    Log.Warning($"{monster} fsm was null, skipping");
+                    continue;
+                }
+
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
                 foreach (var (_, state) in monster.fsm.GetStates()) {
                     SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
                 }
+
+                monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
             }
         }
 
         if (filter.HasFlag(SavestateFilter.FSMs)) {
             foreach (var smo in Object.FindObjectsOfType<StateMachineOwner>()) {
+                if (!smo.FsmContext?.fsm?.State) {
+                    Log.Warning($"{smo} fsm was null, skipping");
+                    continue;
+                }
+
                 fsmSnapshots.Add(GeneralFsmSnapshot.Of(smo));
             }
         }
 
         if (filter.HasFlag(SavestateFilter.Player)) {
             monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(player.fsm));
-            referenceFixups.Add(ReferenceFixups.Of(Player.i,
-            [
-                new ReferenceFixupField(nameof(Player.i.touchingRope),
-                    ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
-            ]));
         }
 
         if (filter.HasFlag(SavestateFilter.Flags)) {
@@ -111,12 +117,11 @@ public static class SavestateLogic {
         var savestate = new Savestate {
             Flags = flagsJson.Count == 0 ? null : flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
-            PlayerPosition = player.transform.position,
+            PlayerPosition = filter.HasFlag(SavestateFilter.Player) ? player.transform.position : null,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
             FsmSnapshots = monsterLoveFsmSnapshots.Count == 0 ? null : monsterLoveFsmSnapshots,
             GeneralFsmSnapshots = fsmSnapshots.Count == 0 ? null : fsmSnapshots,
-            ReferenceFixups = referenceFixups.Count == 0 ? null : referenceFixups,
             RandomState = UnityEngine.Random.state,
         };
 
@@ -155,7 +160,7 @@ public static class SavestateLogic {
             SaveManager.Instance.allFlags.AllFlagInitStartAndEquip();
         }
 
-        //Close dialogue
+        // Close dialogue
         if (DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
 
         // Change scene
@@ -195,10 +200,6 @@ public static class SavestateLogic {
         }
 
         sw.Stop();
-
-        if (savestate.ReferenceFixups != null) {
-            ApplyFixups(savestate.ReferenceFixups);
-        }
 
         foreach (var fsm in savestate.FsmSnapshots ?? new List<MonsterLoveFsmSnapshot>()) {
             var targetGo = ObjectUtils.LookupPath(fsm.Path);
@@ -254,6 +255,10 @@ public static class SavestateLogic {
             bossArea.ForceShowHP();
         }
 
+        foreach (var monster in MonsterManager.Instance.monsterDict.Values) {
+            monster.postureSystem.ShowHpViewCheck();
+        }
+
         var votes = Player.i.playerInput.GetFieldValue<List<RuntimeConditionVote>>("conditionVoteList")!;
         foreach (var vote in votes) {
             vote.votes.Clear();
@@ -270,33 +275,6 @@ public static class SavestateLogic {
     private static void ApplySnapshots(List<ComponentSnapshot> snapshots) {
         foreach (var mb in snapshots) {
             mb.Restore();
-        }
-    }
-
-    private static void ApplyFixups(List<ReferenceFixups> fixups) {
-        foreach (var fields in fixups) {
-            var targetComponent = ObjectUtils.LookupObjectComponentPath(fields.Path);
-            if (targetComponent == null) {
-                Log.Error($"Savestate stored reference fixup on {fields.Path}, which does not exist at load time");
-                continue;
-            }
-
-            foreach (var (fieldName, referencedPath) in fields.Fields) {
-                var field = targetComponent.GetType().GetField(fieldName,
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
-                if (referencedPath == null) {
-                    field.SetValue(targetComponent, null);
-                } else {
-                    var referencedObject = ObjectUtils.LookupObjectComponentPath(referencedPath);
-                    if (referencedObject == null) {
-                        Log.Error(
-                            $"Savestate stored reference fixup on {fields.Path}.{fieldName}, but the target {referencedPath} does not exist at load time");
-                        continue;
-                    }
-
-                    field.SetValue(targetComponent, referencedObject);
-                }
-            }
         }
     }
 
