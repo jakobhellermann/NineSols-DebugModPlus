@@ -11,6 +11,7 @@ using Dialogue;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using static DebugModPlus.Modules.InfotextModule;
 
@@ -58,6 +59,17 @@ public class DebugModPlus : BaseUnityPlugin {
         // Application.logMessageReceived += HandleLog;
 
         try {
+            /*var path = ObjectUtils.LookupPath(
+                "GameCore(Clone)/RCG LifeCycle/PPlayer/RotateProxy/SpriteHolder/HitBoxManager/AttackFront");
+            // ObjectUtils.LookupObjectComponentPath();
+            ToastManager.Toast(path!.GetComponents<Component>().Select(x => x.GetType().Name).Join());*/
+            // Component first = null;
+            /*foreach (var component in gameObject.GetComponents<Component>().Where((Func<Component, bool>)(c => c.GetType().Name == str))) {
+                first = component;
+                break;
+            }*/
+            // return gameObject == (UnityEngine.Object) null ? (Component) null : first;
+
             harmony = Harmony.CreateAndPatchAll(typeof(DebugModPlus).Assembly);
 
             var versionPatches = GameVersions.Select(GameVersions.SpeedrunPatch,

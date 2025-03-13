@@ -127,6 +127,7 @@ public static class MonsterDump {
 
 
     private static UnityReferenceResolver referenceResolver = new() {
+        AlwaysInlineUpToDepth = 2,
         InlineReferences = [
             typeof(LinkNextMoveStateWeight),
             typeof(LinkMoveGroupingNode),
