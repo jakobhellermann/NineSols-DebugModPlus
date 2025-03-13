@@ -141,7 +141,7 @@ public static class SavestateLogic {
         }
 
         //Close dialogue
-        if(DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
+        if (DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
 
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
@@ -163,10 +163,10 @@ public static class SavestateLogic {
 
                 Log.Info($"- Change scene in {sw.ElapsedMilliseconds}ms");
             }
-        } else {
-            if (savestate.PlayerPosition is { } playerPosition) {
-                Player.i.transform.position = playerPosition;
-            }
+        }
+
+        if (savestate.PlayerPosition is { } pp) {
+            Player.i.transform.position = pp;
         }
 
         if (loadMode.HasFlag(SavestateLoadMode.ResetScene)) {
