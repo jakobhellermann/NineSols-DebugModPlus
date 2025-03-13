@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
-using JetBrains.Annotations;
 using MonsterLove.StateMachine;
+using NineSolsAPI.Utils;
 
 namespace DebugModPlus.Utils;
 
@@ -24,12 +23,12 @@ public static class StateMachineExtensions {
 
 
     public static IEnumerable<(object, MappingState)> GetStates(this IStateMachine machine) {
-        return machine.AccessField<object?>("_stateMapping")!
-            .AccessProperty<IList>("getAllStates")!
+        return machine.GetFieldValue<object?>("_stateMapping")!
+            .GetFieldValue<IList>("mappingList")!
             .Cast<object>()
             .Select(stateObj => {
-                var state = stateObj.AccessField<object>("state");
-                var stateBehaviour = stateObj.AccessField<MappingState>("stateBehavior");
+                var state = stateObj.GetFieldValue<object>("state")!;
+                var stateBehaviour = stateObj.GetFieldValue<MappingState>("stateBehavior")!;
                 return (state, stateBehaviour);
             });
     }

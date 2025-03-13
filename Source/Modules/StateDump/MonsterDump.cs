@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Cysharp.Threading.Tasks;
 using DebugModPlus.Savestates;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json;
@@ -101,7 +100,7 @@ public static class MonsterDump {
 
         File.WriteAllText(Path.Combine(dumpDir, "attackSequence") + ".json", TestSerialize(sequences));*/
         var sequences =
-            monster.monsterCore.attackSequenceMoodule.AccessField<MonsterStateSequenceWeight[]>(
+            monster.monsterCore.attackSequenceMoodule.GetFieldValue<MonsterStateSequenceWeight[]>(
                 "SequenceForDifferentPhase");
 
         var data = new MonsterBaseData {
