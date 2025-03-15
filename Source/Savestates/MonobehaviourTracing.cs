@@ -2,18 +2,17 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
-using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Savestates;
 
-public static class MonobehaviourTracing {
+internal static class MonobehaviourTracing {
     public static void TraceReferencedMonobehaviours(
-        MonoBehaviour origin,
+        Component origin,
         List<MonoBehaviourSnapshot> saved,
-        HashSet<MonoBehaviour> seen,
+        HashSet<Component> seen,
         int depth = 0,
-        int? maxDepth = 0,
+        int? maxDepth = null,
         int minDepth = 0
     ) {
         if (!origin.gameObject.scene.IsValid()) return;
