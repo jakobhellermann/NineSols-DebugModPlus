@@ -26,7 +26,7 @@ public class InfotextModule(ConfigEntry<InfotextModule.InfotextFilter> filter) {
               InteractableInfo,
     }
 
-    private static bool infotextActive = true;
+    private static bool infotextActive = false;
     private string debugCanvasInfoText = "";
 
     [BindableMethod(Name = "Toggle Infotext")]
