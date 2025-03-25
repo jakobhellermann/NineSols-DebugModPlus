@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
-using NineSolsAPI;
 using UnityEngine;
 
 namespace DebugModPlus.Savestates;
@@ -10,7 +9,7 @@ namespace DebugModPlus.Savestates;
 public static class MonobehaviourTracing {
     public static void TraceReferencedMonobehaviours(
         MonoBehaviour origin,
-        List<MonoBehaviourSnapshot> saved,
+        List<ComponentSnapshot> saved,
         HashSet<MonoBehaviour> seen,
         int depth = 0,
         int? maxDepth = 0,
@@ -20,7 +19,7 @@ public static class MonobehaviourTracing {
         if (seen.Contains(origin)) return;
 
         if (depth >= minDepth) {
-            saved.Add(MonoBehaviourSnapshot.Of(origin));
+            saved.Add(ComponentSnapshot.Of(origin));
         }
 
         seen.Add(origin);

@@ -15,7 +15,7 @@ public class Savestate {
     public string? Scene;
     public Vector3? PlayerPosition;
     public string? LastTeleportId;
-    public List<MonoBehaviourSnapshot>? MonobehaviourSnapshots;
+    public List<ComponentSnapshot>? MonobehaviourSnapshots;
     public List<MonsterLoveFsmSnapshot>? FsmSnapshots;
     public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
     public List<ReferenceFixups>? ReferenceFixups;
@@ -42,14 +42,26 @@ public class Savestate {
     };
 }
 
-public class MonoBehaviourSnapshot {
+public class ComponentSnapshot {
     public required string Path;
     public required JToken Data;
 
-    public static MonoBehaviourSnapshot Of(Component mb) => new() {
+    public static ComponentSnapshot Of(Component mb) => new() {
         Path = ObjectUtils.ObjectComponentPath(mb),
         Data = SnapshotSerializer.Snapshot(mb),
     };
+
+    public bool Restore() {
+        var targetComponent = ObjectUtils.LookupObjectComponentPath(Path);
+        if (!targetComponent) {
+            Log.Error($"Savestate stored state on {Path}, which does not exist at load time");
+            return false;
+        }
+
+        SnapshotSerializer.Populate(targetComponent!, Data);
+
+        return true;
+    }
 }
 
 public class GeneralFsmSnapshot {

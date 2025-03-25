@@ -50,7 +50,7 @@ public static class SavestateLogic {
 
         var player = Player.i;
 
-        var sceneBehaviours = new List<MonoBehaviourSnapshot>();
+        var sceneBehaviours = new List<ComponentSnapshot>();
         var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
         var fsmSnapshots = new List<GeneralFsmSnapshot>();
         var referenceFixups = new List<ReferenceFixups>();
@@ -142,7 +142,7 @@ public static class SavestateLogic {
         }
 
         //Close dialogue
-        if(DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
+        if (DialoguePlayer.Instance.CanSkip) DialoguePlayer.Instance.ForceClose();
 
         // Change scene
         var isCurrentScene = savestate.Scene == (GameCore.Instance.gameLevel is { } x ? x.SceneName : null);
@@ -249,15 +249,9 @@ public static class SavestateLogic {
         Player.i.UpdateSpriteFacing();
     }
 
-    private static void ApplySnapshots(List<MonoBehaviourSnapshot> snapshots) {
+    private static void ApplySnapshots(List<ComponentSnapshot> snapshots) {
         foreach (var mb in snapshots) {
-            var targetComponent = ObjectUtils.LookupObjectComponentPath(mb.Path);
-            if (targetComponent == null) {
-                Log.Error($"Savestate stored state on {mb.Path}, which does not exist at load time");
-                continue;
-            }
-
-            SnapshotSerializer.Populate(targetComponent, mb.Data);
+            mb.Restore();
         }
     }
 
