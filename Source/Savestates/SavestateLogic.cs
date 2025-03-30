@@ -105,14 +105,14 @@ public static class SavestateLogic {
         }
 
         var savestate = new Savestate {
-            Flags = flagsJson,
+            Flags = flagsJson.Count == 0 ? null : flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
             PlayerPosition = player.transform.position,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
-            FsmSnapshots = monsterLoveFsmSnapshots,
-            GeneralFsmSnapshots = fsmSnapshots,
-            ReferenceFixups = referenceFixups,
+            FsmSnapshots = monsterLoveFsmSnapshots.Count == 0 ? null : monsterLoveFsmSnapshots,
+            GeneralFsmSnapshots = fsmSnapshots.Count == 0 ? null : fsmSnapshots,
+            ReferenceFixups = referenceFixups.Count == 0 ? null : referenceFixups,
         };
 
         return savestate;
