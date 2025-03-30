@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using DebugModPlus.Savestates;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using NineSolsAPI.Utils;
 using UnityEngine;
 
@@ -19,6 +22,7 @@ public class Savestate {
     public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
     public List<ReferenceFixups>? ReferenceFixups;
     public JObject? Flags;
+    public UnityEngine.Random.State? RandomState;
 
     public void SerializeTo(StreamWriter writer) {
         JsonSerializer.Create(jsonSettings).Serialize(writer, this);
@@ -38,8 +42,31 @@ public class Savestate {
     private static JsonSerializerSettings jsonSettings = new() {
         Formatting = Formatting.Indented,
         NullValueHandling = NullValueHandling.Ignore,
+        ContractResolver = new ForceSerializeResolver {
+            ForceSerializePropertiesOf = [typeof(UnityEngine.Random.State)],
+        },
         Converters = [new Vector3Converter()],
     };
+
+    private class ForceSerializeResolver : DefaultContractResolver {
+        public List<Type> ForceSerializePropertiesOf = [];
+
+        protected override List<MemberInfo> GetSerializableMembers(Type objectType) {
+            if (ForceSerializePropertiesOf.Contains(objectType)) {
+                return objectType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Cast<MemberInfo>()
+                    .ToList();
+            }
+
+            return base.GetSerializableMembers(objectType);
+        }
+
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
+            var property = base.CreateProperty(member, MemberSerialization.Fields);
+
+            return property;
+        }
+    }
 }
 
 public class ComponentSnapshot {

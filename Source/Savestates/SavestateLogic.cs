@@ -114,6 +114,7 @@ public static class SavestateLogic {
             FsmSnapshots = monsterLoveFsmSnapshots.Count == 0 ? null : monsterLoveFsmSnapshots,
             GeneralFsmSnapshots = fsmSnapshots.Count == 0 ? null : fsmSnapshots,
             ReferenceFixups = referenceFixups.Count == 0 ? null : referenceFixups,
+            RandomState = UnityEngine.Random.state,
         };
 
         return savestate;
@@ -245,6 +246,10 @@ public static class SavestateLogic {
         foreach (var vote in votes) {
             vote.votes.Clear();
             vote.ManualUpdate();
+        }
+
+        if (savestate.RandomState is { } randomState) {
+            UnityEngine.Random.state = randomState;
         }
 
         Player.i.UpdateSpriteFacing();
