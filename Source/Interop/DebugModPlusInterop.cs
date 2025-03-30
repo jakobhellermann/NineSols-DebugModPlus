@@ -6,6 +6,8 @@ using NineSolsAPI;
 namespace DebugModPlus.Interop;
 
 public static class DebugModPlusInterop {
+    public static bool IsLoadingSavestate = false;
+
     public static Savestate CreateSavestate(int filter) => SavestateLogic.Create((SavestateFilter)filter);
 
     public static bool LoadSavestate(Savestate savestate) {

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using DebugModPlus.Interop;
 using DebugModPlus.Utils;
 using MonsterLove.StateMachine;
 using Newtonsoft.Json.Linq;
@@ -122,6 +123,15 @@ public static class SavestateLogic {
 
 
     public static async Task Load(Savestate savestate, SavestateLoadMode loadMode) {
+        try {
+            DebugModPlusInterop.IsLoadingSavestate = true;
+            await LoadInner(savestate, loadMode);
+        } finally {
+            DebugModPlusInterop.IsLoadingSavestate = false;
+        }
+    }
+
+    private static async Task LoadInner(Savestate savestate, SavestateLoadMode loadMode) {
         if (!GameCore.IsAvailable()) {
             throw new Exception("Attempted to load savestate outside of scene");
         }
