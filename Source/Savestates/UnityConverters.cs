@@ -191,19 +191,21 @@ public class AnimatorConverter : NullableJsonConverter<Animator> {
 
     protected override Animator? ReadJson(JsonReader reader, Type objectType, Animator? existingValue,
         bool hasExistingValue, JsonSerializer serializer) {
+        var snapshot = serializer.Deserialize<AnimatorSnapshot>(reader);
+
+        if (snapshot == null) return null;
+
         if (!hasExistingValue) {
             Log.Error($"Cannot deserialize animator without existing instance at {reader.Path}");
             return null;
         }
 
         if (existingValue == null) {
-            Log.Error("Cannot deserialize animator with null existing value");
+            Log.Error($"Cannot deserialize animator with null existing value at {reader.Path}");
             return null;
         }
 
-        var snapshot = serializer.Deserialize<AnimatorSnapshot>(reader)!;
         snapshot.Restore(existingValue);
-
         return existingValue;
     }
 }
