@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
-using MonoMod.Utils;
 using NineSolsAPI;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+
+// ReSharper disable InconsistentNaming
 
 namespace DebugModPlus.Modules.Hitbox;
 
@@ -11,6 +13,7 @@ namespace DebugModPlus.Modules.Hitbox;
 public enum HitboxType {
     All = int.MaxValue,
     Default = LEVEL | Player | Interactable | Trigger | AttackSensor | DecreasePosture | Uncategorized,
+    TAS = (LEVEL | Player | Interactable | Trigger | AttackSensor | DecreasePosture) & ~Interactable,
 
     Trigger = 1 << 0,
 
@@ -47,9 +50,10 @@ public enum HitboxType {
     PathFindTarget = 1 << 22,
     Audio = 1 << 23,
     GeneralFindable = 1 << 24,
+    PushAwayWall = 1 << 25,
 
-    ActorBody = 1 << 25,
-    Todo = 1 << 26,
+    ActorBody = 1 << 26,
+    Todo = 1 << 27,
     Uncategorized = 1 << 31,
 }
 
@@ -74,6 +78,8 @@ public class HitboxModule : MonoBehaviour {
     private void Awake() {
         SceneManager.sceneLoaded += CreateHitboxRender;
         colliders = new SortedDictionary<HitboxType, HashSet<Collider2D>>();
+
+        HitboxesVisible = HitboxesVisible;
     }
 
     private void OnDestroy() {
@@ -108,9 +114,10 @@ public class HitboxModule : MonoBehaviour {
         { HitboxType.Interactable, new Color(0.8f, 0.25f, 0.8f) },
         { HitboxType.Uncategorized, new Color(0.9f, 0.6f, 0.4f) },
         { HitboxType.ActorBody, new Color(1, 0.5f, 1) },
-        { HitboxType.DecreasePosture, new Color(0.4f, 0.5f, 1) },
+        { HitboxType.DecreasePosture, new Color(0.8f, 0.2f, 1) },
         { HitboxType.PlayerSpawnPoint, new Color(0.65f, 0.8f, 0.6f) },
         { HitboxType.MonsterInvisibleWall, new Color(0.65f, 0.3f, 0.6f) },
+        { HitboxType.PushAwayWall, new Color(0.35f, 0.2f, 0.6f) },
 
         { HitboxType.Todo, new Color(1, 0, 1) },
     };
@@ -139,6 +146,7 @@ public class HitboxModule : MonoBehaviour {
         { HitboxType.Interactable, 18 },
         { HitboxType.ActorBody, 19 },
         { HitboxType.DecreasePosture, 19 },
+        { HitboxType.PushAwayWall, 19 },
         { HitboxType.PlayerSpawnPoint, 20 },
         { HitboxType.MonsterInvisibleWall, 20 },
         { HitboxType.Todo, 21 },
@@ -155,6 +163,9 @@ public class HitboxModule : MonoBehaviour {
 
     private void Reload() {
         colliders.Clear();
+
+        if (!hitboxesVisible) return;
+
         try {
             foreach (var col in Resources.FindObjectsOfTypeAll<Collider2D>()) TryAddHitboxes(col);
         } catch (Exception e) {
@@ -166,9 +177,11 @@ public class HitboxModule : MonoBehaviour {
         foreach (var col in go.GetComponentsInChildren<Collider2D>(true)) TryAddHitboxes(col);
     }
 
-    private static Vector2 LocalToScreenPoint(Camera camera, Collider2D collider2D, Vector2 point) {
-        Vector2 result =
-            camera.WorldToScreenPoint((Vector2)collider2D.transform.TransformPoint(point + collider2D.offset));
+    private static Vector2 LocalToScreenPoint(Camera camera, Collider2D collider2D, Vector2 point) =>
+        LocalToScreenPoint(camera, collider2D.transform.TransformPoint(point + collider2D.offset));
+
+    private static Vector2 LocalToScreenPoint(Camera camera, Vector2 point) {
+        Vector2 result = camera.WorldToScreenPoint(point);
         return new Vector2((int)Math.Round(result.x), (int)Math.Round(Screen.height - result.y));
     }
 
@@ -186,18 +199,24 @@ public class HitboxModule : MonoBehaviour {
                 colliders.AddToKey(HitboxType.Trap, collider2D);
             else if (collider2D.GetComponent<DamageDealer>())
                 colliders.AddToKey(HitboxType.DamageDealer, collider2D);
-            else if (collider2D.GetComponent<TriggerDetector>())
-                colliders.AddToKey(HitboxType.Trigger, collider2D);
-            else if (collider2D.GetComponent<AttackSensor>())
+            else if (collider2D.GetComponent<EffectDealer>()) {
+                if (collider2D.name == "Effect_ToClose_Noise") return;
+
+                colliders.AddToKey(HitboxType.EffectDealer, collider2D);
+            } else if (collider2D.GetComponent<TriggerDetector>() is { } trigger) {
+                if (trigger.name != "NearWallDetector") {
+                    colliders.AddToKey(HitboxType.Trigger, collider2D);
+                }
+            } else if (collider2D.GetComponent<AttackSensor>()) {
+                if (collider2D.name.Contains("AttackPredict")) return;
+
                 colliders.AddToKey(HitboxType.AttackSensor, collider2D);
-            else if (collider2D.GetComponent<AkGameObj>())
+            } else if (collider2D.GetComponent<AkGameObj>())
                 colliders.AddToKey(HitboxType.Audio, collider2D);
             else if (collider2D.GetComponent<PathArea>())
                 colliders.AddToKey(HitboxType.Terrain, collider2D);
             else if (collider2D.GetComponent<EffectReceiver>())
                 colliders.AddToKey(HitboxType.EffectReceiver, collider2D);
-            else if (collider2D.GetComponent<EffectDealer>())
-                colliders.AddToKey(HitboxType.EffectDealer, collider2D);
             else if (collider2D.GetComponent<PathFindAgent>())
                 colliders.AddToKey(HitboxType.PathFindAgent, collider2D);
             else if (collider2D.GetComponent<PlayerSensor>())
@@ -232,7 +251,10 @@ public class HitboxModule : MonoBehaviour {
                 colliders.AddToKey(HitboxType.DecreasePosture, collider2D);
             else if (collider2D.GetComponent<PlayerSpawnPoint>())
                 colliders.AddToKey(HitboxType.PlayerSpawnPoint, collider2D);
-            else if (go.layer == layerMonsterInvisibleWall)
+            else if (collider2D.GetComponent<PushAwayWall>() || go.name.StartsWith("PushAwayWall"))
+                colliders.AddToKey(HitboxType.PushAwayWall, collider2D);
+            else if (collider2D.GetComponent<InfinityBlock>()) {
+            } else if (go.layer == layerMonsterInvisibleWall)
                 colliders.AddToKey(HitboxType.MonsterInvisibleWall, collider2D);
             // 
             else if (collider2D.GetComponent<ParticleSystem>())
@@ -252,7 +274,10 @@ public class HitboxModule : MonoBehaviour {
             } else if (go.name == "BoxRoot") {
                 // colliders.AddToKey(HitboxType.Uncategorized, collider2D);
             } else {
+                // if (go.scene.name != null && go.scene.name.StartsWith("A")) {
+                // if (go.activeInHierarchy)
                 // ToastManager.Toast(go.name);
+
                 colliders.AddToKey(HitboxType.Uncategorized, collider2D);
             }
             /*} else if (go.name == "BoxRoot") {
@@ -300,9 +325,35 @@ public class HitboxModule : MonoBehaviour {
                     DrawHitbox(camera, collider2D, type, lineWidth);
                 }
             }
+
+            // Circle(camera, CameraManager.Instance.cameraCore.transform.position);
+            /*foreach (var target in CameraManager.Instance.camera2D.CameraTargets) {
+                Circle(camera, target.TargetTransform.transform.position);
+            }*/
+            /*foreach (var pathArea in FindObjectsOfType<PathArea>()) {
+                foreach (var pp in pathArea.pathPoints) {
+                    Circle(camera, pp.transform.position);
+                }
+
+                Circle(camera, pathArea.transform.position);
+                DrawPointSequence([..pathArea.edgeCollider.points],
+                    camera,
+                    pathArea.edgeCollider,
+                    HitboxType.Audio,
+                    lineWidth);
+            }*/
         } catch (Exception e) {
             ToastManager.Toast(e);
         }
+    }
+
+    private void Circle(Camera camera, Vector2 pos) {
+        Drawing.DrawCircle(LocalToScreenPoint(camera, pos),
+            10,
+            Color.red,
+            LineWidth,
+            true,
+            4);
     }
 
     private void DrawHitbox(Camera camera, Collider2D collider2D, HitboxType hitboxType, float lineWidth) {
@@ -310,6 +361,13 @@ public class HitboxModule : MonoBehaviour {
 
         var origDepth = GUI.depth;
         GUI.depth = depths[hitboxType];
+        var color = hitboxColors[hitboxType];
+
+        if (hitboxType == HitboxType.AttackSensor) {
+            var sensor = collider2D.GetComponent<AttackSensor>();
+            if (sensor.IsPlayerInside) color = Color.green;
+        }
+
         if (collider2D is BoxCollider2D or EdgeCollider2D or PolygonCollider2D) {
             switch (collider2D) {
                 case BoxCollider2D boxCollider2D:
@@ -321,20 +379,20 @@ public class HitboxModule : MonoBehaviour {
                     var boxPoints = new List<Vector2> {
                         topLeft, topRight, bottomRight, bottomLeft, topLeft,
                     };
-                    DrawPointSequence(boxPoints, camera, collider2D, hitboxType, lineWidth);
+                    DrawPointSequence(boxPoints, camera, collider2D, color, lineWidth);
                     break;
                 case EdgeCollider2D edgeCollider2D:
-                    DrawPointSequence(new List<Vector2>(edgeCollider2D.points),
+                    DrawPointSequence([..edgeCollider2D.points],
                         camera,
                         collider2D,
-                        hitboxType,
+                        color,
                         lineWidth);
                     break;
                 case PolygonCollider2D polygonCollider2D:
                     for (var i = 0; i < polygonCollider2D.pathCount; i++) {
-                        List<Vector2> polygonPoints = new(polygonCollider2D.GetPath(i));
+                        List<Vector2> polygonPoints = [..polygonCollider2D.GetPath(i)];
                         if (polygonPoints.Count > 0) polygonPoints.Add(polygonPoints[0]);
-                        DrawPointSequence(polygonPoints, camera, collider2D, hitboxType, lineWidth);
+                        DrawPointSequence(polygonPoints, camera, collider2D, color, lineWidth);
                     }
 
                     break;
@@ -343,24 +401,19 @@ public class HitboxModule : MonoBehaviour {
             var center = LocalToScreenPoint(camera, collider2D, Vector2.zero);
             var right = LocalToScreenPoint(camera, collider2D, Vector2.right * circleCollider2D.radius);
             var radius = (int)Math.Round(Vector2.Distance(center, right));
-            Drawing.DrawCircle(center,
-                radius,
-                hitboxColors[hitboxType],
-                lineWidth,
-                true,
-                Mathf.Clamp(radius / 16, 4, 32));
+            var segments = Mathf.Clamp(radius / 16, 4, 32);
+            Drawing.DrawCircle(center, radius, color, lineWidth, true, segments);
         }
 
         GUI.depth = origDepth;
     }
 
-    private void DrawPointSequence(List<Vector2> points, Camera camera, Collider2D collider2D,
-        HitboxType hitboxType,
+    private void DrawPointSequence(List<Vector2> points, Camera camera, Collider2D collider2D, Color color,
         float lineWidth) {
         for (var i = 0; i < points.Count - 1; i++) {
             var pointA = LocalToScreenPoint(camera, collider2D, points[i]);
             var pointB = LocalToScreenPoint(camera, collider2D, points[i + 1]);
-            Drawing.DrawLine(pointA, pointB, hitboxColors[hitboxType], lineWidth, true);
+            Drawing.DrawLine(pointA, pointB, color, lineWidth, true);
         }
     }
 
