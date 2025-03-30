@@ -62,22 +62,23 @@ public static class SavestateLogic {
         // - qi in UI
         // - broken floor
 
-        var seen = new HashSet<MonoBehaviour>();
+        var seen = new HashSet<Component>();
+
         if (filter.HasFlag(SavestateFilter.Player)) {
-            MonobehaviourTracing.TraceReferencedMonobehaviours(player, sceneBehaviours, seen, maxDepth: null);
+            sceneBehaviours.Add(ComponentSnapshot.Of(player.transform));
+            SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen);
             foreach (var (_, state) in player.fsm.GetStates()) {
-                MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
+                SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
             }
         }
 
-        // sceneBehaviours.Add(MonoBehaviourSnapshot.Of(player.SpriteHolder));
-
         if (filter.HasFlag(SavestateFilter.Monsters)) {
             foreach (var monster in Object.FindObjectsOfType<MonsterBase>()) {
-                MonobehaviourTracing.TraceReferencedMonobehaviours(monster, sceneBehaviours, seen, maxDepth: null);
+                sceneBehaviours.Add(ComponentSnapshot.Of(monster.transform));
+                SnapshotSerializer.SnapshotRecursive(monster, sceneBehaviours, seen);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
                 foreach (var (_, state) in monster.fsm.GetStates()) {
-                    MonobehaviourTracing.TraceReferencedMonobehaviours(state, sceneBehaviours, seen);
+                    SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
                 }
             }
         }
@@ -206,7 +207,7 @@ public static class SavestateLogic {
             }
         }
 
-        foreach (var fsm in savestate?.GeneralFsmSnapshots ?? new List<GeneralFsmSnapshot>()) {
+        foreach (var fsm in savestate.GeneralFsmSnapshots ?? new List<GeneralFsmSnapshot>()) {
             var targetGo = ObjectUtils.LookupPath(fsm.Path);
             if (targetGo == null) {
                 Log.Error($"Savestate stored general fsm state on {fsm.Path}, which does not exist at load time");

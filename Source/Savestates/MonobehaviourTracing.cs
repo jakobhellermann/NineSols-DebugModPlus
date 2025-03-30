@@ -6,13 +6,13 @@ using UnityEngine;
 
 namespace DebugModPlus.Savestates;
 
-public static class MonobehaviourTracing {
+internal static class MonobehaviourTracing {
     public static void TraceReferencedMonobehaviours(
         MonoBehaviour origin,
         List<ComponentSnapshot> saved,
-        HashSet<MonoBehaviour> seen,
+        HashSet<Component> seen,
         int depth = 0,
-        int? maxDepth = 0,
+        int? maxDepth = null,
         int minDepth = 0
     ) {
         if (!origin.gameObject.scene.IsValid()) return;
@@ -24,7 +24,7 @@ public static class MonobehaviourTracing {
 
         seen.Add(origin);
 
-        if (maxDepth != null && depth >= maxDepth) {
+        if (depth >= maxDepth) {
             return;
         }
 

@@ -17,6 +17,17 @@ using Object = UnityEngine.Object;
 namespace DebugModPlus;
 
 public static class SnapshotSerializer {
+    public static void SnapshotRecursive(
+        MonoBehaviour origin,
+        List<ComponentSnapshot> saved,
+        HashSet<Component> seen,
+        int? maxDepth = null,
+        int minDepth = 0,
+        bool onlyDescendants = true
+    ) {
+        MonobehaviourTracing.TraceReferencedMonobehaviours(origin, saved, seen, maxDepth: maxDepth, minDepth: minDepth);
+    }
+
     public static JToken Snapshot(object obj) => JToken.FromObject(obj, JsonSerializer.Create(Settings));
 
     public static string SnapshotToString(object? obj) =>
