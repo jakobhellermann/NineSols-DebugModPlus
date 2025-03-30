@@ -48,6 +48,7 @@ public static class MonobehaviourTracing {
 
     private static readonly Type[] FindReferenceIgnoreList = new[] {
         typeof(EffectDealer),
+        typeof(GameLevel),
         typeof(PlayerInputCommandQueue),
         typeof(HackDrone),
         typeof(SpriteFlasher),

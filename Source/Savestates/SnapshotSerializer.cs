@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using DebugModPlus.Savestates;
+using DG.Tweening;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -68,6 +69,7 @@ public static class SnapshotSerializer {
             typeof(UnityEventBase),
             typeof(Action),
             typeof(Delegate),
+            typeof(Tweener),
             typeof(FxPlayer),
             typeof(MappingState.StateEvents),
             typeof(IEffectOwner),
@@ -110,6 +112,7 @@ public static class SnapshotSerializer {
         FieldDenylist = new Dictionary<Type, string[]> {
             { typeof(StealthGameMonster), ["boxColliderSizes"] },
             { typeof(FlyingMonster), ["boxColliderSizes"] },
+            { typeof(MonsterCore), ["AnimationSpeed"] },
         },
     };
 

@@ -53,6 +53,10 @@
         <Reference Include="PrimeTween.Runtime">
             <HintPath>$(DllPath)/PrimeTween.Runtime.dll</HintPath>
         </Reference>
+        <Reference Include="DOTween">
+            <HintPath>$(DllPath)/DoTween.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="UnityEngine.UI">
             <HintPath>$(DllPath)/UnityEngine.UI.dll</HintPath>
         </Reference>
