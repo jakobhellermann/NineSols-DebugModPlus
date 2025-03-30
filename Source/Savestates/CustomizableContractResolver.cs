@@ -5,7 +5,7 @@ using System.Reflection;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using NineSolsAPI;
+using UnityEngine;
 
 namespace DebugModPlus.Savestates;
 
@@ -57,6 +57,15 @@ public class CustomizableContractResolver : DefaultContractResolver {
         }
 
         return list;
+    }
+
+    protected override JsonContract CreateContract(Type objectType) {
+        if (objectType == typeof(Transform)) {
+            // Transform is IEnumerable which lets newtonsoft treat it as Array
+            return base.CreateObjectContract(objectType);
+        }
+
+        return base.CreateContract(objectType);
     }
 
     private bool IgnorePropertyType(Type? type) =>
