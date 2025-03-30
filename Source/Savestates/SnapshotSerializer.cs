@@ -109,7 +109,10 @@ public static class SnapshotSerializer {
             typeof(Timer.DelayTask),
             // todo
             typeof(PrimeTween.Tween),
-            typeof(Rigidbody2D), // maybe
+            typeof(RenderTexture),
+            typeof(Texture2D),
+            typeof(Texture3D),
+            // typeof(Rigidbody2D), // maybe
             typeof(Transform), // maybe
             typeof(SpriteRenderer), // maybe
             typeof(LayerMask), // maybe
@@ -127,6 +130,7 @@ public static class SnapshotSerializer {
         ExactFieldTypesToIgnore = [typeof(IResetter), typeof(ILevelDestroy), typeof(ILevelStart), typeof(Component)],
         FieldAllowlist = new Dictionary<Type, string[]> {
             { typeof(Transform), ["localPosition", "localRotation", "localScale"] },
+            { typeof(Rigidbody2D), ["position"] },
         },
         FieldDenylist = new Dictionary<Type, string[]> {
             { typeof(StealthGameMonster), ["boxColliderSizes"] },
