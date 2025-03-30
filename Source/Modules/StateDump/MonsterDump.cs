@@ -197,6 +197,7 @@ public static class MonsterDump {
                     ["teleportScheme", "offsetCandidates", "offset", "offsetYFromGround", "PhysicsDetect"]
                 },
                 { typeof(MonsterStateQueue), ["linkNextMoveStateWeights"] },
+                { typeof(Transform), ["localPosition", "localRotation", "localScale"] },
             },
             FieldDenylist = new Dictionary<Type, string[]> {
                 { typeof(LinkNextMoveStateWeight), ["MustUseEnqueued"] }, {
@@ -210,7 +211,6 @@ public static class MonsterDump {
             },
         },
         Converters = new List<JsonConverter> {
-            new TransformConverter(),
             new Vector2Converter(),
             new Vector3Converter(),
             new Vector4Converter(),

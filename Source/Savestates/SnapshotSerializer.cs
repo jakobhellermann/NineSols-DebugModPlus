@@ -58,7 +58,6 @@ public static class SnapshotSerializer {
         },
         ContractResolver = resolver,
         Converters = new List<JsonConverter> {
-            new TransformConverter(),
             new Vector2Converter(),
             new Vector3Converter(),
             new Vector4Converter(),
@@ -125,6 +124,10 @@ public static class SnapshotSerializer {
             typeof(StatModifier),
             typeof(MapIndexReference.MapTileData), // maybe
         ],
+        ExactFieldTypesToIgnore = [typeof(IResetter), typeof(ILevelDestroy), typeof(ILevelStart), typeof(Component)],
+        FieldAllowlist = new Dictionary<Type, string[]> {
+            { typeof(Transform), ["localPosition", "localRotation", "localScale"] },
+        },
         FieldDenylist = new Dictionary<Type, string[]> {
             { typeof(StealthGameMonster), ["boxColliderSizes"] },
             { typeof(FlyingMonster), ["boxColliderSizes"] },

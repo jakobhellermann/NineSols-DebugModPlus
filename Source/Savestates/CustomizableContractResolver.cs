@@ -11,8 +11,6 @@ namespace DebugModPlus.Savestates;
 
 [PublicAPI]
 public class CustomizableContractResolver : DefaultContractResolver {
-    public bool ForceReadableWritable = true;
-
     public BindingFlags FieldBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
     public BindingFlags PropertyBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -31,17 +29,18 @@ public class CustomizableContractResolver : DefaultContractResolver {
         var list = new List<MemberInfo>();
 
         for (var ty = objectType; ty != typeof(object) && ty != null; ty = ty.BaseType) {
-            var x = ty.IsGenericType ? ty.GetGenericTypeDefinition() : ty;
-            if (FieldAllowlist.TryGetValue(x, out var allowlist)) {
+            var typeStem = ty.IsGenericType ? ty.GetGenericTypeDefinition() : ty;
+            if (FieldAllowlist.TryGetValue(typeStem, out var allowlist)) {
                 list.AddRange(allowlist
                     .Select(fieldName => {
-                        var field = ty.GetField(fieldName, FieldBindingFlags | BindingFlags.DeclaredOnly);
+                        var field = (MemberInfo?)ty.GetField(fieldName, FieldBindingFlags | BindingFlags.DeclaredOnly)
+                                    ?? ty.GetProperty(fieldName, PropertyBindingFlags | BindingFlags.DeclaredOnly);
                         if (field == null) {
                             Log.Error($"Field '{fieldName}' in allowlist of '{ty}' does not exist!");
                         }
 
                         return field;
-                    }).OfType<FieldInfo>());
+                    }).Cast<MemberInfo>());
                 continue;
             }
 
@@ -49,11 +48,11 @@ public class CustomizableContractResolver : DefaultContractResolver {
             list.AddRange(ty.GetFields(FieldBindingFlags | BindingFlags.DeclaredOnly));
             list.AddRange(ty
                 .GetProperties(PropertyBindingFlags | BindingFlags.DeclaredOnly)
-                .Where(x => x.CanWrite && x.CanRead));
+                .Where(prop => prop.CanWrite && prop.CanRead));
         }
 
         if (FieldDenylist.TryGetValue(objectType, out var denyList)) {
-            list.RemoveAll(x => denyList.Contains(x.Name));
+            list.RemoveAll(field => denyList.Contains(field.Name));
         }
 
         return list;
@@ -73,13 +72,11 @@ public class CustomizableContractResolver : DefaultContractResolver {
         Array.Exists(FieldTypesToIgnore, x => x.IsAssignableFrom(type));
 
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
-        var property = base.CreateProperty(member, memberSerialization);
+        // default MemberSerialization ignores private fields, unless DefaultMembersSearchFlags.NonPublic ist set,
+        // but that field is deprecated in favor of GetSerializableMembers.
+        var property = base.CreateProperty(member, MemberSerialization.Fields);
 
         property.Ignored = false;
-        if (ForceReadableWritable) {
-            property.Readable = true;
-            property.Writable = true;
-        }
 
         var shouldSerialize = true;
 
