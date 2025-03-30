@@ -25,7 +25,12 @@ public static class SnapshotSerializer {
         int minDepth = 0,
         bool onlyDescendants = true
     ) {
-        MonobehaviourTracing.TraceReferencedMonobehaviours(origin, saved, seen, maxDepth: maxDepth, minDepth: minDepth);
+        MonobehaviourTracing.TraceReferencedMonobehaviours(origin,
+            saved,
+            seen,
+            onlyDescendants ? origin : null,
+            maxDepth: maxDepth,
+            minDepth: minDepth);
     }
 
     public static JToken Snapshot(object obj) => JToken.FromObject(obj, JsonSerializer.Create(Settings));

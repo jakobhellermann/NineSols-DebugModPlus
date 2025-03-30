@@ -11,6 +11,7 @@ internal static class MonobehaviourTracing {
         MonoBehaviour origin,
         List<ComponentSnapshot> saved,
         HashSet<Component> seen,
+        Component? onlyDescendantsOf,
         int depth = 0,
         int? maxDepth = null,
         int minDepth = 0
@@ -42,7 +43,13 @@ internal static class MonobehaviourTracing {
             var value = (MonoBehaviour)field.GetValue(origin);
             if (!value) continue;
 
-            TraceReferencedMonobehaviours(value, saved, seen, depth + 1, maxDepth, minDepth);
+            if (onlyDescendantsOf == null) {
+                TraceReferencedMonobehaviours(value, saved, seen, onlyDescendantsOf, depth + 1, maxDepth, minDepth);
+            } else if (value.transform.IsChildOf(onlyDescendantsOf.transform)) {
+                TraceReferencedMonobehaviours(value, saved, seen, onlyDescendantsOf, depth + 1, maxDepth, minDepth);
+            } else {
+                Log.Info($"Skipping {value}: not child of {onlyDescendantsOf}");
+            }
         }
     }
 
