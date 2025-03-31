@@ -80,7 +80,8 @@ public static class SnapshotSerializer {
             // ignored
             typeof(PoolObject),
             typeof(MonoBehaviour),
-            typeof(Bounds),
+            typeof(Camera),
+            // typeof(Bounds),
             typeof(GameObject),
             typeof(UnityEventBase),
             typeof(Action),
@@ -103,6 +104,7 @@ public static class SnapshotSerializer {
             typeof(ParticleSystem),
             typeof(TestRope.RopeSegment),
             typeof(AnimationCurve),
+            typeof(MultiSpriteEffectController),
             typeof(AnimationClip),
             typeof(IActiveOverrider),
             typeof(CullingObserver),
@@ -120,6 +122,7 @@ public static class SnapshotSerializer {
             typeof(Collider2D), // maybe
             typeof(AbilityWrapper), // bugs out
             typeof(EffectHitData),
+            typeof(DelayPositionData),
             typeof(IStateMachine),
             typeof(RuntimeConditionVote),
             typeof(ScriptableObject),
