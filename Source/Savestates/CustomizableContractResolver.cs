@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using UnityEngine;
+using UnityEngine.Bindings;
 
 namespace DebugModPlus.Savestates;
 
@@ -45,10 +47,13 @@ public class CustomizableContractResolver : DefaultContractResolver {
             }
 
 
-            list.AddRange(ty.GetFields(FieldBindingFlags | BindingFlags.DeclaredOnly));
+            list.AddRange(ty.GetFields(FieldBindingFlags | BindingFlags.DeclaredOnly)
+                .Where(field => field.GetCustomAttribute<CompilerGeneratedAttribute>() == null));
             list.AddRange(ty
                 .GetProperties(PropertyBindingFlags | BindingFlags.DeclaredOnly)
-                .Where(prop => prop.CanWrite && prop.CanRead));
+                .Where(prop => prop.CanWrite && prop.CanRead
+                                             && (prop.GetGetMethod() is { IsVirtual: true } ||
+                                                 prop.GetCustomAttribute<NativePropertyAttribute>() != null)));
         }
 
         if (FieldDenylist.TryGetValue(objectType, out var denyList)) {
