@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Linq;
+using Com.LuisPedroFonseca.ProCamera2D;
 using DebugModPlus.Savestates;
 using DG.Tweening;
 using Newtonsoft.Json;
@@ -130,7 +131,14 @@ public static class SnapshotSerializer {
         ExactFieldTypesToIgnore = [typeof(IResetter), typeof(ILevelDestroy), typeof(ILevelStart), typeof(Component)],
         FieldAllowlist = new Dictionary<Type, string[]> {
             { typeof(Transform), ["localPosition", "localRotation", "localScale"] },
-            { typeof(Rigidbody2D), ["position"] },
+            { typeof(Rigidbody2D), ["position"] }, {
+                typeof(ProCamera2D), [
+                    "_cameraTargetHorizontalPositionSmoothed",
+                    "_cameraTargetVerticalPositionSmoothed",
+                    "_previousCameraTargetHorizontalPositionSmoothed",
+                    "_previousCameraTargetVerticalPositionSmoothed",
+                ]
+            },
         },
         FieldDenylist = new Dictionary<Type, string[]> {
             { typeof(StealthGameMonster), ["boxColliderSizes"] },

@@ -71,6 +71,8 @@ public static class SavestateLogic {
             foreach (var (_, state) in player.fsm.GetStates()) {
                 SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
             }
+
+            SnapshotSerializer.SnapshotRecursive(CameraManager.Instance.camera2D, sceneBehaviours, seen, 0);
         }
 
         if (filter.HasFlag(SavestateFilter.Monsters)) {
