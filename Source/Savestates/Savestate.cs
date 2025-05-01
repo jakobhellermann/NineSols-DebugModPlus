@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using NineSolsAPI.Utils;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DebugModPlus;
 
@@ -18,6 +19,7 @@ public class Savestate {
     public Vector3? PlayerPosition;
     public string? LastTeleportId;
     public List<ComponentSnapshot>? MonobehaviourSnapshots;
+    public List<GameObjectSnapshot>? GameObjectSnapshots;
     public List<MonsterLoveFsmSnapshot>? FsmSnapshots;
     public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
     public List<ReferenceFixups>? ReferenceFixups;
@@ -66,6 +68,30 @@ public class Savestate {
 
             return property;
         }
+    }
+}
+
+public record GameObjectData(bool Active);
+
+public class GameObjectSnapshot {
+    public required string Path;
+    public required GameObjectData Data;
+
+    public static GameObjectSnapshot Of(GameObject go) => new() {
+        Path = ObjectUtils.ObjectPath(go),
+        Data = new GameObjectData(go.activeSelf),
+    };
+
+    public bool Restore() {
+        var targetGo = ObjectUtils.LookupPath(Path);
+        if (!targetGo) {
+            Log.Error($"Savestate stored state on {Path}, which does not exist at load time");
+            return false;
+        }
+
+        targetGo!.SetActive(Data.Active);
+
+        return true;
     }
 }
 

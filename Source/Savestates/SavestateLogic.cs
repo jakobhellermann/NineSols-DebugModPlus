@@ -52,6 +52,7 @@ public static class SavestateLogic {
         var player = Player.i;
 
         var sceneBehaviours = new List<ComponentSnapshot>();
+        var gameObjects = new List<GameObjectSnapshot>();
         var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
         var fsmSnapshots = new List<GeneralFsmSnapshot>();
         var referenceFixups = new List<ReferenceFixups>();
@@ -67,6 +68,7 @@ public static class SavestateLogic {
 
         if (filter.HasFlag(SavestateFilter.Player)) {
             sceneBehaviours.Add(ComponentSnapshot.Of(player.transform));
+            gameObjects.Add(GameObjectSnapshot.Of(player.pushAwayCollider.gameObject));
             SnapshotSerializer.SnapshotRecursive(player, sceneBehaviours, seen);
             foreach (var (_, state) in player.fsm.GetStates()) {
                 SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
@@ -80,8 +82,13 @@ public static class SavestateLogic {
                 sceneBehaviours.Add(ComponentSnapshot.Of(monster.transform));
                 SnapshotSerializer.SnapshotRecursive(monster, sceneBehaviours, seen);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
+
+                foreach (var attackSensor in monster.attackSensors) {
+                    SnapshotSerializer.SnapshotRecursive(attackSensor, sceneBehaviours, seen);
+                }
+
                 foreach (var (_, state) in monster.fsm.GetStates()) {
-                    SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen, 0);
+                    SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen);
                 }
             }
         }
@@ -114,6 +121,7 @@ public static class SavestateLogic {
             PlayerPosition = player.transform.position,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
+            GameObjectSnapshots = gameObjects,
             FsmSnapshots = monsterLoveFsmSnapshots.Count == 0 ? null : monsterLoveFsmSnapshots,
             GeneralFsmSnapshots = fsmSnapshots.Count == 0 ? null : fsmSnapshots,
             ReferenceFixups = referenceFixups.Count == 0 ? null : referenceFixups,
@@ -190,11 +198,18 @@ public static class SavestateLogic {
 
         sw.Restart();
         if (savestate.MonobehaviourSnapshots != null) {
-            ApplySnapshots(savestate.MonobehaviourSnapshots);
+            foreach (var mb in savestate.MonobehaviourSnapshots) {
+                mb.Restore();
+            }
+
             Log.Info($"- Applied snapshots to scene in {sw.ElapsedMilliseconds}ms");
         }
 
         sw.Stop();
+
+        foreach (var go in savestate.GameObjectSnapshots ?? []) {
+            go.Restore();
+        }
 
         if (savestate.ReferenceFixups != null) {
             ApplyFixups(savestate.ReferenceFixups);
@@ -265,12 +280,6 @@ public static class SavestateLogic {
         }
 
         Player.i.UpdateSpriteFacing();
-    }
-
-    private static void ApplySnapshots(List<ComponentSnapshot> snapshots) {
-        foreach (var mb in snapshots) {
-            mb.Restore();
-        }
     }
 
     private static void ApplyFixups(List<ReferenceFixups> fixups) {
