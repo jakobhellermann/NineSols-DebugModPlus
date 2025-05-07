@@ -7,10 +7,12 @@ using DebugModPlus.Savestates;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 using IStateMachine = MonsterLove.StateMachine.IStateMachine;
 using Object = UnityEngine.Object;
 
@@ -87,33 +89,50 @@ public static class SnapshotSerializer {
             typeof(Delegate),
             // typeof(Tweener), TODO only on speedrunpatch?
             typeof(FxPlayer),
+            typeof(SoundPlayer),
+            typeof(MonsterKnockbackSetting),
+            typeof(MonsterFollowBehavior),
             typeof(MappingState.StateEvents),
-            typeof(IEffectOwner),
+            typeof(EffectOwner),
+            typeof(MoveParam),
             typeof(PositionConstraint),
             typeof(PathArea),
+            typeof(AkGameObj),
             typeof(IEffectHitHandler),
+            typeof(TextMeshProUGUI),
+            typeof(TMP_Text),
+            typeof(Image),
             typeof(ICooldownEffectReceiver),
+            typeof(VelocityModifierManager),
             typeof(PathToAreaFinder),
             typeof(mixpanel.Value),
             typeof(Sprite),
             typeof(Tilemap),
+            typeof(EffectDealer),
+            typeof(EffectReceiver),
             typeof(LineRenderer),
             typeof(Color),
+            typeof(EffectReceivedPlayerRouter),
             typeof(VelocityModifierParam),
             typeof(ParticleSystem),
             typeof(TestRope.RopeSegment),
+            typeof(SoundEmitter),
             typeof(AnimationCurve),
             typeof(MultiSpriteEffectController),
             typeof(AnimationClip),
             typeof(IActiveOverrider),
+            typeof(SpriteFlasher),
             typeof(CullingObserver),
             typeof(Rect),
+            typeof(IOnEnableInvokable),
             typeof(Timer.DelayTask),
             // todo
+            typeof(RCGCullingGroup), // bunch of references
             typeof(PrimeTween.Tween),
             typeof(RenderTexture),
             typeof(Texture2D),
             typeof(Texture3D),
+            typeof(DamageDealer),
             // typeof(Rigidbody2D), // maybe
             typeof(Transform), // maybe
             typeof(SpriteRenderer), // maybe
@@ -128,6 +147,7 @@ public static class SnapshotSerializer {
             typeof(StatData),
             typeof(CharacterStat),
             typeof(StatModifier),
+            typeof(FxPlayer),
             typeof(MapIndexReference.MapTileData), // maybe
         ],
         ExactFieldTypesToIgnore = [typeof(IResetter), typeof(ILevelDestroy), typeof(ILevelStart), typeof(Component)],
@@ -146,6 +166,8 @@ public static class SnapshotSerializer {
             { typeof(StealthGameMonster), ["boxColliderSizes"] },
             { typeof(FlyingMonster), ["boxColliderSizes"] },
             { typeof(MonsterCore), ["AnimationSpeed"] },
+            { typeof(ParryCounterDefenseState), ["_context"] },
+            { typeof(ConditionTimer.Condition), ["_owner"] },
         },
     };
 
