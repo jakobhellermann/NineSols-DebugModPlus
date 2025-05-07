@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NineSolsAPI.Utils;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.Bindings;
 
@@ -146,6 +147,8 @@ public class CustomizableContractResolver : DefaultContractResolver {
 }
 
 internal class RefConverter : JsonConverter {
+    public static HashSet<Component> References = [];
+
     private static void WriteReference(JsonWriter writer, object? component) {
         if (component == null) {
             writer.WriteNull();
@@ -207,6 +210,7 @@ internal class RefConverter : JsonConverter {
                 throw new NotImplementedException("!component");
             }
 
+            References.Add(component);
             WriteReference(writer, value);
         } else if (value is IEnumerable list) {
             writer.WriteStartArray();

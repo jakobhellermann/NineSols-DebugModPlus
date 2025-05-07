@@ -94,11 +94,18 @@ public static class SavestateLogic {
                 foreach (var (_, state) in monster.fsm.GetStates()) {
                     SnapshotSerializer.SnapshotRecursive(state, sceneBehaviours, seen);
                 }
+
+                monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
             }
         }
 
         if (filter.HasFlag(SavestateFilter.FSMs)) {
             foreach (var smo in Object.FindObjectsOfType<StateMachineOwner>()) {
+                if (!smo.FsmContext?.fsm?.State) {
+                    Log.Warning($"{smo} fsm was null, skipping");
+                    continue;
+                }
+
                 fsmSnapshots.Add(GeneralFsmSnapshot.Of(smo));
             }
         }

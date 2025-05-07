@@ -8,11 +8,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using TMPro;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using Component = UnityEngine.Component;
 using IStateMachine = MonsterLove.StateMachine.IStateMachine;
 using Object = UnityEngine.Object;
 
@@ -20,19 +22,43 @@ namespace DebugModPlus;
 
 public static class SnapshotSerializer {
     public static void SnapshotRecursive(
-        MonoBehaviour origin,
-        List<ComponentSnapshot> saved,
+        Component component,
+        List<ComponentSnapshot> snapshots,
         HashSet<Component> seen,
-        int? maxDepth = null,
-        int minDepth = 0,
-        bool onlyDescendants = true
+        int? maxDepth = null
     ) {
-        MonobehaviourTracing.TraceReferencedMonobehaviours(origin,
-            saved,
-            seen,
-            onlyDescendants ? origin : null,
-            maxDepth: maxDepth,
-            minDepth: minDepth);
+        SnapshotRecursive(component, snapshots, seen, component, 0, maxDepth);
+    }
+
+    private static void SnapshotRecursive(
+        Component component,
+        List<ComponentSnapshot> snapshots,
+        HashSet<Component> seen,
+        Component? onlyDescendantsOf,
+        int depth,
+        int? maxDepth = null
+    ) {
+        if (seen.Contains(component)) return;
+
+        RefConverter.References.Clear();
+        var tok = JToken.FromObject(component, JsonSerializer.Create(Settings));
+
+        seen.Add(component);
+        snapshots.Add(new ComponentSnapshot {
+            Data = tok,
+            Path = ObjectUtils.ObjectComponentPath(component),
+        });
+
+        if (depth >= maxDepth) {
+            return;
+        }
+
+        foreach (var reference in RefConverter.References.ToArray()) {
+            var recurseIntoReference = !onlyDescendantsOf || reference.transform.IsChildOf(component.transform);
+            if (recurseIntoReference) {
+                SnapshotRecursive(reference, snapshots, seen, onlyDescendantsOf, depth, maxDepth);
+            }
+        }
     }
 
     public static JToken Snapshot(object obj) => JToken.FromObject(obj, JsonSerializer.Create(Settings));
@@ -52,11 +78,11 @@ public static class SnapshotSerializer {
     }
 
     private static readonly JsonSerializerSettings Settings = new() {
-        ReferenceLoopHandling = ReferenceLoopHandling.Error,
+        ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
         Error = (_, args) => {
             args.ErrorContext.Handled = true;
             Log.Error(
-                $"Serialization error while creating snapshot: {args.CurrentObject?.GetType()}: {args.ErrorContext.Path}: {args.ErrorContext.Error.Message}");
+                $"Serialization during snapshot: {args.CurrentObject?.GetType()}: {args.ErrorContext.Path}: {args.ErrorContext.Error.Message}");
         },
         ContractResolver = resolver,
         Converters = new List<JsonConverter> {
@@ -92,8 +118,8 @@ public static class SnapshotSerializer {
             typeof(MonsterKnockbackSetting),
             typeof(MonsterFollowBehavior),
             typeof(MappingState.StateEvents),
-            typeof(EffectOwner),
             typeof(MoveParam),
+            //typeof(IEffectOwner),
             typeof(PositionConstraint),
             typeof(PathArea),
             typeof(AkGameObj),
@@ -130,6 +156,7 @@ public static class SnapshotSerializer {
             typeof(ActorVelocityModifier),
             typeof(LootSpawner),
             // todo
+            typeof(Transform), // maybe
             typeof(RCGCullingGroup), // bunch of references
             typeof(PrimeTween.Tween),
             typeof(RenderTexture),
@@ -137,7 +164,6 @@ public static class SnapshotSerializer {
             typeof(Texture3D),
             typeof(DamageDealer),
             // typeof(Rigidbody2D), // maybe
-            typeof(Transform), // maybe
             typeof(SpriteRenderer), // maybe
             typeof(LayerMask), // maybe
             typeof(Collider2D), // maybe
