@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using DebugModPlus.Modules;
 using DebugModPlus.Modules.Hitbox;
 using DebugModPlus.Savestates;
-using Dialogue;
 using HarmonyLib;
 using MonsterLove.StateMachine;
 using NineSolsAPI;
@@ -39,6 +37,7 @@ public class DebugModPlus : BaseUnityPlugin {
     private Dictionary<KeyboardShortcut, string> configSavestateShortcutsCreate = null!;
     private Dictionary<KeyboardShortcut, string> configSavestateShortcutsLoad = null!;
 
+    public ConfigEntry<bool> ConfigHitboxesEnabled = null!;
     internal ConfigEntry<HitboxType> HitboxFilter = null!;
 
     private bool initializedSuccessfully = false;
@@ -105,7 +104,9 @@ public class DebugModPlus : BaseUnityPlugin {
                 InfotextFilter.RespawnInfo);
 
             HitboxFilter = Config.Bind("The rest", "Hitbox Filter", HitboxType.Default);
-            HitboxFilter.SettingChanged += (_, _) => HitboxModule.HitboxesVisible = true;
+            ConfigHitboxesEnabled = Config.Bind("The rest", "Hitboxes enabled", false);
+            ConfigHitboxesEnabled.SettingChanged += (_, _) => HitboxModule.Reload();
+            HitboxFilter.SettingChanged += (_, _) => ConfigHitboxesEnabled.Value = true;
 
             configSavestateShortcutsCreate = new Dictionary<KeyboardShortcut, string> {
                 //{ new KeyboardShortcut(KeyCode.Keypad1, KeyCode.LeftControl), "1" },
@@ -153,6 +154,7 @@ public class DebugModPlus : BaseUnityPlugin {
             SavestateModule.SavestateCreated += (_, _) => SpeedrunTimerModule.OnSavestateCreated();
 
             HitboxModule = new GameObject().AddComponent<HitboxModule>();
+            HitboxModule.Reload();
 
             KeybindManager.Add(this, quantumConsoleModule.ToggleConsole, KeyCode.LeftControl, KeyCode.Period);
             KeybindManager.Add(this, ToggleSettings, KeyCode.LeftControl, KeyCode.Comma);

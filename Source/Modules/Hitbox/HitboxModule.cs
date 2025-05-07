@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using NineSolsAPI;
-using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -58,28 +57,18 @@ public enum HitboxType {
 }
 
 public class HitboxModule : MonoBehaviour {
-    private bool hitboxesVisible;
-
-    public bool HitboxesVisible {
-        get => hitboxesVisible;
-        set {
-            hitboxesVisible = value;
-            Reload();
-        }
-    }
+    private static bool hitboxesVisible => DebugModPlus.Instance.ConfigHitboxesEnabled.Value;
 
     private static HitboxType Filter => DebugModPlus.Instance.HitboxFilter.Value;
 
-    [BindableMethod(Name = "Toggle Hitboxes", DefaultKeybind = new KeyCode[] { KeyCode.LeftControl, KeyCode.B })]
+    [BindableMethod(Name = "Toggle Hitboxes", DefaultKeybind = [KeyCode.LeftControl, KeyCode.B])]
     private static void ToggleHitboxes() {
-        DebugModPlus.Instance.HitboxModule.HitboxesVisible ^= true;
+        DebugModPlus.Instance.ConfigHitboxesEnabled.Value ^= true;
     }
 
     private void Awake() {
         SceneManager.sceneLoaded += CreateHitboxRender;
         colliders = new SortedDictionary<HitboxType, HashSet<Collider2D>>();
-
-        HitboxesVisible = HitboxesVisible;
     }
 
     private void OnDestroy() {
@@ -161,7 +150,7 @@ public class HitboxModule : MonoBehaviour {
     // public static float LineWidth => Math.Max(0.7f, Screen.width / 960f * GameCameras.instance.tk2dCam.ZoomFactor);
     private static float LineWidth => Math.Max(0.7f, Screen.width / 2000f);
 
-    private void Reload() {
+    public void Reload() {
         colliders.Clear();
 
         if (!hitboxesVisible) return;
@@ -306,7 +295,7 @@ public class HitboxModule : MonoBehaviour {
     }
 
     public void OnGUI() {
-        if (!HitboxesVisible) return;
+        if (!hitboxesVisible) return;
 
         try {
             if (Event.current?.type != EventType.Repaint || !GameCore.IsAvailable()) return;
