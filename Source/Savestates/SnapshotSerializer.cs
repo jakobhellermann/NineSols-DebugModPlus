@@ -80,7 +80,6 @@ public static class SnapshotSerializer {
         FieldTypesToIgnore = [
             // ignored
             typeof(PoolObject),
-            typeof(MonoBehaviour),
             typeof(Camera),
             // typeof(Bounds),
             typeof(GameObject),

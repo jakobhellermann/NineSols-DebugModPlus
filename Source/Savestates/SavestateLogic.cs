@@ -55,7 +55,6 @@ public static class SavestateLogic {
         var gameObjects = new List<GameObjectSnapshot>();
         var monsterLoveFsmSnapshots = new List<MonsterLoveFsmSnapshot>();
         var fsmSnapshots = new List<GeneralFsmSnapshot>();
-        var referenceFixups = new List<ReferenceFixups>();
         var flagsJson = new JObject();
 
         // TODO:
@@ -106,11 +105,6 @@ public static class SavestateLogic {
 
         if (filter.HasFlag(SavestateFilter.Player)) {
             monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(player.fsm));
-            referenceFixups.Add(ReferenceFixups.Of(Player.i,
-            [
-                new ReferenceFixupField(nameof(Player.i.touchingRope),
-                    ObjectUtils.ObjectComponentPath(Player.i.touchingRope)),
-            ]));
         }
 
         if (filter.HasFlag(SavestateFilter.Flags)) {
@@ -123,13 +117,12 @@ public static class SavestateLogic {
         var savestate = new Savestate {
             Flags = flagsJson.Count == 0 ? null : flagsJson,
             Scene = gameCore.gameLevel.gameObject.scene.name,
-            PlayerPosition = player.transform.position,
+            PlayerPosition = filter.HasFlag(SavestateFilter.Player) ? player.transform.position : null,
             LastTeleportId = ApplicationCore.Instance.lastSaveTeleportPoint.FinalSaveID,
             MonobehaviourSnapshots = sceneBehaviours,
             GameObjectSnapshots = gameObjects,
             FsmSnapshots = monsterLoveFsmSnapshots.Count == 0 ? null : monsterLoveFsmSnapshots,
             GeneralFsmSnapshots = fsmSnapshots.Count == 0 ? null : fsmSnapshots,
-            ReferenceFixups = referenceFixups.Count == 0 ? null : referenceFixups,
             RandomState = UnityEngine.Random.state,
         };
 
@@ -216,10 +209,6 @@ public static class SavestateLogic {
             go.Restore();
         }
 
-        if (savestate.ReferenceFixups != null) {
-            ApplyFixups(savestate.ReferenceFixups);
-        }
-
         foreach (var fsm in savestate.FsmSnapshots ?? new List<MonsterLoveFsmSnapshot>()) {
             var targetGo = ObjectUtils.LookupPath(fsm.Path);
             if (targetGo == null) {
@@ -290,34 +279,6 @@ public static class SavestateLogic {
 
         Player.i.UpdateSpriteFacing();
     }
-
-    private static void ApplyFixups(List<ReferenceFixups> fixups) {
-        foreach (var fields in fixups) {
-            var targetComponent = ObjectUtils.LookupObjectComponentPath(fields.Path);
-            if (targetComponent == null) {
-                Log.Error($"Savestate stored reference fixup on {fields.Path}, which does not exist at load time");
-                continue;
-            }
-
-            foreach (var (fieldName, referencedPath) in fields.Fields) {
-                var field = targetComponent.GetType().GetField(fieldName,
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
-                if (referencedPath == null) {
-                    field.SetValue(targetComponent, null);
-                } else {
-                    var referencedObject = ObjectUtils.LookupObjectComponentPath(referencedPath);
-                    if (referencedObject == null) {
-                        Log.Error(
-                            $"Savestate stored reference fixup on {fields.Path}.{fieldName}, but the target {referencedPath} does not exist at load time");
-                        continue;
-                    }
-
-                    field.SetValue(targetComponent, referencedObject);
-                }
-            }
-        }
-    }
-
 
     private static void EnterStateDirectly(IStateMachine sm, object stateObj) {
         // TODO: handle transitions

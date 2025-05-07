@@ -22,7 +22,6 @@ public class Savestate {
     public List<GameObjectSnapshot>? GameObjectSnapshots;
     public List<MonsterLoveFsmSnapshot>? FsmSnapshots;
     public List<GeneralFsmSnapshot>? GeneralFsmSnapshots;
-    public List<ReferenceFixups>? ReferenceFixups;
     public JObject? Flags;
     public UnityEngine.Random.State? RandomState;
 

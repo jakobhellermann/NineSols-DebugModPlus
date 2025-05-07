@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using NineSolsAPI.Utils;
 using UnityEngine;
 using UnityEngine.Bindings;
 
@@ -127,6 +128,10 @@ public class CustomizableContractResolver : DefaultContractResolver {
             }
         }
 
+        if (RefType(itemType)) {
+            property.Converter = new RefConverter();
+        }
+
         if (ContainerTypesToIgnore.Contains(member.DeclaringType)) {
             shouldSerialize = false;
         }
@@ -134,5 +139,139 @@ public class CustomizableContractResolver : DefaultContractResolver {
         property.ShouldSerialize = _ => shouldSerialize;
 
         return property;
+    }
+
+    private bool RefType(Type type) => typeof(Component).IsAssignableFrom(type) && type != typeof(Animator);
+}
+
+internal class RefConverter : JsonConverter {
+    private static void WriteReference(JsonWriter writer, object? component) {
+        if (component == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        writer.WriteStartObject();
+        writer.WritePropertyName("$ref");
+        writer.WriteValue(GetRef(component));
+        writer.WriteEndObject();
+    }
+
+    private static Component? ReadReference(JsonReader reader) {
+        if (reader.TokenType == JsonToken.Null) return null;
+
+        if (reader.TokenType != JsonToken.StartObject)
+            throw new JsonSerializationException($"Expected StartObject token, got {reader.TokenType}");
+
+        string? refPath = null;
+        while (reader.Read()) {
+            if (reader.TokenType == JsonToken.PropertyName && reader.Value?.ToString() == "$ref") {
+                reader.Read();
+                refPath = reader.Value?.ToString();
+                break;
+            }
+        }
+
+        if (refPath == null) {
+            throw new JsonSerializationException($"Expected $ref property at {reader.Path}");
+        }
+
+        while (reader.Read() && reader.TokenType != JsonToken.EndObject) {
+        }
+
+        return ObjectUtils.LookupObjectComponentPath(refPath);
+    }
+
+    private static IEnumerable<Component?> ReadReferenceArray(JsonReader reader) {
+        if (reader.TokenType != JsonToken.StartArray)
+            throw new JsonSerializationException($"Expected StartArray token, got {reader.TokenType}");
+
+        reader.Read();
+
+        while (reader.TokenType != JsonToken.EndArray) {
+            yield return ReadReference(reader);
+
+            reader.Read();
+        }
+    }
+
+    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) {
+        if (value == null) {
+            writer.WriteNull();
+            return;
+        }
+
+        if (value is Component component) {
+            if (!component) {
+                throw new NotImplementedException("!component");
+            }
+
+            WriteReference(writer, value);
+        } else if (value is IEnumerable list) {
+            writer.WriteStartArray();
+            foreach (var item in list) {
+                WriteReference(writer, item);
+            }
+
+            writer.WriteEndArray();
+        } else {
+            throw new NotImplementedException($"RefConverter got {value.GetType()}");
+        }
+    }
+
+
+    public override object? ReadJson(JsonReader reader, Type type, object? existingValue,
+        JsonSerializer serializer) {
+        if (reader.TokenType == JsonToken.Null) {
+            return null;
+        }
+
+        if (type.IsArray) {
+            var arr = ReadReferenceArray(reader).ToArray();
+            var newArray = Array.CreateInstance(type.GetElementType()!, arr.Length);
+            for (var i = 0; i < arr.Length; i++) {
+                newArray.SetValue(arr[i], i);
+            }
+
+            return newArray;
+        } else if (typeof(IList).IsAssignableFrom(type)) {
+            if (existingValue is not IList list) throw new JsonSerializationException("List requires existing value");
+
+            list.Clear();
+            foreach (var item in ReadReferenceArray(reader)) {
+                list.Add(item);
+            }
+
+            return list;
+        } else if (type.IsGenericType) {
+            if (existingValue is null)
+                throw new JsonSerializationException("reference collection requires existing value");
+
+            if (type.GetGenericTypeDefinition() == typeof(HashSet<>)) {
+                existingValue.InvokeMethod("Clear");
+                foreach (var item in ReadReferenceArray(reader)) {
+                    existingValue.InvokeMethod<bool>("Add", item);
+                }
+
+                return existingValue;
+            }
+
+            throw new NotImplementedException($"RefConverter called for {type}");
+        } else if (typeof(Component).IsAssignableFrom(type)) {
+            return ReadReference(reader);
+        } else {
+            throw new NotImplementedException($"RefConverter called for {type}");
+        }
+    }
+
+    // we only assign the in the contract resolver
+    public override bool CanConvert(Type objectType) => true;
+
+    private static string GetRef(object obj) {
+        if (obj is Component component) {
+            return ObjectUtils.ObjectComponentPath(component);
+        }
+
+        throw new NotImplementedException("GetRef not for component");
     }
 }
