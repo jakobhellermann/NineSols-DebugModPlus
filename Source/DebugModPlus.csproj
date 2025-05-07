@@ -68,6 +68,10 @@
         <Reference Include="Mixpanel">
             <HintPath>$(DllPath)/Mixpanel.dll</HintPath>
         </Reference>
+        <Reference Include="barbaro.autoattributes.Runtime.dll">
+            <HintPath>$(DllPath)/barbaro.autoattributes.Runtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>

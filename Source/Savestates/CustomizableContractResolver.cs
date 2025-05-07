@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -88,27 +89,41 @@ public class CustomizableContractResolver : DefaultContractResolver {
         var type = property.PropertyType;
         if (type == null) return property;
 
+        if (member.GetCustomAttribute<AutoAttribute>() != null ||
+            member.GetCustomAttribute<AutoChildrenAttribute>() != null) {
+            shouldSerialize = false;
+        }
+
         shouldSerialize &= !IgnorePropertyType(type);
 
         if (type.IsArray) {
             shouldSerialize &= !IgnorePropertyType(type.GetElementType());
         }
 
-        if (type.IsGenericType) {
+        var itemType = type;
+
+        if (type.IsArray) {
+            itemType = type.GetElementType()!;
+            shouldSerialize &= !IgnorePropertyType(itemType);
+        } else if (type.IsGenericType) {
             if (type.GetGenericTypeDefinition() == typeof(List<>)) {
-                shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[0]);
+                itemType = type.GetGenericArguments()[0];
+                shouldSerialize &= !IgnorePropertyType(itemType);
 
                 property.ObjectCreationHandling = ObjectCreationHandling.Replace;
             }
 
             if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
                 var generics = type.GetGenericArguments();
+                // TODO Dict<EffectDealer, bool>
                 shouldSerialize &= generics[0].IsPrimitive || generics[0] == typeof(string);
-                shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[1]);
+                itemType = type.GetGenericArguments()[1];
+                shouldSerialize &= !IgnorePropertyType(itemType);
             }
 
             if (type.GetGenericTypeDefinition() == typeof(HashSet<>)) {
-                shouldSerialize &= !IgnorePropertyType(type.GetGenericArguments()[0]);
+                itemType = type.GetGenericArguments()[0];
+                shouldSerialize &= !IgnorePropertyType(itemType);
             }
         }
 

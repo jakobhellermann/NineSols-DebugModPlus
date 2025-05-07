@@ -31,6 +31,10 @@ public abstract class NullableJsonConverter<T> : JsonConverter {
                 $"Converter cannot read JSON with the specified existing value. {typeof(T)} is required.");
         }
 
+        if (reader.TokenType == JsonToken.Null) {
+            return null;
+        }
+
         return ReadJson(reader,
             objectType,
             existingValue == null ? default : (T)existingValue,
