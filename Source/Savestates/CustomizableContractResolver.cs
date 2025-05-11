@@ -56,10 +56,11 @@ public class CustomizableContractResolver : DefaultContractResolver {
                 .Where(prop => prop.CanWrite && prop.CanRead
                                              && (prop.GetGetMethod() is { IsVirtual: true } ||
                                                  prop.GetCustomAttribute<NativePropertyAttribute>() != null)));
-        }
 
-        if (FieldDenylist.TryGetValue(objectType, out var denyList)) {
-            list.RemoveAll(field => denyList.Contains(field.Name));
+            // TODO: just removed added from this type
+            if (FieldDenylist.TryGetValue(ty, out var denyList)) {
+                list.RemoveAll(field => denyList.Contains(field.Name));
+            }
         }
 
         return list;

@@ -105,6 +105,7 @@ public static class SnapshotSerializer {
             typeof(VelocityModifierManager),
             typeof(PathToAreaFinder),
             typeof(mixpanel.Value),
+            typeof(Player), // only one
             typeof(Sprite),
             typeof(Tilemap),
             typeof(EffectDealer),
@@ -125,6 +126,9 @@ public static class SnapshotSerializer {
             typeof(Rect),
             typeof(IOnEnableInvokable),
             typeof(Timer.DelayTask),
+            // reference stays constant
+            typeof(ActorVelocityModifier),
+            typeof(LootSpawner),
             // todo
             typeof(RCGCullingGroup), // bunch of references
             typeof(PrimeTween.Tween),
@@ -146,7 +150,6 @@ public static class SnapshotSerializer {
             typeof(StatData),
             typeof(CharacterStat),
             typeof(StatModifier),
-            typeof(FxPlayer),
             typeof(MapIndexReference.MapTileData), // maybe
         ],
         ExactFieldTypesToIgnore = [typeof(IResetter), typeof(ILevelDestroy), typeof(ILevelStart), typeof(Component)],
@@ -167,6 +170,8 @@ public static class SnapshotSerializer {
             { typeof(MonsterCore), ["AnimationSpeed"] },
             { typeof(ParryCounterDefenseState), ["_context"] },
             { typeof(ConditionTimer.Condition), ["_owner"] },
+            { typeof(ActorState), ["_actor"] },
+            { typeof(MappingState), ["_context"] },
         },
     };
 
