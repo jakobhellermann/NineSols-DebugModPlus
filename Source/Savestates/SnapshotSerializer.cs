@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Com.LuisPedroFonseca.ProCamera2D;
 using DebugModPlus.Savestates;
-using DG.Tweening;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -86,7 +85,7 @@ public static class SnapshotSerializer {
             typeof(UnityEventBase),
             typeof(Action),
             typeof(Delegate),
-            typeof(Tweener),
+            // typeof(Tweener), TODO only on speedrunpatch?
             typeof(FxPlayer),
             typeof(MappingState.StateEvents),
             typeof(IEffectOwner),
