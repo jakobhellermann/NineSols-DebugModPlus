@@ -83,7 +83,7 @@ public static class SavestateLogic {
                 SnapshotSerializer.SnapshotRecursive(monster, sceneBehaviours, seen);
                 monsterLoveFsmSnapshots.Add(MonsterLoveFsmSnapshot.Of(monster.fsm));
 
-                foreach (var attackSensor in monster.attackSensors) {
+                foreach (var attackSensor in monster.AttackSensorsCompat()) {
                     SnapshotSerializer.SnapshotRecursive(attackSensor, sceneBehaviours, seen);
                 }
 
