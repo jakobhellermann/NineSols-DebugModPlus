@@ -183,6 +183,8 @@ public class DebugModPlus : BaseUnityPlugin {
 
             RCGLifeCycle.DontDestroyForever(gameObject);
             RCGLifeCycle.DontDestroyForever(HitboxModule.gameObject);
+            gameObject.hideFlags = HideFlags.HideAndDontSave;
+            HitboxModule.gameObject.hideFlags = HideFlags.HideAndDontSave;
 
             QuantumConsoleModule.Initialize();
 
