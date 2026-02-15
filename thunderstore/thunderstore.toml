@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "jakobhellermann"
 name = "DebugMod"
-versionNumber = "1.10.1"
+versionNumber = "1.10.2"
 description = "Debug tools for the game"
 websiteUrl = "https://github.com/jakobhellermann/NineSols-DebugMod"
 containsNsfwContent = false
